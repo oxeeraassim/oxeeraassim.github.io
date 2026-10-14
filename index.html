@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Biblioteca do Oxe</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;700&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&family=Courier+Prime:wght@400;700&display=swap">
+<style>
+/* Layout: um fichário de biblioteca — gavetas por tema, cada livro é uma ficha catalográfica */
+:root{
+  --bg:#e9e3d6;        /* madeira clara do fichário */
+  --card:#fbf8f1;      /* ficha */
+  --ink:#1f2a44;       /* tinta azul-marinho de carimbo */
+  --muted:#5d6475;
+  --rule:#c8433a;      /* linha vermelha da ficha */
+  --line:#d7cfbf;
+  --accent:#a8521f;    /* cobre / couro */
+  --btn:#1f2a44; --btnfg:#fbf8f1;
+  --display:"Zilla Slab",Georgia,serif;
+  --body:"Literata",Georgia,serif;
+  --mono:"Courier Prime","Courier New",monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#191a1f;--card:#24252c;--ink:#e8e2d3;--muted:#a3a6b2;--rule:#e06a5f;--line:#3a3b44;--accent:#e09a62;--btn:#e8e2d3;--btnfg:#191a1f;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#191a1f;--card:#24252c;--ink:#e8e2d3;--muted:#a3a6b2;--rule:#e06a5f;--line:#3a3b44;--accent:#e09a62;--btn:#e8e2d3;--btnfg:#191a1f;color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.55}
+.wrap{max-width:1040px;margin:0 auto;padding-block:28px 56px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header{display:grid;gap:10px;margin-bottom:22px}
+.eyebrow{font-family:var(--mono);font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,7vw,58px);line-height:1.02;margin:0;text-wrap:balance}
+.lead{max-width:62ch;margin:0;color:var(--muted)}
+.aviso{font-family:var(--mono);font-size:13px;color:var(--muted);border-top:1px dashed var(--line);border-bottom:1px dashed var(--line);padding-block:8px;margin:6px 0 0}
+.tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:18px 0 8px;position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);padding-block:10px;z-index:2}
+.tools input{flex:1 1 220px;min-width:0;font:inherit;font-size:15px;padding:10px 12px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--ink)}
+.tabs{display:flex;flex-wrap:wrap;gap:6px}
+.tab{font-family:var(--mono);font-size:13px;padding:7px 10px;border:1px solid var(--line);border-radius:4px 4px 0 0;background:var(--card);color:var(--ink);cursor:pointer}
+.tab[aria-pressed="true"]{background:var(--ink);color:var(--card);border-color:var(--ink)}
+.tab:focus-visible,.tools input:focus-visible,a.buy:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+section.gaveta{margin-top:30px}
+.gaveta h2{font-family:var(--display);font-weight:700;font-size:26px;margin:0 0 4px;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.gaveta h2 .n{font-family:var(--mono);font-size:13px;font-weight:400;color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px;margin-top:12px}
+.ficha{background:var(--card);border:1px solid var(--line);border-radius:3px;padding:14px 16px 18px;display:grid;gap:6px;position:relative;min-width:0;box-shadow:0 1px 0 var(--line)}
+.ficha::before{content:"";position:absolute;left:0;right:0;top:6px;border-top:1.5px solid var(--rule);opacity:.8}
+.ficha::after{content:"";position:absolute;left:50%;bottom:6px;width:12px;height:12px;margin-left:-6px;border-radius:50%;background:var(--bg);border:1px solid var(--line)}
+.cota{font-family:var(--mono);font-size:12.5px;color:var(--muted);display:flex;justify-content:space-between;gap:8px;height:20px}
+.titulo{font-family:var(--display);font-weight:700;font-size:20px;line-height:1.2;margin:8px 0 0;text-wrap:balance}
+.autor{font-family:var(--mono);font-size:14px;margin:0}
+.reel{font-size:14.5px;color:var(--muted);margin:2px 0 6px}
+.reel b{color:var(--ink);font-weight:600}
+a.buy{justify-self:start;font-family:var(--mono);font-size:14px;font-weight:700;text-decoration:none;background:var(--btn);color:var(--btnfg);padding:8px 12px;border-radius:4px;margin-bottom:8px}
+a.buy:hover{background:var(--accent);color:var(--btnfg)}
+.indic{font-family:var(--mono);font-size:13px;color:var(--accent)}
+.acoes{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px}
+.acoes a.buy{margin-bottom:0}
+a.buy.alt{background:transparent;color:var(--ink);border:1px solid var(--ink)}
+a.buy.alt:hover{background:var(--ink);color:var(--card)}
+.vazio{font-family:var(--mono);color:var(--muted);margin-top:24px}
+.sugira{margin-top:40px;background:var(--ink);color:var(--card);border-radius:6px;padding:22px 22px 18px;display:grid;gap:6px;max-width:720px}
+.sugira h2{font-family:var(--display);font-weight:700;font-size:26px;margin:0}
+.sugira p{margin:0;max-width:62ch}
+footer{margin-top:44px;font-family:var(--mono);font-size:13px;color:var(--muted);display:grid;gap:6px}
+@media (prefers-reduced-motion:no-preference){.ficha{transition:transform .15s}.ficha:hover{transform:translateY(-2px)}}
+
+.ficha h3{font-family:var(--display);font-weight:700;font-size:21px;line-height:1.2;margin:10px 0 2px;text-wrap:balance}
+.livros{list-style:none;margin:4px 0 8px;padding:0;display:grid;gap:0}
+.livros li{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:9px 0;border-bottom:1px dotted var(--line)}
+.livros li:last-child{border-bottom:0}
+.lt{font-family:var(--body);font-weight:600;font-size:15.5px;line-height:1.3}
+.la{display:block;font-family:var(--mono);font-size:13px;color:var(--muted);margin-top:2px}
+a.mini{font-family:var(--mono);font-size:13px;font-weight:700;text-decoration:none;color:var(--btnfg);background:var(--btn);padding:6px 9px;border-radius:4px;white-space:nowrap}
+a.mini:hover{background:var(--accent)}
+a.mini:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.grid{grid-template-columns:repeat(auto-fill,minmax(310px,1fr))}
+*{box-sizing:border-box}body{margin:0}
+</style>
+</head>
+<body>
+
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">@oxe_eraassim · uma biblioteca do Nordeste</div>
+    <h1>Biblioteca do Oxe</h1>
+    <p class="lead">Uma biblioteca do Nordeste. Cada ficha é um personagem ou episódio que já contamos na página, com os livros sobre ele. No fim de cada ficha, um botão mostra tudo o que existe sobre o tema.</p>
+  </header>
+  <div class="tools">
+    <input id="busca" type="search" placeholder="Procure um livro, autor ou reel (ex.: cangaço, Bahia, seca)" aria-label="Procurar na biblioteca">
+    <div class="tabs" id="tabs" role="group" aria-label="Gavetas"></div>
+  </div>
+  <main id="lista"></main>
+  <p class="vazio" id="vazio" hidden>Nenhuma ficha com esse termo. Tente outro nome ou limpe a busca.</p>
+  <aside class="sugira">
+    <h2>Falta um livro na estante?</h2>
+    <p>Se você conhece um livro sobre uma história que contamos e ele ainda não está aqui, comente no Instagram <b>@oxe_eraassim</b>. As melhores indicações entram na Biblioteca com o seu nome.</p>
+  </aside>
+  <footer>
+    <span>Biblioteca do Oxe · uma biblioteca do Nordeste</span>
+    <span>Curadoria: Oxe, era assim? · Instagram @oxe_eraassim</span>
+    <span>Links de parceria com a Amazon.</span>
+  </footer>
+</div>
+<script>
+const TAG='oxeeraassinlm-20';
+const EXTRA={'O crime da Baronesa':['Livro do MP do Maranhão sobre o caso (grátis)','https://www.mpma.mp.br/wp-content/uploads/2020/12/Livro_Baronesa1%C2%BAEd._compactado.pdf']};
+// [personagem/episódio, assunto p/ "todos os livros", [[título, autor, ASIN, indicado, kindle]]]
+const G=[
+ {id:'cangaco',nome:'Cangaço e sertão',f:[
+  ['Corisco e Dadá','Corisco Dadá cangaço',[['Gente de Lampião: Dadá e Corisco','Antônio Amaury Corrêa de Araújo','8571961468'],['Corisco e Dadá: uma saga de amor, cachaça e sangue','','6586639360'],['Dadá, a mulher de Corisco','Luciana Savaget','8536800240']]],
+  ['Antônio Silvino','Antônio Silvino cangaceiro',[['Antônio Silvino: o cangaceiro, o homem, o mito','Sérgio Augusto de Souza Dantas','856563101X'],['História completa de Antonio Silvino','','6583305151'],['Antônio Silvino, o Rifle de Ouro','Severino Barbosa','B0CL5JXMY9','',1]]],
+  ['Jesuíno Brilhante','Jesuíno Brilhante',[['Os Brilhantes','Rodolfo Teófilo','8555300002'],['Rodolfo Teófilo e a saga de Jesuíno Brilhante','','B09T3VVWCD','',1]]],
+  ['O Caldeirão e o beato José Lourenço','Caldeirão beato José Lourenço',[['José Lourenço: o beato perseguido','','8579741440'],['Caldeirão: a guerra dos beatos','Cláudio Aguiar','B08NMJ8ZFB'],['Memória e história: o Caldeirão da Santa Cruz do Deserto','','3639690680'],['Remexendo o caldeirão do beato José Lourenço','','B08KVM8P25','',1]]],
+  ['Horácio de Matos e a Coluna Prestes','Coluna Prestes',[['A Coluna Prestes: uma história do interior','','6557112546']]]]},
+ {id:'bahia',nome:'Bahia',f:[
+  ['A Revolta dos Malês','Revolta dos Malês',[['Malês: a revolta dos escravizados na Bahia e seu legado','','8542223829'],['Imalês: fragmentos da presença de muçulmanos nas revoltas','','6525030218'],['Bahia de todos os negros: as rebeliões escravas do século XIX','','658751815X'],['Slave Rebellion in Brazil (em inglês)','João José Reis','0801852501']]],
+  ['A origem do axé e o Carnaval de Salvador','axé music Carnaval de Salvador',[['A trama dos tambores: a música afro-pop de Salvador','Goli Guerreiro','8573261757'],['O canto da cidade: da matriz afro-baiana à axé music','Luciano Matos','B09JKWBSKT','',1]]],
+  ['Escrava Anastácia','Escrava Anastácia',[['Anastácia: escrava e mártir negra','','8573290676'],['Blessed Anastácia (em inglês)','John Burdick','0415912601']]],
+  ['Juliano Moreira','Juliano Moreira psiquiatria',[['Juliano Moreira: da Bahia para o mundo','','8523218181']]]]},
+ {id:'ceara',nome:'Ceará',f:[
+  ['A seca de 1877 no Ceará','seca no Ceará',[['A fome','Rodolfo Teófilo','8564406012','@raiferreira20100']]],
+  ['Os campos de concentração da seca','campos de concentração seca Ceará',[['O Quinze','Rachel de Queiroz','8503012928'],['Campos de concentração da seca de 1932 no Ceará','Valdecy Alves','6555564229']]]]},
+ {id:'pepbal',nome:'Pernambuco, Paraíba e Alagoas',f:[
+  ['Anayde Beiriz, João Pessoa e a Revolução de 1930','Revolução de 1930 Paraíba',[['Anayde Beiriz: panthera dos olhos dormentes','Marcus Aranha','8591183614'],['João Pessoa, o reformador','Wellington Aguiar','8575392271'],['Três homens chamados João: uma tragédia em 1930','Ana Maria César','B08LJBYYZD','',1],['1930: os órfãos da revolução','Domingos Meirelles','8501070688']]],
+  ['Tarcísio Burity e Ronaldo Cunha Lima','história da Paraíba',[['Tarcísio Burity: o intelectual na política paraibana','Glauce Burity','8583102775','@marcoaureliojpa'],['Ronaldo Cunha Lima: um nordestino de todo canto','','8579741556']]],
+  ['Delmiro Gouveia','Delmiro Gouveia',[['Delmiro Gouveia','Cláudio Said','854281259X'],['Delmiro Gouveia: era uma vez no sertão','','B0DYJPVFJ3'],['Pedra: plano e cotidiano operário no sertão','','8530805267']]],
+  ['Nise da Silveira','Nise da Silveira',[['Nise da Silveira: uma psiquiatra rebelde','Ferreira Gullar','8542226100'],['Mania de liberdade','','6557080091'],['Nise da Silveira','Patrícia Lessa','6525039681']]],
+  ['Ariano Suassuna e o Auto da Compadecida','Ariano Suassuna',[['Auto da Compadecida','Ariano Suassuna','8520938396'],['ABC de Ariano Suassuna','Bráulio Tavares','8503009706']]],
+  ['Jackson do Pandeiro','Jackson do Pandeiro',[['Jackson do Pandeiro: o rei do ritmo','Fernando Moura e Antônio Vicente','8573262214'],['Jackson do Pandeiro: o ritmo na palma da mão','','6559274438']]],
+  ['A Perna Cabeluda','Perna Cabeluda Recife',[['Lendas urbanas de Pernambuco: a Perna Cabeluda em versos de cordel','','B0BC6R5272','',1]]]]},
+ {id:'ma',nome:'Maranhão',f:[
+  ['A Baronesa de Grajaú','Baronesa de Grajaú',[['O crime da Baronesa','José Eulálio Figueiredo de Almeida','8578626931','@kelhicristina'],['Geminiana e seus filhos','Maria Helena Machado e Alexandre Isidio Cardoso','6585984285'],['Autos do processo-crime da Baronesa de Grajaú, 1876-1877','','8598144177']]],
+  ['A Balaiada','Balaiada',[['A Balaiada','Maria de Lourdes Janotti','8511021167'],['De caboclos a bem-te-vis','Matthias Röhrig Assunção','8539106604'],['Balaiada, a revolta','Wilson Marques','8578261542']]]]},
+ {id:'brasil',nome:'O Nordeste na história do Brasil',f:[
+  ['A história do Supremo Tribunal Federal','história do Supremo Tribunal Federal',[['O Supremo Tribunal Federal e a construção da cidadania','Emília Viotti da Costa','8571396604'],['História do Supremo Tribunal Federal, volume 4','Leda Boechat Rodrigues','8520005845']]],
+  ['Natal, Parnamirim e o U-507','Brasil Segunda Guerra Mundial Natal',[['U-507: o submarino que afundou o Brasil na Segunda Guerra Mundial','Marcelo Monteiro','8580131219'],['Trampolim para a vitória','Clyde Smith Jr.','857273001X'],['O Brasil na mira de Hitler','Roberto Sander','8573028688']]],
+  ['Lito Sousa','aviação',[['Onde morrem os aviões','Lito Sousa','B07PNK4FKZ','',1]]]]}
+];
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function link(asin){return 'https://www.amazon.com.br/dp/'+asin+'?tag='+TAG}
+function linkAssunto(q){return 'https://www.amazon.com.br/s?k='+encodeURIComponent(q)+'&i=stripbooks&tag='+TAG}
+const lista=document.getElementById('lista'),tabs=document.getElementById('tabs'),busca=document.getElementById('busca'),vazio=document.getElementById('vazio');
+let atual='todas';
+function render(){
+ const q=busca.value.trim().toLowerCase();let total=0;lista.innerHTML='';
+ G.forEach(g=>{
+  if(atual!=='todas'&&atual!==g.id)return;
+  const fs=g.f.filter(x=>!q||JSON.stringify(x).toLowerCase().includes(q)||g.nome.toLowerCase().includes(q));
+  if(!fs.length)return;total+=fs.length;
+  const nl=fs.reduce((n,x)=>n+x[2].length,0);
+  const s=document.createElement('section');s.className='gaveta';
+  s.innerHTML='<h2>'+esc(g.nome)+' <span class="n">'+fs.length+(fs.length>1?' fichas':' ficha')+' · '+nl+(nl>1?' livros':' livro')+'</span></h2><div class="grid"></div>';
+  const grid=s.querySelector('.grid');
+  fs.forEach(([reel,assunto,livros])=>{
+   const d=document.createElement('article');d.className='ficha';
+   let h='<h3>'+esc(reel)+'</h3><ul class="livros">';
+   livros.forEach(([t,a,asin,ind,k])=>{
+    h+='<li><span><span class="lt">'+esc(t)+(k?' <span class="la" style="display:inline">· Kindle</span>':'')+'</span>'+(a?'<span class="la">'+esc(a)+'</span>':'')+(ind?'<span class="indic">Indicado por '+esc(ind)+'</span>':'')+
+     (EXTRA[t]?'<span class="la"><a href="'+EXTRA[t][1]+'" target="_blank" rel="noopener">'+esc(EXTRA[t][0])+'</a></span>':'')+
+     '</span><a class="mini" href="'+link(asin)+'" target="_blank" rel="noopener">Ver →</a></li>';
+   });
+   h+='</ul><a class="buy alt" href="'+linkAssunto(assunto)+'" target="_blank" rel="noopener">Todos os livros sobre '+esc(assunto)+'</a>';
+   d.innerHTML=h;grid.appendChild(d);
+  });
+  lista.appendChild(s);
+ });
+ vazio.hidden=total>0;
+}
+[{id:'todas',nome:'Todas'}].concat(G).forEach(g=>{
+ const b=document.createElement('button');b.className='tab';b.type='button';b.textContent=g.nome;b.setAttribute('aria-pressed',g.id==='todas');
+ b.onclick=()=>{atual=g.id;tabs.querySelectorAll('.tab').forEach(x=>x.setAttribute('aria-pressed',x===b));render()};tabs.appendChild(b);
+});
+busca.addEventListener('input',render);render();
+</script>
+
+</body>
+</html>
