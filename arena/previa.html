@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Central de Prévia Oficial — @oxe_eraassim</title>
+<link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@600;700;800;900&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;0,7..72,700;1,7..72,600&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --gold: #d49b35;
+    --gold-bright: #ffd166;
+    --rule: #8b1e19;
+    --rule-light: #c8433a;
+    --ink: #1f2a44;
+    --dark: #0e0a06;
+    --card: #fbf7ee;
+    --green: #25D366;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #080604;
+    font-family: 'Literata', Georgia, serif;
+    color: #f7f1e5;
+    padding: 16px;
+    display: flex;
+    justify-content: center;
+  }
+  .hub {
+    max-width: 1040px;
+    width: 100%;
+    background: linear-gradient(180deg, #18120c 0%, #0c0906 100%);
+    border: 2px solid var(--gold);
+    border-radius: 20px;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.9);
+    overflow: hidden;
+  }
+  /* Topbar Oficial */
+  .hub-header {
+    background: #110b06;
+    border-bottom: 2px solid #2a1c12;
+    padding: 14px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .hub-brand {
+    font-family: 'Zilla Slab', serif;
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: #fff;
+  }
+  .hub-brand b { color: var(--gold-bright); }
+  .hub-badge {
+    background: rgba(139, 30, 25, 0.4);
+    border: 1px solid var(--rule);
+    color: #fca5a5;
+    font-family: 'Courier Prime', monospace;
+    font-size: 0.72rem;
+    padding: 4px 10px;
+    border-radius: 99px;
+  }
+
+  /* Abas de Navegação Principal */
+  .hub-tabs {
+    display: flex;
+    background: #1e150d;
+    border-bottom: 2px solid var(--gold);
+    overflow-x: auto;
+  }
+  .hub-tab {
+    padding: 12px 18px;
+    background: transparent;
+    border: none;
+    color: #d1c4b2;
+    font-family: 'Zilla Slab', serif;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s;
+  }
+  .hub-tab.active {
+    background: #2b1d12;
+    color: var(--gold-bright);
+    border-bottom-color: var(--gold);
+  }
+
+  /* Conteúdo das Abas */
+  .tab-pane {
+    display: none;
+    padding: 24px 20px;
+  }
+  .tab-pane.active {
+    display: block;
+  }
+
+  /* 1. ABA ARENAS & MINIGAMES */
+  .arena-grid {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 20px;
+  }
+  @media (max-width: 800px) {
+    .arena-grid { grid-template-columns: 1fr; }
+  }
+  .arena-list {
+    display: grid;
+    gap: 8px;
+    max-height: 480px;
+    overflow-y: auto;
+    padding-right: 6px;
+  }
+  .arena-card {
+    background: #20170f;
+    border: 1px solid #3d2c1e;
+    border-left: 5px solid var(--gold);
+    border-radius: 8px;
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .arena-card.active, .arena-card:hover {
+    background: #2d1f14;
+    border-color: var(--gold);
+    transform: translateX(4px);
+  }
+  .arena-card .a-uf {
+    font-family: 'Courier Prime', monospace;
+    font-size: 0.72rem;
+    color: var(--gold-bright);
+  }
+  .arena-card .a-nome {
+    font-family: 'Zilla Slab', serif;
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: #fff;
+  }
+  .arena-card .a-sub {
+    font-size: 0.75rem;
+    color: #a89885;
+    margin-top: 2px;
+  }
+  .arena-stage-box {
+    background: #000;
+    border: 2px solid var(--gold);
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.8);
+    display: flex;
+    flex-direction: column;
+  }
+  .stage-cv {
+    width: 100%;
+    height: 320px;
+    display: block;
+  }
+  .stage-bar {
+    background: #140d07;
+    padding: 12px 16px;
+    border-top: 1px solid #332214;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .minigame-pill {
+    background: var(--rule);
+    color: #fff;
+    padding: 3px 10px;
+    border-radius: 99px;
+    font-family: 'Courier Prime', monospace;
+    font-size: 0.7rem;
+    font-weight: 700;
+  }
+
+  /* 2. ABA OXEDLE */
+  .oxedle-wrap {
+    max-width: 580px;
+    margin: 0 auto;
+    background: #18120b;
+    border: 2px solid #52b788;
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 16px 40px rgba(0,0,0,0.8);
+  }
+  .ox-head {
+    text-align: center;
+    margin-bottom: 16px;
+  }
+  .ox-head h2 {
+    font-family: 'Zilla Slab', serif;
+    font-size: 1.8rem;
+    color: #b7e4c7;
+  }
+  .ox-head p {
+    font-family: 'Courier Prime', monospace;
+    font-size: 0.78rem;
+    color: #74c69d;
+  }
+  .ox-quiz-box {
+    background: #231b12;
+    border-radius: 10px;
+    padding: 16px;
+    border: 1px solid #3d2f21;
+    margin-bottom: 16px;
+  }
+  .ox-q {
+    font-family: 'Zilla Slab', serif;
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin-bottom: 12px;
+    color: #fff;
+  }
+  .ox-opts {
+    display: grid;
+    gap: 8px;
+  }
+  .ox-opt {
+    background: #140e08;
+    border: 1px solid #4a3826;
+    color: #f7f1e5;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-family: 'Literata', serif;
+    font-size: 0.88rem;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.15s;
+  }
+  .ox-opt:hover {
+    background: #332416;
+    border-color: var(--gold);
+  }
+  .ox-share-result {
+    display: none;
+    background: #0d2818;
+    border: 1px solid #52b788;
+    border-radius: 10px;
+    padding: 16px;
+    text-align: center;
+  }
+  .ox-share-result.on { display: block; }
+  .btn-wa {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--green);
+    color: #042612;
+    font-family: 'Zilla Slab', serif;
+    font-size: 1rem;
+    font-weight: 800;
+    padding: 10px 18px;
+    border-radius: 8px;
+    text-decoration: none;
+    cursor: pointer;
+    border: none;
+    margin-top: 10px;
+  }
+
+  /* 3. ABA BUCHADA DE BODE */
+  .buchada-wrap {
+    max-width: 620px;
+    margin: 0 auto;
+    background: #260b11;
+    border: 2px dashed #f43f5e;
+    border-radius: 16px;
+    padding: 24px;
+    text-align: center;
+  }
+  .buchada-wrap h2 {
+    font-family: 'Zilla Slab', serif;
+    font-size: 2rem;
+    color: #fda4af;
+  }
+  .buchada-card {
+    background: #160408;
+    border: 2px solid #e11d48;
+    border-radius: 12px;
+    padding: 18px;
+    margin: 18px 0;
+    font-family: 'Courier Prime', monospace;
+    font-size: 0.82rem;
+    line-height: 1.5;
+    color: #ffe4e6;
+    text-align: left;
+  }
+
+  /* 4. ABA STORIES 9:16 */
+  .stories-flex {
+    display: flex;
+    gap: 24px;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .phone-mock {
+    width: 280px;
+    height: 497px; /* 9:16 */
+    border: 10px solid #2b2016;
+    border-radius: 32px;
+    overflow: hidden;
+    box-shadow: 0 16px 40px rgba(0,0,0,0.9), 0 0 0 2px var(--gold);
+    background: #000;
+  }
+  .phone-mock img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .stories-ctrls {
+    max-width: 380px;
+  }
+  .st-btn {
+    display: block;
+    width: 100%;
+    background: #20170f;
+    border: 1px solid #4a3826;
+    color: #fff;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-family: 'Zilla Slab', serif;
+    font-size: 0.92rem;
+    font-weight: 700;
+    cursor: pointer;
+    margin-bottom: 8px;
+    text-align: left;
+  }
+  .st-btn.active {
+    background: var(--gold);
+    color: #120e0a;
+    border-color: #fff;
+  }
+
+  /* 5. ABA COMPÊNDIO 2.000 FATOS */
+  .comp-search {
+    width: 100%;
+    background: #1a120a;
+    border: 1px solid var(--gold);
+    color: #fff;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-family: 'Literata', serif;
+    font-size: 0.9rem;
+    margin-bottom: 16px;
+    outline: none;
+  }
+  .comp-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    max-height: 460px;
+    overflow-y: auto;
+  }
+  @media (max-width: 760px) {
+    .comp-list { grid-template-columns: 1fr; }
+  }
+  .comp-item {
+    background: #1c150e;
+    border: 1px solid #3d2d1e;
+    border-left: 4px solid var(--rule);
+    padding: 12px;
+    border-radius: 6px;
+  }
+  .comp-item h4 {
+    font-family: 'Zilla Slab', serif;
+    font-size: 0.95rem;
+    color: var(--gold-bright);
+    margin-bottom: 4px;
+  }
+  .comp-item p {
+    font-size: 0.78rem;
+    color: #d1c4b2;
+    line-height: 1.35;
+    margin-bottom: 6px;
+  }
+  .comp-sources {
+    font-family: 'Courier Prime', monospace;
+    font-size: 0.65rem;
+    color: #8b7964;
+    background: #110c07;
+    padding: 4px 6px;
+    border-radius: 4px;
+  }
+</style>
+</head>
+<body>
+
+<div class="hub">
+  <!-- Topbar -->
+  <div class="hub-header">
+    <div class="hub-brand">MUSEU <b>OXE, ERA ASSIM?</b> — CENTRAL DE PRÉVIA</div>
+    <div class="hub-badge">★ PADRÃO OFICIAL 3 FONTES • VERSÃO 2.0</div>
+  </div>
+
+  <!-- Abas de Navegação -->
+  <div class="hub-tabs">
+    <button class="hub-tab active" onclick="openTab('arenas', this)">🏟️ 9 Arenas & Minigames</button>
+    <button class="hub-tab" onclick="openTab('oxedle', this)">🌵 Oxedle (Desafio Diário)</button>
+    <button class="hub-tab" onclick="openTab('buchada', this)">🐐 Duelo da Buchada</button>
+    <button class="hub-tab" onclick="openTab('stories', this)">📸 Stories 9:16 (4 Estilos)</button>
+    <button class="hub-tab" onclick="openTab('compendio', this)">📚 Compêndio dos 2.000 Fatos</button>
+  </div>
+
+  <!-- 1. ABA ARENAS & MINIGAMES -->
+  <div class="tab-pane active" id="pane-arenas">
+    <div class="arena-grid">
+      <div class="arena-list" id="arenaList"></div>
+      <div class="arena-stage-box">
+        <canvas id="stageCv" class="stage-cv" width="600" height="320"></canvas>
+        <div class="stage-bar">
+          <div>
+            <div style="font-family:'Zilla Slab',serif; font-size:1.15rem; font-weight:800; color:#fff;" id="stageTitle">Pedra do Ingá (PB)</div>
+            <div style="font-family:'Courier Prime',monospace; font-size:0.7rem; color:#d49b35;" id="stageSub">Cabo de guerra sobre a cacimba</div>
+          </div>
+          <div class="minigame-pill" id="stageMode">CABO DE GUERRA</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. ABA OXEDLE -->
+  <div class="tab-pane" id="pane-oxedle">
+    <div class="oxedle-wrap">
+      <div class="ox-head">
+        <h2>🌵 OXEDLE DO DIA #42</h2>
+        <p>Liberado pontualmente às 06h • 100% de Marcar X • Enigma do Sertão</p>
+      </div>
+
+      <div class="ox-quiz-box" id="oxQuiz">
+        <div style="font-family:'Courier Prime'; font-size:0.7rem; color:#52b788; margin-bottom:4px;">RODADA 1 DE 5 • SERTÃO DO PAJEÚ</div>
+        <div class="ox-q">Qual foi a única cidade nordestina que expulsou o bando de Lampião a tiros em 1927?</div>
+        <div class="ox-opts">
+          <button class="ox-opt" onclick="answerOxedle(true, this)">A) Mossoró (Rio Grande do Norte)</button>
+          <button class="ox-opt" onclick="answerOxedle(false, this)">B) Juazeiro do Norte (Ceará)</button>
+          <button class="ox-opt" onclick="answerOxedle(false, this)">C) Serra Talhada (Pernambuco)</button>
+          <button class="ox-opt" onclick="answerOxedle(false, this)">D) Piranhas (Alagoas)</button>
+        </div>
+      </div>
+
+      <div class="ox-share-result" id="oxResult">
+        <h3 style="font-family:'Zilla Slab'; font-size:1.4rem; color:#86efac; margin-bottom:4px;">PARABÉNS, CABRA DA PESTE! 🌵</h3>
+        <p style="font-size:0.85rem; color:#d8f3dc; margin-bottom:12px;">Você acertou o Oxedle de hoje sem consultar os livros!</p>
+        <div style="background:#081c15; padding:10px; border-radius:6px; font-family:'Courier Prime'; font-size:0.8rem; color:#a7f3d0; margin-bottom:12px; line-height:1.4;">
+          OXEDLE DO DIA #42 🌵<br>
+          🌵🌵☀️🪨🌵 (4/5)<br>
+          🔥 Sequência: 12 dias de aboio<br>
+          Duvido você bater: oxeeraassim.github.io
+        </div>
+        <button class="btn-wa" onclick="alert('Bloco de emojis copiado para a área de transferência! Cole no seu grupo do WhatsApp.')">
+          📲 Copiar e Mandar no Zap
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. ABA DUELO DA BUCHADA -->
+  <div class="tab-pane" id="pane-buchada">
+    <div class="buchada-wrap">
+      <h2>🐐 O DUELO DA BUCHADA DE BODE</h2>
+      <p style="font-family:'Courier Prime'; font-size:0.8rem; color:#fda4af; margin-top:4px;">Aposta de honra entre amigos no WhatsApp. Quem fizer menos pontos paga a refeição de domingo!</p>
+
+      <div class="buchada-card">
+        <b>MENSAGEM PRÉ-FORMATADA DO DESAFIO:</b><br><br>
+        <i>"🌵 *DESAFIO DA BUCHADA DO OXE* 🌵<br>
+        Acabei de fazer *4.850 pontos* defendendo Pernambuco sem errar!<br>
+        Topa o duelo? *Quem fizer menos pontos paga a buchada no domingo!* 🐐<br>
+        👉 oxeeraassim.github.io?duelo=buchada&rival=@joao_sertao"</i>
+      </div>
+
+      <div style="background:#160408; border-radius:10px; padding:16px; border:1px solid #9f1239; margin-bottom:16px;">
+        <div style="font-family:'Zilla Slab'; font-size:1.15rem; color:#f43f5e; font-weight:700;">SELO OFICIAL DO PERDEDOR:</div>
+        <div style="display:inline-block; border:3px solid #f43f5e; color:#f43f5e; font-family:'Courier Prime'; font-weight:800; font-size:1.1rem; padding:8px 16px; border-radius:8px; transform:rotate(-4deg); margin-top:8px;">
+          [ DEVE UMA BUCHADA DE BODE 🐐 ]
+        </div>
+      </div>
+
+      <button class="btn-wa" style="background:#f43f5e; color:#fff;" onclick="alert('Link do duelo gerado! Aberto no WhatsApp.')">
+        📲 Criar Duelo da Buchada no WhatsApp
+      </button>
+    </div>
+  </div>
+
+  <!-- 4. ABA STORIES 9:16 -->
+  <div class="tab-pane" id="pane-stories">
+    <div class="stories-flex">
+      <div class="phone-mock">
+        <img id="stMockImg" src="" alt="Story 9:16">
+      </div>
+      <div class="stories-ctrls">
+        <h3 style="font-family:'Zilla Slab'; font-size:1.4rem; color:var(--gold-bright); margin-bottom:8px;">Selecione o Estilo do Card:</h3>
+        <p style="font-size:0.8rem; color:#d1c4b2; margin-bottom:14px; line-height:1.4;">
+          Cards gerados em 1080x1920 nativo com safe zones para os Stories do Instagram.
+        </p>
+        <button class="st-btn active" onclick="previewStoryStyle('dossie', this)">📜 1. Dossiê Histórico Oficial</button>
+        <button class="st-btn" onclick="previewStoryStyle('duelo', this)">⚔️ 2. Duelo de Titãs (Procura-se)</button>
+        <button class="st-btn" onclick="previewStoryStyle('insolito', this)">👁️ 3. Reel Viral (Você Jurava Que Era Assim)</button>
+        <button class="st-btn" onclick="previewStoryStyle('laudo', this)">🏛️ 4. Laudo Pericial do Museu (Patente Raiz)</button>
+        
+        <a id="btnDlDirect" class="btn-wa" style="display:block; text-align:center; margin-top:14px; text-decoration:none;" download="story_oxe_hd.png">
+          📥 Baixar Card HD (1080x1920)
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. ABA COMPÊNDIO 2.000 FATOS -->
+  <div class="tab-pane" id="pane-compendio">
+    <input type="text" class="comp-search" id="compSearch" placeholder="🔍 Pesquise por tema, personagem, cidade ou fonte (ex: Lampião, Sobral, Nise, Alagoas...)" oninput="filterCompendio()">
+    <div style="font-family:'Courier Prime'; font-size:0.72rem; color:var(--gold); margin-bottom:12px;" id="compCount">
+      Exibindo 2.000 fatos históricos comprovados por 3 fontes independentes
+    </div>
+    <div class="comp-list" id="compList"></div>
+  </div>
+</div>
+
+<canvas id="hiddenStoryCv" width="1080" height="1920" style="display:none;"></canvas>
+
+<script>
+// Polyfill universal roundRect
+if (!CanvasRenderingContext2D.prototype.roundRect) {
+  CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+    if (!r) r = 0;
+    r = Math.min(r, Math.abs(w)/2, Math.abs(h)/2);
+    this.beginPath();
+    this.moveTo(x + r, y);
+    this.lineTo(x + w - r, y);
+    this.quadraticCurveTo(x + w, y, x + w, y + r);
+    this.lineTo(x + w, y + h - r);
+    this.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    this.lineTo(x + r, y + h);
+    this.quadraticCurveTo(x, y + h, x, y + h - r);
+    this.lineTo(x, y + r);
+    this.quadraticCurveTo(x, y, x + r, y);
+    this.closePath();
+    return this;
+  };
+}
+
+// 1. Dados das 9 Arenas
+const ARENAS_DATA = [
+  { id:0, uf:'PB', nome:'Pedra do Ingá', sub:'Cabo de guerra sobre a cacimba rupestre', mode:'CABO DE GUERRA', color:'#e67e22', draw: drawCaboGuerra },
+  { id:1, uf:'PE', nome:'Rua do Bom Jesus', sub:'Corrida de jegue pelo Recife Antigo colonial', mode:'CORRIDA DE JEGUE', color:'#3498db', draw: drawCorridaJegue },
+  { id:2, uf:'AL', nome:'Angiquinho', sub:'Pau de sebo na beira do Cânion do São Francisco', mode:'PAU DE SEBO', color:'#1abc9c', draw: drawPauSebo },
+  { id:3, uf:'RN', nome:'Mossoró, 1927', sub:'Cabo de guerra na trincheira contra Lampião', mode:'CABO DE GUERRA', color:'#d35400', draw: drawCaboGuerra },
+  { id:4, uf:'CE', nome:'Céu de Sobral', sub:'Corrida sob a escuridão do eclipse de Einstein (1919)', mode:'CORRIDA DE JEGUE', color:'#9b59b6', draw: drawCorridaJegue },
+  { id:5, uf:'PI', nome:'Serra da Capivara', sub:'Pau de sebo diante dos paredões de arte rupestre', mode:'PAU DE SEBO', color:'#c0392b', draw: drawPauSebo },
+  { id:6, uf:'MA', nome:'Arraial do Boi', sub:'Cabo de guerra na festa de São João de São Luís', mode:'CABO DE GUERRA', color:'#f39c12', draw: drawCaboGuerra },
+  { id:7, uf:'SE', nome:'Praça São Francisco', sub:'Corrida veloz pelo patrimônio de São Cristóvão', mode:'CORRIDA DE JEGUE', color:'#2ecc71', draw: drawCorridaJegue },
+  { id:8, uf:'BA', nome:'Final: Salvador', sub:'Quebra-pote: a botija de ouro ou carvão no Pelourinho', mode:'QUEBRA-POTE', color:'#e74c3c', draw: drawQuebraPote }
+];
+
+let currentArenaIdx = 0;
+let animTimer = null;
+
+function renderArenaList() {
+  const list = document.getElementById('arenaList');
+  list.innerHTML = ARENAS_DATA.map((a, i) => `
+    <div class="arena-card ${i === currentArenaIdx ? 'active' : ''}" onclick="selectArena(${i})">
+      <div class="a-uf">${a.uf} • ${a.mode}</div>
+      <div class="a-nome">${a.nome}</div>
+      <div class="a-sub">${a.sub}</div>
+    </div>
+  `).join('');
+}
+
+function selectArena(idx) {
+  currentArenaIdx = idx;
+  renderArenaList();
+  const a = ARENAS_DATA[idx];
+  document.getElementById('stageTitle').textContent = `${a.nome} (${a.uf})`;
+  document.getElementById('stageSub').textContent = a.sub;
+  document.getElementById('stageMode').textContent = a.mode;
+  startArenaAnimation();
+}
+
+function startArenaAnimation() {
+  if (animTimer) cancelAnimationFrame(animTimer);
+  const cv = document.getElementById('stageCv');
+  const ctx = cv.getContext('2d');
+  let frame = 0;
+
+  function loop() {
+    frame++;
+    ctx.clearRect(0, 0, 600, 320);
+    ARENAS_DATA[currentArenaIdx].draw(ctx, 600, 320, frame);
+    animTimer = requestAnimationFrame(loop);
+  }
+  loop();
+}
+
+// Funções de desenho dos minigames em Canvas
+function drawCaboGuerra(ctx, w, h, f) {
+  // Cenário Terra e Sol
+  const bg = ctx.createLinearGradient(0, 0, 0, h);
+  bg.addColorStop(0, '#3a1f10'); bg.addColorStop(0.7, '#8b4513'); bg.addColorStop(1, '#24140a');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, w, h);
+
+  // Sol do sertão
+  ctx.fillStyle = 'rgba(255, 209, 102, 0.25)';
+  ctx.beginPath(); ctx.arc(w / 2, 80, 70, 0, Math.PI * 2); ctx.fill();
+
+  // Chão de terra
+  ctx.fillStyle = '#5c3317'; ctx.fillRect(0, 240, w, 80);
+
+  // Corda com nó oscilando
+  const offset = Math.sin(f * 0.08) * 35;
+  ctx.strokeStyle = '#d49b35'; ctx.lineWidth = 8;
+  ctx.beginPath(); ctx.moveTo(60, 210); ctx.lineTo(w - 60, 210); ctx.stroke();
+
+  // Fita vermelha no centro
+  ctx.fillStyle = '#c8433a';
+  ctx.fillRect(w / 2 + offset - 12, 190, 24, 40);
+
+  // Jogador 1 (Você)
+  ctx.fillStyle = '#2f7d4f'; ctx.beginPath(); ctx.arc(100, 190, 22, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#ffd166'; ctx.font = '700 14px "Courier Prime"'; ctx.fillText('VOCÊ', 80, 155);
+
+  // Rival
+  ctx.fillStyle = '#c8433a'; ctx.beginPath(); ctx.arc(w - 100, 190, 22, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#fca5a5'; ctx.fillText('RIVAL', w - 120, 155);
+}
+
+function drawCorridaJegue(ctx, w, h, f) {
+  const bg = ctx.createLinearGradient(0, 0, 0, h);
+  bg.addColorStop(0, '#102a43'); bg.addColorStop(0.6, '#243b53'); bg.addColorStop(1, '#0b1622');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, w, h);
+
+  // Pista de paralelepípedo
+  ctx.fillStyle = '#334e68'; ctx.fillRect(0, 220, w, 100);
+
+  // Jegue do Jogador
+  const posMe = (f * 4) % (w + 100) - 50;
+  ctx.fillStyle = '#d49b35'; ctx.fillRect(posMe, 180, 50, 30);
+  ctx.fillRect(posMe + 35, 160, 20, 25);
+  ctx.fillStyle = '#fff'; ctx.font = '700 12px "Courier Prime"'; ctx.fillText('JEGUE 1', posMe, 150);
+
+  // Jegue do Rival
+  const posBot = ((f * 3.6) + 60) % (w + 100) - 50;
+  ctx.fillStyle = '#c8433a'; ctx.fillRect(posBot, 240, 50, 30);
+  ctx.fillRect(posBot + 35, 220, 20, 25);
+}
+
+function drawPauSebo(ctx, w, h, f) {
+  const bg = ctx.createLinearGradient(0, 0, 0, h);
+  bg.addColorStop(0, '#1b3b2b'); bg.addColorStop(1, '#081710');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, w, h);
+
+  // Pau de sebo central
+  ctx.fillStyle = '#8b5a2b'; ctx.fillRect(w / 2 - 12, 40, 24, 280);
+
+  // Nota de R$ 100 / Prêmio no topo
+  ctx.fillStyle = '#ffd166'; ctx.fillRect(w / 2 - 30, 25, 60, 20);
+  ctx.fillStyle = '#111'; ctx.font = '800 12px "Courier Prime"'; ctx.fillText('RÉIS', w / 2 - 16, 39);
+
+  // Personagem subindo e escorregando
+  const climb = 240 - Math.abs(Math.sin(f * 0.05)) * 160;
+  ctx.fillStyle = '#ffd166'; ctx.beginPath(); ctx.arc(w / 2, climb, 18, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.font = '700 12px "Courier Prime"'; ctx.fillText('SUBINDO...', w / 2 + 25, climb);
+}
+
+function drawQuebraPote(ctx, w, h, f) {
+  const bg = ctx.createLinearGradient(0, 0, 0, h);
+  bg.addColorStop(0, '#2c0b0e'); bg.addColorStop(1, '#0f0405');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, w, h);
+
+  // Pote de barro pendurado
+  const swing = Math.sin(f * 0.06) * 40;
+  ctx.strokeStyle = '#d49b35'; ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.moveTo(w / 2, 0); ctx.lineTo(w / 2 + swing, 120); ctx.stroke();
+
+  // Pote
+  ctx.fillStyle = '#b75b28';
+  ctx.beginPath(); ctx.arc(w / 2 + swing, 140, 32, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#ffd166'; ctx.font = '700 12px "Courier Prime"'; ctx.fillText('BOTIJA?', w / 2 + swing - 24, 144);
+
+  // Jogador de venda nos olhos com porrete
+  ctx.fillStyle = '#ffd166'; ctx.beginPath(); ctx.arc(140, 220, 24, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#c8433a'; ctx.fillRect(130, 215, 26, 8); // venda
+}
+
+// 2. Navegação entre Abas
+function openTab(tabKey, btn) {
+  document.querySelectorAll('.hub-tab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('pane-' + tabKey).classList.add('active');
+  if (tabKey === 'arenas') startArenaAnimation();
+  if (tabKey === 'stories') previewStoryStyle('dossie');
+}
+
+// 3. Mecânica do Oxedle
+function answerOxedle(isRight, btn) {
+  if (isRight) {
+    btn.style.background = '#15803d';
+    document.getElementById('oxQuiz').style.display = 'none';
+    document.getElementById('oxResult').classList.add('on');
+  } else {
+    btn.style.background = '#b91c1c';
+    alert('Vixe! Errou! Tente de novo, visse?');
+  }
+}
+
+// 4. Mecânica do Gerador de Stories
+function previewStoryStyle(styleKey, btn) {
+  if (btn) {
+    document.querySelectorAll('.st-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+  const cv = document.getElementById('hiddenStoryCv');
+  const ctx = cv.getContext('2d');
+  const w = 1080, h = 1920;
+
+  // Fundo
+  ctx.fillStyle = '#120d08'; ctx.fillRect(0, 0, w, h);
+
+  // Borda cordel
+  ctx.strokeStyle = '#d49b35'; ctx.lineWidth = 14; ctx.strokeRect(40, 40, w - 80, h - 80);
+  ctx.strokeStyle = '#8b1e19'; ctx.lineWidth = 4; ctx.strokeRect(58, 58, w - 116, h - 116);
+
+  ctx.fillStyle = '#fff'; ctx.font = '800 40px "Zilla Slab"'; ctx.textAlign = 'center';
+  ctx.fillText('MUSEU OXE, ERA ASSIM? • OFICIAL', w / 2, 160);
+
+  if (styleKey === 'laudo') {
+    ctx.fillStyle = '#8b1e19'; ctx.fillRect(100, 230, w - 200, 80);
+    ctx.fillStyle = '#fff'; ctx.font = '800 44px "Zilla Slab"'; ctx.fillText('CERTIDÃO PERICIAL DE NORDESTINIDADE', w / 2, 285);
+    ctx.fillStyle = '#fbf7ee'; ctx.beginPath(); ctx.roundRect(100, 350, w - 200, 1150, 20); ctx.fill();
+    ctx.fillStyle = '#1b140e'; ctx.font = '800 52px "Zilla Slab"'; ctx.fillText('@joao_sertao', w / 2, 500);
+    ctx.fillStyle = '#8b1e19'; ctx.font = '900 86px "Zilla Slab"'; ctx.fillText('94% RAIZ', w / 2, 630);
+    ctx.fillStyle = '#6b4c2a'; ctx.font = '700 36px "Courier Prime"'; ctx.fillText('CABRA DA PESTE CERTIFICADO 🌵', w / 2, 700);
+    ctx.fillStyle = '#1b140e'; ctx.font = '700 28px "Literata"'; ctx.fillText('Autenticado pelo Dr. Mané do Arquivo • 3 Fontes', w / 2, 850);
+  } else if (styleKey === 'duelo') {
+    ctx.fillStyle = '#c8433a'; ctx.fillRect(100, 230, w - 200, 80);
+    ctx.fillStyle = '#fff'; ctx.font = '900 48px "Zilla Slab"'; ctx.fillText('PROCURA-SE DESAFIANTE!', w / 2, 285);
+    ctx.fillStyle = '#fdf8ef'; ctx.beginPath(); ctx.roundRect(100, 350, w - 200, 1150, 20); ctx.fill();
+    ctx.fillStyle = '#1c1510'; ctx.font = '900 64px "Zilla Slab"'; ctx.fillText('4.850 PONTOS', w / 2, 520);
+    ctx.fillStyle = '#8b1e19'; ctx.font = '700 36px "Courier Prime"'; ctx.fillText('VAI CORRER OU VAI PEITAR? ⚔️', w / 2, 620);
+  } else if (styleKey === 'insolito') {
+    ctx.fillStyle = '#ffd166'; ctx.font = '900 50px "Zilla Slab"'; ctx.fillText('VOCÊ JURAVA QUE ERA ASSIM.', w / 2, 260);
+    ctx.fillStyle = '#ff4d4d'; ctx.fillText('MAS NÃO ERA.', w / 2, 320);
+    ctx.fillStyle = 'rgba(25,23,20,0.95)'; ctx.beginPath(); ctx.roundRect(100, 360, w - 200, 1140, 20); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.font = '800 42px "Literata"'; ctx.fillText('“O mistério que não contam nos livros”', w / 2, 540);
+  } else {
+    ctx.fillStyle = '#8b1e19'; ctx.fillRect(100, 230, w - 200, 80);
+    ctx.fillStyle = '#fff'; ctx.font = '800 40px "Zilla Slab"'; ctx.fillText('LAUDO PERICIAL HISTÓRICO Nº 1927', w / 2, 285);
+    ctx.fillStyle = '#f9f5ec'; ctx.beginPath(); ctx.roundRect(100, 350, w - 200, 1150, 20); ctx.fill();
+    ctx.fillStyle = '#8b1e19'; ctx.font = '900 84px "Zilla Slab"'; ctx.fillText('4.850 PTS', w / 2, 520);
+    ctx.fillStyle = '#1b140e'; ctx.font = '700 28px "Courier Prime"'; ctx.fillText('PATENTE: CORONEL DO ACERVO', w / 2, 600);
+  }
+
+  const url = cv.toDataURL('image/png');
+  document.getElementById('stMockImg').src = url;
+  document.getElementById('btnDlDirect').href = url;
+}
+
+// 5. Compêndio de 2.000 Fatos (Amostra de Busca em Tempo Real)
+const COMP_SAMPLES = [
+  { id:'OXE-0001', uf:'RN', cat:'CANGAÇO', t:'A Batalha de Mossoró e a Derrota de Lampião em 1927', f:'Lampião exigiu 400 contos para não queimar a cidade; os moradores pegaram em armas e o expulsaram a tiros.', s:'Coleção Mossoroense • IHGB • O Mossoroense (1927)' },
+  { id:'OXE-0002', uf:'CE', cat:'CIÊNCIA', t:'O Eclipse de Sobral e a Fama Mundial de Einstein em 1919', f:'Astrônomos britânicos comprovaram a deflexão da luz no Ceará tornando a Relatividade Geral famosa no mundo.', s:'Royal Astronomical Society • Revista do Instituto do Ceará • The Times' },
+  { id:'OXE-0003', uf:'AL', cat:'MEDICINA', t:'Nise da Silveira e a Revolução das Imagens do Inconsciente', f:'Presa por Vargas em 1936, recusou o eletrochoque e provou que a arte cura sofrimentos mentais.', s:'Museu de Imagens do Inconsciente • Arquivo Público de Alagoas • Fiocruz' },
+  { id:'OXE-0004', uf:'PI', cat:'DIREITO', t:'A Petição de Esperança Garcia em 1770', f:'Primeira advogada do Brasil, escravizada que redigiu petição jurídica denunciando abusos ao governador.', s:'OAB Nacional • Arquivo Público do Piauí • Conselho Estadual de Cultura' },
+  { id:'OXE-0005', uf:'BA', cat:'MULHERES', t:'Maria Felipa e a Queima dos Barcos Lusitanos em 1823', f:'Marisqueira de Itaparica que liderou mulheres armadas com folhas de cansanção incendiando mais de 40 caravelas.', s:'Teses UFBA • Instituto Geográfico e Histórico da Bahia • Diário da Bahia' },
+  { id:'OXE-0006', uf:'MA', cat:'LENDAS', t:'A Serpente Encantada sob a Ilha de São Luís', f:'A lenda do monstro subterrâneo nasceu das galerias jesuíticas e francesas de pedra para drenar marés.', s:'Biblioteca Benedito Leite • Iphan Maranhão • Revista Maranhense de Letras' },
+  { id:'OXE-0007', uf:'PE', cat:'REVOLTAS', t:'A Confederação do Equador e a Morte de Frei Caneca em 1824', f:'República que uniu PE, CE, PB e RN; carrascos se recusaram a enforcar o frei, que acabou fuzilado.', s:'Arquivo Público Estadual Jordão Emerenciano • Anais do Império • Fundaj' },
+  { id:'OXE-0008', uf:'PB', cat:'CIDADES', t:'O Vale dos Dinossauros em Sousa', f:'Pegadas fossilizadas de iguanodontes e saurópodes preservadas há 130 milhões de anos descobertas por sertanejos.', s:'UFPB Geologia • Iphan • Revista Brasileira de Paleontologia' }
+];
+
+function filterCompendio() {
+  const query = document.getElementById('compSearch').value.toLowerCase();
+  const list = document.getElementById('compList');
+  const filtered = COMP_SAMPLES.filter(item => 
+    item.t.toLowerCase().includes(query) || 
+    item.f.toLowerCase().includes(query) || 
+    item.uf.toLowerCase().includes(query) ||
+    item.s.toLowerCase().includes(query)
+  );
+
+  list.innerHTML = filtered.map(item => `
+    <div class="comp-item">
+      <div style="font-family:'Courier Prime'; font-size:0.68rem; color:#8b1e19; font-weight:bold;">${item.id} • ${item.uf} • ${item.cat}</div>
+      <h4>${item.t}</h4>
+      <p>${item.f}</p>
+      <div class="comp-sources"><b>3 FONTES:</b> ${item.s}</div>
+    </div>
+  `).join('');
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  renderArenaList();
+  selectArena(0);
+  filterCompendio();
+});
+</script>
+</body>
+</html>
