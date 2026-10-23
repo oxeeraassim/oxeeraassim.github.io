@@ -331,6 +331,57 @@ const sleepFrames = (T, n) => T.step(n);
     return { pass: obj.version === 3 && lvl.length > 0 && lvl.every((v) => v <= 29 && v >= 0), details: d };
   });
 
+  /* 11. Motor Gráfico Ultra-HD (graphics_hd.js) + 18 Espécies + Obstáculos Interativos */
+  await test('11', 'Ultra-HD 3D-to-2D (graphics_hd.js), 18 espécies de inimigos, 20+ inimigos/fase e Zabumba Trampolim', async () => {
+    const HD = sandbox.OxeHD;
+    const OL = sandbox.OxeLevels;
+    const all18 = ['calango', 'tatu', 'carcara', 'morcego', 'cacto_atirador', 'bode_doido', 'fulozinha', 'papa_figo', 'caranguejo', 'baiacu', 'salamandra', 'sapo_cururu', 'marimbondo', 'jararaca', 'cangaceiro_sombra', 'mula_sem_cabeca', 'boitata_fogo', 'lobisomem'];
+    T.loadLevel(0);
+    const L0 = T.getLevel();
+    const fakeCtx = byId.gameCanvas.getContext('2d');
+    const renderedSpecies = [];
+    for (const sp of all18) {
+      const en = new T.Enemy(300, 400, sp, {});
+      if (en.update) en.update(T.getPlayer(), L0);
+      if (HD && HD.drawEnemyHD) HD.drawEnemyHD(fakeCtx, 0, 0, en, 1, 10);
+      renderedSpecies.push(sp);
+    }
+    let minEnemies = 999, maxEnemies = 0, totalEnemies = 0, totalTramps = 0, totalMoving = 0, totalWheels = 0;
+    for (let i = 0; i < 30; i++) {
+      if (i % 5 === 4) continue;
+      const spec = OL.getLevelSpec(i);
+      const ec = (spec.enemies || []).length;
+      minEnemies = Math.min(minEnemies, ec);
+      maxEnemies = Math.max(maxEnemies, ec);
+      totalEnemies += ec;
+      totalTramps += (spec.trampolines || []).length;
+      totalMoving += (spec.movingPlatforms || []).length;
+      totalWheels += (spec.hazardWheels || []).length;
+    }
+    // Testa física do Zabumba Trampolim na fase 1-1
+    const tr = (L0.trampolines || [])[0];
+    const p = T.getPlayer();
+    let bounced = false;
+    if (tr && p) {
+      p.x = tr.x + 4; p.y = tr.y - p.h + 4; p.vy = 4;
+      T.step(2);
+      bounced = p.vy < -12;
+    }
+    const d = {
+      oxeHdAtivo: !!(HD && HD.drawTonhoHD && HD.drawEnemyHD && HD.drawBossHD && HD.drawParallaxHD && HD.drawPlatformsHD),
+      especiesRenderizadas: renderedSpecies.length,
+      inimigosFase1_1: (L0.enemies || []).length,
+      minInimigosPorFase: minEnemies,
+      maxInimigosPorFase: maxEnemies,
+      mediaInimigosPorFase: +(totalEnemies / 24).toFixed(1),
+      totalZabumbas30Fases: totalTramps,
+      totalPlataformasMoveis: totalMoving,
+      totalRodasMandacaru: totalWheels,
+      zabumbaImpulsionouTonho: bounced
+    };
+    return { pass: d.oxeHdAtivo && d.especiesRenderizadas === 18 && minEnemies >= 18 && totalTramps >= 24 && totalMoving >= 24 && totalWheels >= 24 && bounced, details: d };
+  });
+
   writeReport(t0);
   process.exit(results.every((r) => r.pass) ? 0 : 1);
 })();

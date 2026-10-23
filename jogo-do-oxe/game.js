@@ -13,10 +13,14 @@ if (typeof CanvasRenderingContext2D !== 'undefined' && !CanvasRenderingContext2D
 }
 
 function resizeCanvas() {
-  canvas.width = CANVAS_W; canvas.height = CANVAS_H;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = Math.round(CANVAS_W * dpr); canvas.height = Math.round(CANVAS_H * dpr);
+  if (canvas.dataset) canvas.dataset.dpr = String(dpr);
   const s = Math.min(window.innerWidth / CANVAS_W, window.innerHeight / CANVAS_H);
   canvas.style.width = Math.floor(CANVAS_W * s) + 'px'; canvas.style.height = Math.floor(CANVAS_H * s) + 'px';
-  ctx.imageSmoothingEnabled = false;
+  if (ctx.setTransform) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
 }
 window.addEventListener('resize', resizeCanvas); window.addEventListener('orientationchange', resizeCanvas); resizeCanvas();
 
@@ -271,7 +275,8 @@ class Tonho {
       this.vy = -12.3; this.onGround = false; this.coyote = 0; this.jumpBuffer = 0;
       sfx('jump'); spawnDust(this.x + this.w / 2, this.y + this.h, 5);
     }
-    if (!keys.jump && this.vy < -3) this.vy *= 0.6; // pulo variável
+    if (this.trampolineTimer > 0) this.trampolineTimer--;
+    if (!keys.jump && this.vy < -3 && !(this.trampolineTimer > 0)) this.vy *= 0.6; // pulo variável
 
     this.vy += GRAVITY;
     this.gliding = keys.glide && keys.jump && this.vy > 0 && !this.onGround;
@@ -366,6 +371,10 @@ class Tonho {
   draw(ctx, camX, camY) {
     if (this.dead) return;
     if (this.invuln > 0 && Math.floor(this.invuln / 4) % 2 === 0) return;
+    if (typeof window !== 'undefined' && window.OxeHD && window.OxeHD.drawTonhoHD) {
+      window.OxeHD.drawTonhoHD(ctx, camX, camY, this, renderAlpha, frameCount);
+      return;
+    }
     const rx = lerp(this.prevX, this.x, renderAlpha) - camX, ry = lerp(this.prevY, this.y, renderAlpha) - camY;
     const cx = rx + this.w / 2, feet = ry + this.h;
     // sombra
@@ -412,14 +421,21 @@ class Tonho {
 }
 
 // ==================== INIMIGOS ====================
-const ENEMY_DEF = {
+const ENEMY_DEF = Object.assign({
   calango: { w: 32, h: 20, hp: 1, spd: 1.2, color: '#82C91E' }, tatu: { w: 32, h: 24, hp: 2, spd: 0.9, color: '#A68A64' },
   carcara: { w: 36, h: 24, hp: 1, spd: 1.6, color: '#5C4033', fly: true }, morcego: { w: 26, h: 18, hp: 1, spd: 1.4, color: '#5F3DC4', fly: true },
   cacto_atirador: { w: 28, h: 40, hp: 2, spd: 0, color: '#2B8A3E' }, bode_doido: { w: 40, h: 32, hp: 3, spd: 0.8, color: '#DEE2E6' },
   fulozinha: { w: 24, h: 30, hp: 2, spd: 1.2, color: '#20C997', fly: true }, papa_figo: { w: 32, h: 42, hp: 3, spd: 0.9, color: '#495057' },
   caranguejo: { w: 34, h: 22, hp: 2, spd: 1.1, color: '#FA5252' }, baiacu: { w: 30, h: 30, hp: 2, spd: 0.6, color: '#FAB005', fly: true },
-  salamandra: { w: 34, h: 18, hp: 2, spd: 1.5, color: '#FD7E14' }
-};
+  salamandra: { w: 34, h: 18, hp: 2, spd: 1.5, color: '#FD7E14' },
+  sapo_cururu: { w: 38, h: 32, hp: 2, spd: 1.0, color: '#40C057' },
+  marimbondo: { w: 32, h: 28, hp: 1, spd: 1.8, color: '#FAB005', fly: true },
+  jararaca: { w: 36, h: 28, hp: 2, spd: 1.3, color: '#E03131' },
+  cangaceiro_sombra: { w: 36, h: 44, hp: 3, spd: 1.1, color: '#845EF7' },
+  mula_sem_cabeca: { w: 46, h: 40, hp: 3, spd: 2.2, color: '#FF6B6B' },
+  boitata_fogo: { w: 40, h: 26, hp: 2, spd: 1.6, color: '#FFD43B', fly: true },
+  lobisomem: { w: 40, h: 44, hp: 3, spd: 1.9, color: '#495057' }
+}, (typeof window !== 'undefined' && window.OxeHD && window.OxeHD.ENEMY_DEF_HD) || {});
 class Enemy {
   constructor(a, b, c = "calango", opts = {}) {
     const type = typeof a === "number" ? c : a;
@@ -472,6 +488,11 @@ class Enemy {
       case 'cacto_atirador': this.physics(); this.facing = Math.sign(dx) || -1;
         if (this.timer % 120 === 0 && Math.abs(dx) < 420 && Math.abs(dy) < 200) { sfx('spine'); for (let i = -1; i <= 1; i++) projectiles.push(new Projectile(this.x + this.w / 2, this.y + 10, Math.sign(dx) * 3.4, -2.4 + i * 1.2, 'spine', { gravity: 0.08 })); } break;
       case 'bode_doido': this.updateBode(dx, dy); break;
+      default:
+        if (typeof window !== 'undefined' && window.OxeHD && window.OxeHD.updateNewEnemy) {
+          window.OxeHD.updateNewEnemy(this, player, currentLevel, { GRAVITY, MAX_FALL_SPEED, getPlatforms, checkAABB, clamp, sfx, spawnDust, spawnSparks, Projectile, projectiles });
+        } else { this.physics(); this.walk(this.speed); }
+        break;
     }
   }
   updateBode(dx, dy) {
@@ -514,6 +535,10 @@ class Enemy {
   }
   draw(ctx, camX, camY) {
     if (this.dead) return;
+    if (typeof window !== 'undefined' && window.OxeHD && window.OxeHD.drawEnemyHD) {
+      window.OxeHD.drawEnemyHD(ctx, camX, camY, this, renderAlpha, frameCount);
+      return;
+    }
     const x = lerp(this.prevX, this.x, renderAlpha) - camX, y = lerp(this.prevY, this.y, renderAlpha) - camY, w = this.w, h = this.h;
     if (x + w < -50 || x > CANVAS_W + 50) return;
     ctx.fillStyle = 'rgba(0,0,0,0.2)'; ctx.beginPath(); ctx.ellipse(x + w / 2, this.fly ? y + h + 22 : y + h, w * 0.45, 4, 0, 0, Math.PI * 2); ctx.fill();
@@ -625,6 +650,10 @@ class BossBase {
   draw(ctx, camX, camY) {
     if (this.dead && this.deathTimer <= 0) return;
     if (this.invuln > 0 && Math.floor(this.invuln / 3) % 2 === 0 && !this.dead) return;
+    if (typeof window !== 'undefined' && window.OxeHD && window.OxeHD.drawBossHD) {
+      window.OxeHD.drawBossHD(ctx, camX, camY, this, renderAlpha, frameCount);
+      return;
+    }
     const x = lerp(this.prevX, this.x, renderAlpha) - camX, y = lerp(this.prevY, this.y, renderAlpha) - camY;
     this.drawShadow(ctx, x, y);
     ctx.save(); if (this.dead) ctx.globalAlpha = this.deathTimer / 120;
@@ -1174,6 +1203,9 @@ function drawBossGuide(ctx, boss, camX, camY) {
         if (typeof damagePlayer === 'function') damagePlayer(1); else { health--; tookDamageThisRun = true; player.invulnTimer = 60; }
       }
     }
+    if (typeof window !== 'undefined' && window.OxeHD && window.OxeHD.updateObstacles) {
+      window.OxeHD.updateObstacles(L, player, keys, { GRAVITY, MAX_FALL_SPEED, getPlatforms, checkAABB, clamp, sfx, spawnDust, spawnSparks, floatText });
+    }
   }
 
   // ===================== CONSTRUÇÃO DE FASE =====================
@@ -1191,9 +1223,13 @@ function drawBossGuide(ctx, boss, camX, camY) {
       signs: arr(spec.signs).map((s) => Object.assign({}, s)), vines: arr(spec.vines).map((s) => Object.assign({}, s)),
       geysers: arr(spec.geysers).map((s) => Object.assign({}, s)), lightCrystals: arr(spec.lightCrystals).map((s) => Object.assign({}, s)),
       updrafts: arr(spec.updrafts), windZones: arr(spec.windZones),
+      trampolines: arr(spec.trampolines).map((t) => Object.assign({}, t)),
+      movingPlatforms: arr(spec.movingPlatforms).map((m) => Object.assign({}, m, { origX: m.x, origY: m.y, isMoving: true, oneWay: true })),
+      hazardWheels: arr(spec.hazardWheels).map((w) => Object.assign({}, w, { baseX: w.baseX != null ? w.baseX : w.x, baseY: w.baseY != null ? w.baseY : w.y })),
       tideConfig: spec.tideConfig || null, currentTideY: 99999, darkness: !!spec.darkness || spec.worldIdx === 1,
       checkpoint: null, flagpole: null
     };
+    L.movingPlatforms.forEach((mp) => L.platforms.push(mp));
     const sp = spec.spawn || spec.playerStart || { x: spec.respawnX != null ? spec.respawnX : 80, y: spec.respawnY != null ? spec.respawnY : 380 };
     L.spawn = { x: sp.x, y: sp.y }; L.checkpoint = { x: sp.x, y: sp.y };
     const fl = spec.flagpolePos || spec.flag || spec.flagpole || spec.goal;
@@ -1675,11 +1711,21 @@ function drawBossGuide(ctx, boss, camX, camY) {
     if (typeof screenShake !== 'undefined' && screenShake > 0) { camX += (Math.random() - 0.5) * screenShake; camY += (Math.random() - 0.5) * screenShake; }
     camX = Math.round(camX); camY = Math.round(camY);
     const draw = (e) => { if (e && e.draw && !e.removed) e.draw(ctx, camX, camY); };
-    if (typeof drawParallax === 'function') drawParallax(ctx, camX, camY, L);
-    if (typeof drawPlatforms === 'function') drawPlatforms(ctx, camX, camY, L);
-    if (typeof drawBiome === 'function') drawBiome(ctx, camX, camY, L);
-    L.rapaduras.forEach(draw); L.cajus.forEach(draw); L.stars.forEach(draw); L.checkpoints.forEach(draw);
-    if (L.flagpole && (!L.boss || L.boss.dead || L.boss.hp <= 0)) draw(L.flagpole);
+    const HD = typeof window !== 'undefined' && window.OxeHD;
+    if (HD && HD.drawParallaxHD) HD.drawParallaxHD(ctx, camX, camY, L, frameCount, W, H);
+    else if (typeof drawParallax === 'function') drawParallax(ctx, camX, camY, L);
+    if (HD && HD.drawPlatformsHD) HD.drawPlatformsHD(ctx, camX, camY, L, frameCount, W, H);
+    else if (typeof drawPlatforms === 'function') drawPlatforms(ctx, camX, camY, L);
+    if (HD && HD.drawObstacles) HD.drawObstacles(ctx, camX, camY, L, frameCount);
+    if (typeof drawBiomeEffects === 'function') drawBiomeEffects(ctx, camX, camY, L);
+    L.rapaduras.forEach((r) => { if (!r.collected && HD && HD.drawCollectibleHD) HD.drawCollectibleHD(ctx, camX, camY, r, 'rapadura', frameCount); else draw(r); });
+    L.cajus.forEach((c) => { if (!c.collected && HD && HD.drawCollectibleHD) HD.drawCollectibleHD(ctx, camX, camY, c, 'caju', frameCount); else draw(c); });
+    L.stars.forEach((s) => { if (!s.collected && HD && HD.drawCollectibleHD) HD.drawCollectibleHD(ctx, camX, camY, s, 'star', frameCount); else draw(s); });
+    L.checkpoints.forEach((c) => { if (HD && HD.drawCollectibleHD) HD.drawCollectibleHD(ctx, camX, camY, c, 'checkpoint', frameCount); else draw(c); });
+    if (L.flagpole && (!L.boss || L.boss.dead || L.boss.hp <= 0)) {
+      if (HD && HD.drawCollectibleHD) HD.drawCollectibleHD(ctx, camX, camY, L.flagpole, 'flagpole', frameCount);
+      else draw(L.flagpole);
+    }
     L.enemies.forEach(draw);
     if (L.boss) { draw(L.boss); if (bossIntroTimer <= 0) drawBossGuide(ctx, L.boss, camX, camY); }
     if (Array.isArray(projectiles)) projectiles.forEach(draw);

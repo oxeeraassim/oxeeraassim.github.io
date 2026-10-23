@@ -6,12 +6,13 @@
  *  - Offline                        -> fallback para o cache (e index.html em navegação)
  */
 
-const CACHE_NAME = 'oxe-jogo-v5';
+const CACHE_NAME = 'oxe-jogo-v6';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
   './game.js',
   './levels.js',
+  './graphics_hd.js',
   './audio.js',
   './manifest.json',
   './icon-192.png',

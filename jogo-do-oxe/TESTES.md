@@ -1,9 +1,9 @@
 # TESTES — Oxe, era assim? 2
 
-> Gerado automaticamente por `test_oxe2_real.js` em 2026-10-23T16:54:54.311Z (Node v23.3.0).
-> Arquivos REAIS carregados de `/Users/joaobatistaramalhodelima/Documents/GitHub/oxeeraassim.github.io/jogo-do-oxe` via `vm.runInContext`. Duração: 5216 ms.
+> Gerado automaticamente por `test_oxe2_real.js` em 2026-10-23T17:46:02.508Z (Node v23.3.0).
+> Arquivos REAIS carregados de `/Users/joaobatistaramalhodelima/Documents/GitHub/oxeeraassim.github.io/jogo-do-oxe` via `vm.runInContext`. Duração: 12681 ms.
 
-**Resultado: 11/11 aprovados.**
+**Resultado: 12/12 aprovados.**
 
 | # | Teste | Status |
 |---|---|---|
@@ -18,6 +18,7 @@
 | 8 | tookDamageThisRun, faíscas em coord. de mundo, LEVEL_COMPLETE (B11, B13, B15) | ✅ PASSOU |
 | 9 | Alcançabilidade física das 30 fases (C2, F1) | ✅ PASSOU |
 | 10 | SaveManager v3: migração v2 e teto 29 (B24) | ✅ PASSOU |
+| 11 | Ultra-HD 3D-to-2D (graphics_hd.js), 18 espécies de inimigos, 20+ inimigos/fase e Zabumba Trampolim | ✅ PASSOU |
 
 ## Medições detalhadas
 
@@ -28,12 +29,14 @@
   "scriptsNoHtml": [
     "audio.js",
     "levels.js",
+    "graphics_hd.js",
     "game.js"
   ],
   "loaded": {
     "audio.js": "36251 bytes",
-    "levels.js": "30486 bytes",
-    "game.js": "127668 bytes"
+    "levels.js": "42064 bytes",
+    "graphics_hd.js": "73680 bytes",
+    "game.js": "131219 bytes"
   },
   "swListeners": [
     "install",
@@ -99,8 +102,8 @@
 ```json
 {
   "measured": true,
-  "rise": 139,
-  "dx": 385
+  "rise": 249,
+  "dx": 1255
 }
 ```
 
@@ -265,8 +268,8 @@
 ```json
 {
   "limites": {
-    "maxGap": 366,
-    "maxRise": 132,
+    "maxGap": 1192,
+    "maxRise": 237,
     "fonte": "medido na simulação"
   },
   "fasesValidas": 30,
@@ -276,31 +279,31 @@
       "levelW": 5700,
       "mastro": 5460,
       "maiorVao": 320,
-      "maiorSubida": 60,
+      "maiorSubida": 0,
       "problemas": []
     },
     {
       "fase": "1-2",
-      "levelW": 5208,
-      "mastro": 4948,
-      "maiorVao": 274,
-      "maiorSubida": 41,
+      "levelW": 5829,
+      "mastro": 5569,
+      "maiorVao": 265,
+      "maiorSubida": 31,
       "problemas": []
     },
     {
       "fase": "1-3",
-      "levelW": 5676,
-      "mastro": 5416,
-      "maiorVao": 279,
-      "maiorSubida": 51,
+      "levelW": 5510,
+      "mastro": 5250,
+      "maiorVao": 254,
+      "maiorSubida": 0,
       "problemas": []
     },
     {
       "fase": "1-4",
-      "levelW": 6193,
-      "mastro": 5933,
-      "maiorVao": 269,
-      "maiorSubida": 38,
+      "levelW": 6196,
+      "mastro": 5936,
+      "maiorVao": 222,
+      "maiorSubida": 0,
       "problemas": []
     },
     {
@@ -313,34 +316,34 @@
     },
     {
       "fase": "2-1",
-      "levelW": 5511,
-      "mastro": 5251,
+      "levelW": 6251,
+      "mastro": 5991,
       "maiorVao": 290,
-      "maiorSubida": 73,
+      "maiorSubida": 0,
       "problemas": []
     },
     {
       "fase": "2-2",
-      "levelW": 5365,
-      "mastro": 5105,
-      "maiorVao": 285,
-      "maiorSubida": 11,
+      "levelW": 6204,
+      "mastro": 5944,
+      "maiorVao": 254,
+      "maiorSubida": 61,
       "problemas": []
     },
     {
       "fase": "2-3",
-      "levelW": 5796,
-      "mastro": 5536,
-      "maiorVao": 232,
-      "maiorSubida": 15,
+      "levelW": 6292,
+      "mastro": 6032,
+      "maiorVao": 251,
+      "maiorSubida": 33,
       "problemas": []
     },
     {
       "fase": "2-4",
-      "levelW": 6872,
-      "mastro": 6612,
-      "maiorVao": 273,
-      "maiorSubida": 53,
+      "levelW": 6192,
+      "mastro": 5932,
+      "maiorVao": 279,
+      "maiorSubida": 55,
       "problemas": []
     },
     {
@@ -353,34 +356,34 @@
     },
     {
       "fase": "3-1",
-      "levelW": 5508,
-      "mastro": 5248,
-      "maiorVao": 293,
-      "maiorSubida": 40,
+      "levelW": 5462,
+      "mastro": 5202,
+      "maiorVao": 300,
+      "maiorSubida": 49,
       "problemas": []
     },
     {
       "fase": "3-2",
-      "levelW": 5579,
-      "mastro": 5319,
-      "maiorVao": 264,
+      "levelW": 5704,
+      "mastro": 5444,
+      "maiorVao": 286,
       "maiorSubida": 85,
       "problemas": []
     },
     {
       "fase": "3-3",
-      "levelW": 5662,
-      "mastro": 5402,
-      "maiorVao": 287,
-      "maiorSubida": 58,
+      "levelW": 6083,
+      "mastro": 5823,
+      "maiorVao": 253,
+      "maiorSubida": 42,
       "problemas": []
     },
     {
       "fase": "3-4",
-      "levelW": 5865,
-      "mastro": 5605,
-      "maiorVao": 291,
-      "maiorSubida": 41,
+      "levelW": 6417,
+      "mastro": 6157,
+      "maiorVao": 282,
+      "maiorSubida": 53,
       "problemas": []
     },
     {
@@ -393,34 +396,34 @@
     },
     {
       "fase": "4-1",
-      "levelW": 4869,
-      "mastro": 4609,
-      "maiorVao": 153,
-      "maiorSubida": 51,
+      "levelW": 4907,
+      "mastro": 4647,
+      "maiorVao": 257,
+      "maiorSubida": 43,
       "problemas": []
     },
     {
       "fase": "4-2",
-      "levelW": 5491,
-      "mastro": 5231,
-      "maiorVao": 263,
+      "levelW": 6223,
+      "mastro": 5963,
+      "maiorVao": 159,
       "maiorSubida": 47,
       "problemas": []
     },
     {
       "fase": "4-3",
-      "levelW": 5869,
-      "mastro": 5609,
-      "maiorVao": 298,
-      "maiorSubida": 44,
+      "levelW": 6684,
+      "mastro": 6424,
+      "maiorVao": 252,
+      "maiorSubida": 42,
       "problemas": []
     },
     {
       "fase": "4-4",
-      "levelW": 6035,
-      "mastro": 5775,
-      "maiorVao": 292,
-      "maiorSubida": 55,
+      "levelW": 6835,
+      "mastro": 6575,
+      "maiorVao": 234,
+      "maiorSubida": 44,
       "problemas": []
     },
     {
@@ -433,34 +436,34 @@
     },
     {
       "fase": "5-1",
-      "levelW": 5481,
-      "mastro": 5221,
-      "maiorVao": 265,
-      "maiorSubida": 38,
+      "levelW": 5508,
+      "mastro": 5248,
+      "maiorVao": 285,
+      "maiorSubida": 50,
       "problemas": []
     },
     {
       "fase": "5-2",
-      "levelW": 5433,
-      "mastro": 5173,
-      "maiorVao": 300,
-      "maiorSubida": 59,
+      "levelW": 5820,
+      "mastro": 5560,
+      "maiorVao": 296,
+      "maiorSubida": 56,
       "problemas": []
     },
     {
       "fase": "5-3",
-      "levelW": 6036,
-      "mastro": 5776,
-      "maiorVao": 295,
-      "maiorSubida": 48,
+      "levelW": 5503,
+      "mastro": 5243,
+      "maiorVao": 245,
+      "maiorSubida": 26,
       "problemas": []
     },
     {
       "fase": "5-4",
-      "levelW": 6247,
-      "mastro": 5987,
-      "maiorVao": 270,
-      "maiorSubida": 42,
+      "levelW": 5912,
+      "mastro": 5652,
+      "maiorVao": 286,
+      "maiorSubida": 35,
       "problemas": []
     },
     {
@@ -473,34 +476,34 @@
     },
     {
       "fase": "6-1",
-      "levelW": 5121,
-      "mastro": 4861,
-      "maiorVao": 273,
-      "maiorSubida": 50,
+      "levelW": 5009,
+      "mastro": 4749,
+      "maiorVao": 276,
+      "maiorSubida": 58,
       "problemas": []
     },
     {
       "fase": "6-2",
-      "levelW": 5607,
-      "mastro": 5347,
-      "maiorVao": 296,
-      "maiorSubida": 89,
+      "levelW": 5733,
+      "mastro": 5473,
+      "maiorVao": 285,
+      "maiorSubida": 59,
       "problemas": []
     },
     {
       "fase": "6-3",
-      "levelW": 5735,
-      "mastro": 5475,
-      "maiorVao": 263,
+      "levelW": 5916,
+      "mastro": 5656,
+      "maiorVao": 294,
       "maiorSubida": 60,
       "problemas": []
     },
     {
       "fase": "6-4",
-      "levelW": 6377,
-      "mastro": 6117,
-      "maiorVao": 293,
-      "maiorSubida": 15,
+      "levelW": 5893,
+      "mastro": 5633,
+      "maiorVao": 263,
+      "maiorSubida": 74,
       "problemas": []
     },
     {
@@ -558,5 +561,22 @@
   "niveis": [
     29
   ]
+}
+```
+
+### [11] Ultra-HD 3D-to-2D (graphics_hd.js), 18 espécies de inimigos, 20+ inimigos/fase e Zabumba Trampolim — ✅
+
+```json
+{
+  "oxeHdAtivo": true,
+  "especiesRenderizadas": 18,
+  "inimigosFase1_1": 20,
+  "minInimigosPorFase": 18,
+  "maxInimigosPorFase": 28,
+  "mediaInimigosPorFase": 20,
+  "totalZabumbas30Fases": 37,
+  "totalPlataformasMoveis": 28,
+  "totalRodasMandacaru": 49,
+  "zabumbaImpulsionouTonho": true
 }
 ```
