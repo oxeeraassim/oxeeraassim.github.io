@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gerador Ultra Premium de Stories 9:16 — @oxe_eraassim</title>
+<link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@700;800;900&family=Literata:ital,opsz,wght@0,7..72,600;0,7..72,700;1,7..72,600&family=Courier+Prime:wght@700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --gold: #d49b35;
+    --gold-bright: #ffd166;
+    --rule: #8b1e19;
+    --ink: #120e0a;
+    --dark: #0a0806;
+    --card: #f7f1e5;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0f0d0a;
+    font-family: 'Literata', Georgia, serif;
+    color: #f7f1e5;
+    padding: 14px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+  }
+  .app-wrap {
+    max-width: 980px;
+    width: 100%;
+    background: linear-gradient(180deg, #181410 0%, #0e0b08 100%);
+    border: 2px solid var(--gold);
+    border-radius: 20px;
+    padding: 20px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.85);
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 24px;
+  }
+  @media (max-width: 820px) {
+    .app-wrap { grid-template-columns: 1fr; }
+  }
+  .preview-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .phone-frame {
+    width: 320px;
+    height: 568px; /* 9:16 ratio */
+    border: 12px solid #28211b;
+    border-radius: 36px;
+    overflow: hidden;
+    box-shadow: 0 16px 36px rgba(0,0,0,0.9), 0 0 0 2px var(--gold);
+    background: #000;
+    position: relative;
+  }
+  .phone-frame img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .phone-notch {
+    position: absolute;
+    top: 6px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90px;
+    height: 16px;
+    background: #28211b;
+    border-radius: 8px;
+    z-index: 10;
+  }
+  .editor-col {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .badge-header {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(139, 30, 25, 0.4);
+    border: 1px solid var(--rule);
+    padding: 4px 12px;
+    border-radius: 99px;
+    font-family: 'Courier Prime', monospace;
+    font-size: 0.72rem;
+    color: #fca5a5;
+    margin-bottom: 8px;
+  }
+  h1 {
+    font-family: 'Zilla Slab', serif;
+    font-size: 1.6rem;
+    color: var(--gold-bright);
+    margin-bottom: 6px;
+    font-weight: 900;
+  }
+  .sub-desc {
+    font-family: 'Courier Prime', monospace;
+    font-size: 0.78rem;
+    color: #d1c5b0;
+    margin-bottom: 16px;
+    line-height: 1.4;
+  }
+  /* Abas de temas */
+  .theme-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    margin-bottom: 16px;
+  }
+  .theme-btn {
+    background: #231c15;
+    border: 1px solid #453629;
+    color: #d8c8b4;
+    padding: 8px 4px;
+    border-radius: 8px;
+    font-family: 'Zilla Slab', serif;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+  }
+  .theme-btn.active {
+    background: var(--gold);
+    color: #120e0a;
+    border-color: #fff;
+    box-shadow: 0 4px 12px rgba(212, 155, 53, 0.4);
+  }
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .f-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  label {
+    font-family: 'Courier Prime', monospace;
+    font-size: 0.68rem;
+    color: #b5a48b;
+    text-transform: uppercase;
+  }
+  input, select {
+    background: #14100c;
+    border: 1px solid #453629;
+    color: #fff;
+    padding: 7px 10px;
+    border-radius: 8px;
+    font-family: 'Literata', serif;
+    font-size: 0.8rem;
+    width: 100%;
+    outline: none;
+  }
+  input:focus, select:focus {
+    border-color: var(--gold);
+  }
+  .actions-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 10px;
+  }
+  .btn-act {
+    padding: 12px;
+    border-radius: 10px;
+    font-family: 'Zilla Slab', serif;
+    font-weight: 800;
+    font-size: 0.92rem;
+    text-align: center;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 0 rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: transform 0.1s;
+  }
+  .btn-act:active { transform: translateY(2px); }
+  .btn-download {
+    background: #25D366;
+    color: #042612;
+    box-shadow: 0 4px 0 #128C7E;
+  }
+  .btn-share {
+    background: var(--rule);
+    color: #fff;
+    box-shadow: 0 4px 0 #58120e;
+  }
+  canvas { display: none; }
+</style>
+</head>
+<body>
+
+<div class="app-wrap">
+  <!-- Coluna Preview Telefone -->
+  <div class="preview-col">
+    <div class="phone-frame">
+      <div class="phone-notch"></div>
+      <img id="imgStoryPrev" alt="Preview 9:16">
+    </div>
+    <div style="font-family:'Courier Prime'; font-size:0.68rem; color:#887766; margin-top:8px; text-align:center;">
+      Resolução nativa: 1080 x 1920 px (Full HD 9:16)
+    </div>
+  </div>
+
+  <!-- Coluna Controles / Editor -->
+  <div class="editor-col">
+    <div>
+      <div class="badge-header">
+        <span>★ PADRÃO OFICIAL @OXE_ERAASSIM</span>
+        <span>•</span>
+        <span>3 FONTES HISTÓRICAS</span>
+      </div>
+      <h1>Gerador de Stories Ultra Premium</h1>
+      <p class="sub-desc">
+        Identidade visual cinematográfica para viralizar nos Stories: estética de documento confidencial, carimbos periciais com angulação e safe zones perfeitas para o Instagram.
+      </p>
+
+      <!-- Seletor de Tema Visual -->
+      <label style="margin-bottom:6px; display:block;">Escolha o Formato do Story:</label>
+      <div class="theme-tabs">
+        <button class="theme-btn active" onclick="setTheme('dossie', this)">1. Dossiê Secreto</button>
+        <button class="theme-btn" onclick="setTheme('duelo', this)">2. Duelo de Titãs</button>
+        <button class="theme-btn" onclick="setTheme('insolito', this)">3. Reel Viral</button>
+      </div>
+
+      <!-- Formulário de Personalização -->
+      <div class="form-grid">
+        <div class="f-group">
+          <label>Seu Arroba / Nome:</label>
+          <input type="text" id="fTag" value="@joao_sertao" oninput="updateCard()">
+        </div>
+        <div class="f-group">
+          <label>Patente Sertaneja:</label>
+          <select id="fPatente" onchange="updateCard()">
+            <option value="Coronel do Acervo">Coronel do Acervo</option>
+            <option value="Cangaceiro das Letras">Cangaceiro das Letras</option>
+            <option value="Terror da Volante">Terror da Volante</option>
+            <option value="Guardador de Memórias">Guardador de Memórias</option>
+            <option value="Mestre de Xaxado">Mestre de Xaxado</option>
+            <option value="Doutor dos Sertões">Doutor dos Sertões</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <div class="f-group">
+          <label>Estado Defendido:</label>
+          <select id="fHeart" onchange="updateCard()">
+            <option value="Pernambuco">Pernambuco (PE)</option>
+            <option value="Bahia">Bahia (BA)</option>
+            <option value="Ceará">Ceará (CE)</option>
+            <option value="Paraíba">Paraíba (PB)</option>
+            <option value="Rio Grande do Norte">Rio G. do Norte (RN)</option>
+            <option value="Alagoas">Alagoas (AL)</option>
+            <option value="Sergipe">Sergipe (SE)</option>
+            <option value="Maranhão">Maranhão (MA)</option>
+            <option value="Piauí">Piauí (PI)</option>
+          </select>
+        </div>
+        <div class="f-group">
+          <label>Rival Enfrentado:</label>
+          <input type="text" id="fRival" value="@primo_em_sp" oninput="updateCard()">
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <div class="f-group">
+          <label>Pontos Conquistados:</label>
+          <input type="number" id="fPts" value="4850" oninput="updateCard()">
+        </div>
+        <div class="f-group">
+          <label>Tempo / Precisão:</label>
+          <input type="text" id="fTime" value="3.1s com Speed Bonus" oninput="updateCard()">
+        </div>
+      </div>
+
+      <div class="f-group" style="margin-bottom:12px;">
+        <label>Fato Insólito do Acervo:</label>
+        <select id="fTema" onchange="updateCard()">
+          <option value="O dia em que Mossoró expulsou o bando de Lampião a balas (1927)">ARENA-039 • Lampião expulso de Mossoró (RN, 1927)</option>
+          <option value="O Eclipse de Sobral que comprovou a Teoria da Relatividade de Einstein (1919)">ARENA-001 • Eclipse de Sobral e Einstein (CE, 1919)</option>
+          <option value="A médica alagoana que revolucionou a psiquiatria mundial com arte">ARENA-011 • Nise da Silveira (AL)</option>
+          <option value="A revolta dos escravizados muçulmanos letrados no coração de Salvador (1835)">ARENA-016 • Revolta dos Malês (BA, 1835)</option>
+          <option value="As pinturas rupestres que mudaram a datação dos primeiros humanos na América">ARENA-035 • Serra da Capivara (PI)</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Ações Finais -->
+    <div class="actions-grid">
+      <a id="btnDownload" class="btn-act btn-download" download="oxe_stories_hd.png">
+        📥 Baixar Imagem HD
+      </a>
+      <button class="btn-act btn-share" onclick="shareDirect()">
+        📲 Compartilhar no Stories
+      </button>
+    </div>
+  </div>
+</div>
+
+<canvas id="cvCanvas" width="1080" height="1920"></canvas>
+
+<script>
+// Polyfill universal para roundRect
+if (!CanvasRenderingContext2D.prototype.roundRect) {
+  CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, radii) {
+    if (!radii) radii = 0;
+    let r = typeof radii === 'number' ? radii : (Array.isArray(radii) ? radii[0] : 0);
+    r = Math.min(r, Math.abs(w) / 2, Math.abs(h) / 2);
+    this.beginPath();
+    this.moveTo(x + r, y);
+    this.lineTo(x + w - r, y);
+    this.quadraticCurveTo(x + w, y, x + w, y + r);
+    this.lineTo(x + w, y + h - r);
+    this.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    this.lineTo(x + r, y + h);
+    this.quadraticCurveTo(x, y + h, x, y + h - r);
+    this.lineTo(x, y + r);
+    this.quadraticCurveTo(x, y, x + r, y);
+    this.closePath();
+    return this;
+  };
+}
+
+let currentTheme = 'dossie';
+
+function setTheme(theme, btn) {
+  currentTheme = theme;
+  document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  updateCard();
+}
+
+// Funções de Efeitos Gráficos
+function drawGrain(ctx, w, h, opacity = 0.04) {
+  const step = 6;
+  ctx.save();
+  for (let x = 0; x < w; x += step * 3) {
+    for (let y = 0; y < h; y += step * 3) {
+      if (Math.random() > 0.45) {
+        ctx.fillStyle = `rgba(255,255,255,${(Math.random() * opacity).toFixed(3)})`;
+        ctx.fillRect(x, y, step, step);
+      }
+    }
+  }
+  ctx.restore();
+}
+
+function drawVignette(ctx, w, h) {
+  const rad = ctx.createRadialGradient(w / 2, h / 2, w * 0.35, w / 2, h / 2, w * 0.85);
+  rad.addColorStop(0, 'rgba(0,0,0,0)');
+  rad.addColorStop(0.7, 'rgba(0,0,0,0.45)');
+  rad.addColorStop(1, 'rgba(0,0,0,0.85)');
+  ctx.fillStyle = rad;
+  ctx.fillRect(0, 0, w, h);
+}
+
+function drawTape(ctx, x, y, width, height, angle) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate((angle * Math.PI) / 180);
+  ctx.fillStyle = 'rgba(235, 230, 210, 0.45)';
+  ctx.shadowColor = 'rgba(0,0,0,0.3)';
+  ctx.shadowBlur = 8;
+  ctx.shadowOffsetY = 3;
+  ctx.fillRect(-width / 2, -height / 2, width, height);
+  ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(-width / 2, -height / 2, width, height);
+  ctx.restore();
+}
+
+function drawStamp(ctx, text, x, y, angle = -8, color = '#a31914') {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate((angle * Math.PI) / 180);
+  ctx.font = '800 32px "Courier Prime", monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  const textWidth = ctx.measureText(text).width;
+  const padX = 24, padY = 14;
+
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 6;
+  ctx.shadowColor = 'rgba(0,0,0,0.35)';
+  ctx.shadowBlur = 6;
+  ctx.strokeRect(-textWidth / 2 - padX, -24 - padY, textWidth + padX * 2, 48 + padY * 2);
+
+  ctx.lineWidth = 2;
+  ctx.strokeRect(-textWidth / 2 - padX + 5, -24 - padY + 5, textWidth + padX * 2 - 10, 48 + padY * 2 - 10);
+
+  ctx.fillStyle = color;
+  ctx.fillText(text, 0, 0);
+  ctx.restore();
+}
+
+function drawWaxSeal(ctx, x, y, radius = 55) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.shadowColor = 'rgba(0,0,0,0.5)';
+  ctx.shadowBlur = 12;
+  ctx.shadowOffsetY = 6;
+
+  const grad = ctx.createRadialGradient(-10, -10, 5, 0, 0, radius);
+  grad.addColorStop(0, '#fcd34d');
+  grad.addColorStop(0.5, '#d97706');
+  grad.addColorStop(1, '#78350f');
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  const points = 16;
+  for (let i = 0; i < points; i++) {
+    const a = (i / points) * Math.PI * 2;
+    const r = radius + (i % 2 === 0 ? 3 : -3);
+    const px = Math.cos(a) * r;
+    const py = Math.sin(a) * r;
+    if (i === 0) ctx.moveTo(px, py);
+    else ctx.lineTo(px, py);
+  }
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.strokeStyle = '#b45309';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(0, 0, radius - 8, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.fillStyle = '#fef3c7';
+  ctx.font = '36px serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('★', 0, 0);
+  ctx.restore();
+}
+
+function drawCordelBorder(ctx, w, h) {
+  ctx.save();
+  ctx.strokeStyle = '#d49b35';
+  ctx.lineWidth = 12;
+  ctx.strokeRect(40, 40, w - 80, h - 80);
+
+  ctx.strokeStyle = '#8b1e19';
+  ctx.lineWidth = 4;
+  ctx.strokeRect(58, 58, w - 116, h - 116);
+
+  const corners = [
+    [40, 40], [w - 40, 40], [40, h - 40], [w - 40, h - 40]
+  ];
+  ctx.fillStyle = '#d49b35';
+  corners.forEach(([cx, cy]) => {
+    ctx.beginPath();
+    ctx.arc(cx, cy, 14, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#2b190e';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+  });
+  ctx.restore();
+}
+
+// 1. Dossiê Histórico Oficial
+function drawDossie(ctx, w, h, d) {
+  const bg = ctx.createLinearGradient(0, 0, 0, h);
+  bg.addColorStop(0, '#0f0c0a');
+  bg.addColorStop(0.3, '#1c1510');
+  bg.addColorStop(0.7, '#241a14');
+  bg.addColorStop(1, '#0c0a08');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, w, h);
+
+  drawVignette(ctx, w, h);
+  drawGrain(ctx, w, h, 0.05);
+  drawCordelBorder(ctx, w, h);
+
+  drawTape(ctx, 160, 310, 140, 36, -24);
+  drawTape(ctx, w - 160, 310, 140, 36, 24);
+
+  // Topo Safe Zone
+  ctx.fillStyle = '#f5eedb';
+  ctx.font = '800 36px "Zilla Slab", serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('MUSEU OXE, ERA ASSIM? • ACERVO OFICIAL', w / 2, 170);
+
+  ctx.fillStyle = '#d49b35';
+  ctx.font = '700 24px "Courier Prime", monospace';
+  ctx.fillText('ARQUIVO DE HISTÓRIA & MEMÓRIA DO NORDESTE', w / 2, 215);
+
+  ctx.fillStyle = '#8b1e19';
+  ctx.fillRect(100, 255, w - 200, 64);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '800 36px "Zilla Slab", serif';
+  ctx.fillText('LAUDO PERICIAL HISTÓRICO Nº 1927', w / 2, 300);
+
+  // Card Interno Pergaminho
+  const cardX = 90, cardY = 345, cardW = w - 180, cardH = 1180;
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.6)';
+  ctx.shadowBlur = 24;
+  ctx.shadowOffsetY = 12;
+  const pgrad = ctx.createLinearGradient(cardX, cardY, cardX + cardW, cardY + cardH);
+  pgrad.addColorStop(0, '#f9f5ec');
+  pgrad.addColorStop(0.5, '#f4ece0');
+  pgrad.addColorStop(1, '#ebe0cf');
+  ctx.fillStyle = pgrad;
+  ctx.beginPath();
+  ctx.roundRect(cardX, cardY, cardW, cardH, 20);
+  ctx.fill();
+
+  ctx.strokeStyle = '#c5a059';
+  ctx.lineWidth = 4;
+  ctx.stroke();
+  ctx.restore();
+
+  // Marca d'água
+  ctx.save();
+  ctx.fillStyle = 'rgba(212, 155, 53, 0.08)';
+  ctx.beginPath();
+  ctx.arc(w / 2, 600, 200, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // Dados do Jogador
+  ctx.fillStyle = '#6b4c2a';
+  ctx.font = '700 24px "Courier Prime", monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText('INVESTIGADOR(A):', cardX + 50, cardY + 70);
+
+  ctx.fillStyle = '#1b140e';
+  ctx.font = '800 48px "Zilla Slab", serif';
+  ctx.fillText(d.tag, cardX + 50, cardY + 120);
+
+  ctx.fillStyle = '#8b1e19';
+  ctx.font = '700 28px "Courier Prime", monospace';
+  ctx.fillText('PATENTE: ' + d.patente.toUpperCase(), cardX + 50, cardY + 165);
+
+  ctx.fillStyle = '#2b190e';
+  ctx.font = '600 26px "Literata", serif';
+  ctx.fillText('EM NOME DE: ' + d.heart + ' ❤️', cardX + 50, cardY + 205);
+
+  ctx.strokeStyle = '#d3c2a6';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(cardX + 40, cardY + 235);
+  ctx.lineTo(cardX + cardW - 40, cardY + 235);
+  ctx.stroke();
+
+  // Pontuação
+  ctx.fillStyle = '#55371b';
+  ctx.font = '700 22px "Courier Prime", monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('PONTUAÇÃO OBTIDA NA ARENA', w / 2, cardY + 285);
+
+  ctx.fillStyle = '#8b1e19';
+  ctx.font = '900 88px "Zilla Slab", serif';
+  ctx.fillText(Number(d.pts).toLocaleString('pt-BR') + ' PTS', w / 2, cardY + 375);
+
+  // Pílulas
+  const pilY = cardY + 415;
+  ctx.fillStyle = '#e8dec9';
+  ctx.beginPath();
+  ctx.roundRect(cardX + 60, pilY, 360, 60, 30);
+  ctx.fill();
+  ctx.strokeStyle = '#b89d6e';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.fillStyle = '#1b140e';
+  ctx.font = '700 24px "Courier Prime", monospace';
+  ctx.fillText('🎯 ACERTOS: 5/5', cardX + 240, pilY + 38);
+
+  ctx.fillStyle = '#e8dec9';
+  ctx.beginPath();
+  ctx.roundRect(cardX + cardW - 420, pilY, 360, 60, 30);
+  ctx.fill();
+  ctx.strokeStyle = '#b89d6e';
+  ctx.stroke();
+  ctx.fillStyle = '#1b140e';
+  ctx.fillText('⚡ ' + d.time, cardX + cardW - 240, pilY + 38);
+
+  ctx.strokeStyle = '#d3c2a6';
+  ctx.beginPath();
+  ctx.moveTo(cardX + 40, cardY + 510);
+  ctx.lineTo(cardX + cardW - 40, cardY + 510);
+  ctx.stroke();
+
+  // Fato Desbloqueado
+  ctx.fillStyle = '#8b1e19';
+  ctx.font = '800 28px "Zilla Slab", serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('DOCUMENTO HISTÓRICO DESBLOQUEADO:', cardX + 50, cardY + 560);
+
+  ctx.fillStyle = '#1c1510';
+  ctx.font = '700 36px "Literata", serif';
+  ctx.fillText('“' + d.tema + '”', cardX + 50, cardY + 620, cardW - 100);
+
+  ctx.fillStyle = '#6b4c2a';
+  ctx.font = 'italic 24px "Literata", serif';
+  ctx.fillText('Autenticação bibliográfica cruzada por 3 fontes primárias:', cardX + 50, cardY + 700);
+
+  ctx.fillStyle = '#2b190e';
+  ctx.font = '700 22px "Courier Prime", monospace';
+  ctx.fillText('✓ Coleção Mossoroense • IHGB • Acervo Público Estadual', cardX + 50, cardY + 740, cardW - 100);
+
+  drawWaxSeal(ctx, cardX + cardW - 110, cardY + 840, 60);
+  drawStamp(ctx, 'COMPROVADO POR 3 FONTES', w / 2 - 30, cardY + 850, -9, '#a31914');
+
+  // Tarja Provocação
+  ctx.fillStyle = '#1b140e';
+  ctx.beginPath();
+  ctx.roundRect(cardX + 40, cardY + 950, cardW - 80, 160, 16);
+  ctx.fill();
+
+  ctx.fillStyle = '#ffd166';
+  ctx.font = '800 34px "Zilla Slab", serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('DESAFIO DOS 9 ESTADOS', w / 2, cardY + 1005);
+
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '700 26px "Courier Prime", monospace';
+  ctx.fillText('“DUVIDO VOCÊ ACERTAR A 4ª RODADA!”', w / 2, cardY + 1055);
+
+  ctx.fillStyle = '#86efac';
+  ctx.font = '700 22px "Courier Prime", monospace';
+  ctx.fillText('Jogue grátis tocando na figurinha abaixo 👇', w / 2, cardY + 1090);
+
+  // Sticker de Link Simulado
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.5)';
+  ctx.shadowBlur = 12;
+  ctx.shadowOffsetY = 6;
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  ctx.roundRect(w / 2 - 280, 1600, 560, 80, 40);
+  ctx.fill();
+  ctx.restore();
+
+  ctx.fillStyle = '#1b140e';
+  ctx.font = '800 28px "Zilla Slab", serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('🔗 oxeeraassim.github.io', w / 2, 1650);
+
+  ctx.fillStyle = '#f5eedb';
+  ctx.font = '700 24px "Courier Prime", monospace';
+  ctx.fillText('Marque @oxe_eraassim para repost no perfil!', w / 2, 1730);
+}
+
+// 2. Duelo de Titãs
+function drawDuelo(ctx, w, h, d) {
+  const bg = ctx.createLinearGradient(0, 0, 0, h);
+  bg.addColorStop(0, '#190a05');
+  bg.addColorStop(0.5, '#2e1208');
+  bg.addColorStop(1, '#0e0402');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, w, h);
+
+  drawVignette(ctx, w, h);
+  drawGrain(ctx, w, h, 0.06);
+  drawCordelBorder(ctx, w, h);
+
+  ctx.fillStyle = '#ffd166';
+  ctx.font = '800 38px "Zilla Slab", serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('ARENA DO OXE • CONFRONTO DE TITÃS', w / 2, 170);
+
+  ctx.fillStyle = '#f5eedb';
+  ctx.font = '700 24px "Courier Prime", monospace';
+  ctx.fillText('GUERRA HISTÓRICA DOS 9 ESTADOS', w / 2, 215);
+
+  ctx.fillStyle = '#c8433a';
+  ctx.fillRect(90, 260, w - 180, 90);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '900 50px "Zilla Slab", serif';
+  ctx.fillText('PROCURA-SE DESAFIANTE!', w / 2, 322);
+
+  const cardX = 90, cardY = 380, cardW = w - 180, cardH = 1140;
+  ctx.fillStyle = '#fdf8ef';
+  ctx.beginPath();
+  ctx.roundRect(cardX, cardY, cardW, cardH, 20);
+  ctx.fill();
+  ctx.strokeStyle = '#2e1208';
+  ctx.lineWidth = 6;
+  ctx.stroke();
+
+  // Chapéu de Couro
+  ctx.save();
+  ctx.translate(w / 2, cardY + 120);
+  ctx.fillStyle = '#8b4513';
+  ctx.beginPath();
+  ctx.arc(0, 0, 110, Math.PI, 0);
+  ctx.fill();
+  ctx.strokeStyle = '#ffd166';
+  ctx.lineWidth = 6;
+  ctx.stroke();
+  [-60, 0, 60].forEach((sx, idx) => {
+    ctx.fillStyle = '#ffd166';
+    ctx.beginPath();
+    ctx.arc(sx, idx === 1 ? -40 : -25, 14, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.restore();
+
+  ctx.fillStyle = '#1c1510';
+  ctx.font = '900 54px "Zilla Slab", serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(d.tag, w / 2, cardY + 300);
+
+  ctx.fillStyle = '#8b1e19';
+  ctx.font = '700 32px "Courier Prime", monospace';
+  ctx.fillText('DEFENDEU ' + d.heart.toUpperCase() + ' NO BRAÇO!', w / 2, cardY + 350);
+
+  const vsY = cardY + 440;
+  ctx.fillStyle = '#1c1510';
+  ctx.beginPath();
+  ctx.roundRect(cardX + 40, vsY, cardW - 80, 170, 16);
+  ctx.fill();
+
+  ctx.fillStyle = '#ffd166';
+  ctx.font = '900 70px "Zilla Slab", serif';
+  ctx.fillText(Number(d.pts).toLocaleString('pt-BR') + ' PONTOS', w / 2, vsY + 80);
+
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '700 26px "Courier Prime", monospace';
+  ctx.fillText('Derrubou ' + d.rival + ' sem chance!', w / 2, vsY + 130);
+
+  drawStamp(ctx, 'CABRA RETADO • NOCAUTE', w / 2, cardY + 690, 7, '#8b1e19');
+
+  ctx.fillStyle = '#2b190e';
+  ctx.font = '800 34px "Literata", serif';
+  ctx.fillText('“Você tem coragem de aceitar o duelo?”', w / 2, cardY + 800);
+
+  ctx.fillStyle = '#6b4c2a';
+  ctx.font = '600 24px "Literata", serif';
+  ctx.fillText('Tema disputado na Arena: ' + d.tema.slice(0, 42) + '...', w / 2, cardY + 845);
+
+  ctx.fillStyle = '#8b1e19';
+  ctx.beginPath();
+  ctx.roundRect(cardX + 40, cardY + 910, cardW - 80, 160, 16);
+  ctx.fill();
+
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '900 38px "Zilla Slab", serif';
+  ctx.fillText('VAI CORRER OU VAI PEITAR?', w / 2, cardY + 975);
+
+  ctx.fillStyle = '#ffd166';
+  ctx.font = '700 24px "Courier Prime", monospace';
+  ctx.fillText('Toque no link e prove que conhece o Nordeste!', w / 2, cardY + 1025);
+
+  ctx.fillStyle = '#fdf8ef';
+  ctx.font = '700 26px "Courier Prime", monospace';
+  ctx.fillText('🔗 oxeeraassim.github.io • Marque @oxe_eraassim', w / 2, 1650);
+}
+
+// 3. Reel Viral
+function drawInsolito(ctx, w, h, d) {
+  const bg = ctx.createLinearGradient(0, 0, 0, h);
+  bg.addColorStop(0, '#050505');
+  bg.addColorStop(0.4, '#121212');
+  bg.addColorStop(0.8, '#1a1815');
+  bg.addColorStop(1, '#050505');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, w, h);
+
+  drawVignette(ctx, w, h);
+  drawGrain(ctx, w, h, 0.05);
+  drawCordelBorder(ctx, w, h);
+
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '800 36px "Zilla Slab", serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('@OXE_ERAASSIM • HISTÓRIA REAL', w / 2, 170);
+
+  // Gancho oficial do Claude
+  ctx.fillStyle = '#ffd166';
+  ctx.font = '900 52px "Zilla Slab", serif';
+  ctx.fillText('VOCÊ JURAVA QUE ERA ASSIM.', w / 2, 260);
+  ctx.fillStyle = '#ff4d4d';
+  ctx.fillText('MAS NÃO ERA.', w / 2, 320);
+
+  const cardX = 90, cardY = 380, cardW = w - 180, cardH = 1140;
+  ctx.fillStyle = 'rgba(25, 23, 20, 0.95)';
+  ctx.beginPath();
+  ctx.roundRect(cardX, cardY, cardW, cardH, 20);
+  ctx.fill();
+  ctx.strokeStyle = '#ffd166';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  ctx.fillStyle = '#f5eedb';
+  ctx.font = '800 32px "Courier Prime", monospace';
+  ctx.fillText('🔍 FATO OCULTO DO NORDESTE', w / 2, cardY + 70);
+
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '800 46px "Literata", serif';
+  ctx.fillText('“' + d.tema + '”', w / 2, cardY + 160, cardW - 80);
+
+  ctx.fillStyle = '#ffd166';
+  ctx.font = '700 28px "Courier Prime", monospace';
+  ctx.fillText(d.tag + ' DESCOBRIU A VERDADE!', w / 2, cardY + 280);
+
+  ctx.fillStyle = '#86efac';
+  ctx.font = '900 64px "Zilla Slab", serif';
+  ctx.fillText(Number(d.pts).toLocaleString('pt-BR') + ' PONTOS', w / 2, cardY + 360);
+
+  // Enquete Simulada
+  const pollY = cardY + 440;
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '800 30px "Zilla Slab", serif';
+  ctx.fillText('E VOCÊ, JÁ SABIA DISSO?', w / 2, pollY);
+
+  ctx.fillStyle = '#262626';
+  ctx.beginPath();
+  ctx.roundRect(cardX + 60, pollY + 30, cardW - 120, 90, 16);
+  ctx.fill();
+  ctx.strokeStyle = '#86efac';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  ctx.fillStyle = '#86efac';
+  ctx.font = '800 34px "Zilla Slab", serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('A) Já sabia de tudo! (16%)', cardX + 90, pollY + 86);
+
+  ctx.fillStyle = '#262626';
+  ctx.beginPath();
+  ctx.roundRect(cardX + 60, pollY + 140, cardW - 120, 90, 16);
+  ctx.fill();
+  ctx.strokeStyle = '#ffd166';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  ctx.fillStyle = '#ffd166';
+  ctx.fillText('B) Oxe, tô chocado! (84%)', cardX + 90, pollY + 196);
+
+  drawStamp(ctx, 'ARQUIVO SECRETO DO OXE', w / 2, cardY + 770, -6, '#ff4d4d');
+
+  ctx.fillStyle = '#a3a3a3';
+  ctx.font = 'italic 24px "Literata", serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Comprovado cientificamente por 3 fontes independentes.', w / 2, cardY + 860);
+
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '800 36px "Zilla Slab", serif';
+  ctx.fillText('TESTE SEUS CONHECIMENTOS NA BIO!', w / 2, cardY + 970);
+
+  ctx.fillStyle = '#ffd166';
+  ctx.font = '700 28px "Courier Prime", monospace';
+  ctx.fillText('👉 oxeeraassim.github.io 👈', w / 2, cardY + 1030);
+
+  ctx.fillStyle = '#a3a3a3';
+  ctx.font = '700 24px "Courier Prime", monospace';
+  ctx.fillText('Poste e marque @oxe_eraassim para aparecer!', w / 2, 1660);
+}
+
+function updateCard() {
+  const cv = document.getElementById('cvCanvas');
+  const ctx = cv.getContext('2d');
+  const w = 1080, h = 1920;
+
+  const data = {
+    tag: document.getElementById('fTag').value || '@cabra',
+    patente: document.getElementById('fPatente').value,
+    heart: document.getElementById('fHeart').value,
+    rival: document.getElementById('fRival').value || '@rival',
+    pts: document.getElementById('fPts').value || 0,
+    time: document.getElementById('fTime').value,
+    tema: document.getElementById('fTema').value
+  };
+
+  if (currentTheme === 'duelo') {
+    drawDuelo(ctx, w, h, data);
+  } else if (currentTheme === 'insolito') {
+    drawInsolito(ctx, w, h, data);
+  } else {
+    drawDossie(ctx, w, h, data);
+  }
+
+  const url = cv.toDataURL('image/png');
+  document.getElementById('imgStoryPrev').src = url;
+  document.getElementById('btnDownload').href = url;
+}
+
+function shareDirect() {
+  const cv = document.getElementById('cvCanvas');
+  cv.toBlob(blob => {
+    const file = new File([blob], 'stories_oxe.png', { type: 'image/png' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      navigator.share({
+        title: 'Dossiê do Oxe: Arena Nordeste',
+        text: 'Acabei de desvendar a história do Nordeste! Duvido bater meu laudo pericial: oxeeraassim.github.io',
+        files: [file]
+      }).catch(() => {});
+    } else {
+      alert('Seu navegador não suporta compartilhamento direto de arquivo. Toque em "Baixar Imagem HD" e suba diretamente no Instagram Stories!');
+    }
+  }, 'image/png');
+}
+
+// Inicializa no carregamento
+window.addEventListener('DOMContentLoaded', () => {
+  updateCard();
+});
+</script>
+</body>
+</html>
