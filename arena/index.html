@@ -259,6 +259,45 @@ button { font-family: inherit; cursor: pointer; border: none; }
       <label>Defendo</label><select id="fHeart"></select>
     </div>
     <div class="patente"><div class="ico" id="pIco">🧒</div><div style="flex:1"><div class="slab" style="font-weight:700" id="pNome">Menino de Recado</div><div class="mono" style="font-size:.66rem;color:#6b6455" id="pXp">0 / 300 XP</div><div class="xpbar"><i id="pBar" style="width:0%"></i></div></div></div>
+    <!-- PERSONALIZAÇÃO DE AVATAR SERTANEJO -->
+    <div style="background: rgba(0,0,0,0.04); border: 1px dashed #c9bfa9; border-radius: 8px; padding: 10px 12px; margin-top: 10px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px;">
+        <span style="font-family:'Courier Prime',monospace; font-size:.7rem; font-weight:700; color:#5c4033;">🎨 SEU AVATAR SERTANEJO</span>
+        <span id="avatarPreviewBadge" style="font-size:1.3rem; background:#1c1109; padding:2px 8px; border-radius:6px; border:1px solid #d49b35;">🤠</span>
+      </div>
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+        <div>
+          <label style="font-family:'Courier Prime',monospace; font-size:.65rem; color:#6b6455; display:block; margin-bottom:2px;">Chapéu</label>
+          <select id="selChapeu" onchange="updateAvatarConfig()" style="width:100%; font-size:.72rem; padding:4px; border-radius:4px; background:#fff; border:1px solid #c9bfa9;">
+            <option value="couro">🤠 Couro de Vaqueiro</option>
+            <option value="palha">🌾 Palha do Roceiro</option>
+            <option value="males">👳 Turbante dos Malês</option>
+            <option value="boina">🧢 Boina Sertaneja</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-family:'Courier Prime',monospace; font-size:.65rem; color:#6b6455; display:block; margin-bottom:2px;">Adereço</label>
+          <select id="selAdereco" onchange="updateAvatarConfig()" style="width:100%; font-size:.72rem; padding:4px; border-radius:4px; background:#fff; border:1px solid #c9bfa9;">
+            <option value="nenhum">Nenhum</option>
+            <option value="oculos">👓 Óculos de Arame</option>
+            <option value="lenco">🧣 Lenço Rubro</option>
+            <option value="estrela">⭐ Estrela de Capitão</option>
+            <option value="flor">🌸 Flor de Mandacaru</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- SELETOR DE DIFICULDADE -->
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-top:10px; padding-top:8px; border-top:1px dotted #c9bfa9;">
+      <label style="font-family:'Courier Prime',monospace; font-size:.7rem; font-weight:700; color:#5c4033;">⚔️ DIFICULDADE:</label>
+      <select id="selDificuldade" onchange="updateDificuldadeConfig()" style="font-size:.72rem; padding:4px 8px; border-radius:4px; background:#1c1109; color:#ffd166; border:1px solid #d49b35; font-weight:bold;">
+        <option value="facil">Bucho Furado (25s • Fácil)</option>
+        <option value="medio" selected>Cabra Bom (20s • Médio)</option>
+        <option value="dificil">Canudos (15s • Difícil)</option>
+        <option value="dragao">Dragão do Mar (10s • Insano)</option>
+      </select>
+    </div>
   </div>
   <div class="menu">
     <!-- MODO 1: OXEDLE DESAFIO DO DIA -->
@@ -269,6 +308,20 @@ button { font-family: inherit; cursor: pointer; border: none; }
       </div>
       <div class="badge">NOVO ☀️</div>
     </div>
+
+    <!-- MODO 2: MORTE SÚBITA (CABOCLO VALENTE) -->
+    <button class="mbtn" onclick="startCabocloValente()" style="background: linear-gradient(135deg, #2b140b, #150905); border: 1.5px solid #a8422b; box-shadow: 0 3px 8px rgba(0,0,0,0.3);">
+      <div class="e">🔥</div>
+      <div class="t" style="color: #fca5a5;">Caboclo Valente (Morte Súbita)</div>
+      <div class="s" style="color: #fecaca;">1 erro e você cai! Quantas consecutivas você aguenta?</div>
+    </button>
+
+    <!-- MODO 3: CRONÔMETRO INSANO (60 SEGUNDOS) -->
+    <button class="mbtn" onclick="startCronometroInsano()" style="background: linear-gradient(135deg, #1c180e, #0c0a06); border: 1.5px solid #d49b35; box-shadow: 0 3px 8px rgba(0,0,0,0.3);">
+      <div class="e">⚡</div>
+      <div class="t" style="color: #fef08a;">Cronômetro Insano (60 Segundos)</div>
+      <div class="s" style="color: #fef9c3;">60s corridos na tela • Responda sem parar!</div>
+    </button>
     <button class="mbtn main" onclick="go('map')"><div class="e">🗺️</div><div class="t">Jornada pelo Nordeste</div><div class="s">9 arenas · 4 tipos de disputa · chefão final em Salvador</div></button>
     <button class="mbtn" onclick="quickDuel()"><div class="e">⚔️</div><div class="t">Duelo Rápido</div><div class="s">5 rodadas, perguntas misturadas</div></button>
     <button class="mbtn" onclick="go('album')"><div class="e">🃏</div><div class="t">Álbum do Acervo</div><div class="s" id="hAlb">0 / 40 figurinhas</div></button>
@@ -434,7 +487,7 @@ const MODES = {cabo:'CABO DE GUERRA',corrida:'CORRIDA DE JEGUE',sebo:'PAU DE SEB
 const RIVAIS = ['@zefinha_do_crato','@baiano_em_sp','@tonho_da_feira','@clarice_olinda','@potiguar_df','@maria_do_ingá','@vaqueiro_digital','@cordel_ligeiro','@neta_de_rendeira'];
 
 // ---------- estado salvo ----------
-const S = Object.assign({name:'',orig:'PE',heart:'PE',xp:0,reis:60,stars:{},cards:[],seen:[],pts:0,pups:{reza:2,rede:2,chapeu:1},exits:0}, JSON.parse(localStorage.getItem('oxe_arena_v2')||'{}'));
+const S = Object.assign({name:'',orig:'PE',heart:'PE',xp:0,reis:60,stars:{},cards:[],seen:[],pts:0,pups:{reza:2,rede:2,chapeu:1},exits:0,avatar:{chapeu:'couro',adereco:'nenhum'},dif:'medio'}, JSON.parse(localStorage.getItem('oxe_arena_v2')||'{}'));
 const save=()=>localStorage.setItem('oxe_arena_v2',JSON.stringify(S));
 const $=id=>document.getElementById(id);
 function toast(m){const t=$('toast');t.textContent=m;t.classList.add('on');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('on'),2200)}
@@ -447,6 +500,15 @@ function initHome(){
   $('fName').oninput=e=>{S.name=e.target.value;save()};
   $('fOrig').onchange=e=>{S.orig=e.target.value;save()};
   $('fHeart').onchange=e=>{S.heart=e.target.value;save()};
+
+  // Avatar & Dificuldade
+  S.avatar = S.avatar || { chapeu: 'couro', adereco: 'nenhum' };
+  S.dif = S.dif || 'medio';
+  if ($('selChapeu')) $('selChapeu').value = S.avatar.chapeu;
+  if ($('selAdereco')) $('selAdereco').value = S.avatar.adereco;
+  if ($('selDificuldade')) $('selDificuldade').value = S.dif;
+  const av = getAvatarDisplay(S.avatar);
+  if ($('avatarPreviewBadge')) $('avatarPreviewBadge').textContent = av.full;
 }
 function patente(){let p=PATENTES[0],n=null;for(let i=0;i<PATENTES.length;i++){if(S.xp>=PATENTES[i][0]){p=PATENTES[i];n=PATENTES[i+1]||null}}return{p,n}}
 function refreshHome(){
@@ -759,20 +821,99 @@ function quickDuel(){
   B={arena:-1,a,mode:['cabo','corrida','sebo'][Math.random()*3|0],qs:pickQs('XX',5),r:0,me:0,bot:0,hitsMe:0,results:[],combo:0,rival:RIVAIS[Math.random()*RIVAIS.length|0],newCards:[],botSkill:.55};
   go('battle');setupBattle();
 }
+
+// ---------- NOVOS MODOS DE JOGO ----------
+function startCabocloValente() {
+  if (typeof initAudio === 'function') initAudio();
+  B = {
+    arena: -1,
+    a: { nome: 'Sertão Bravio', mode: 'cabo', sky: ['#2b140b', '#000'] },
+    mode: 'cabo',
+    isCaboclo: true,
+    qs: shuffle([...Q]),
+    r: 0,
+    me: 0,
+    bot: 0,
+    hitsMe: 0,
+    results: [],
+    combo: 0,
+    rival: '💀 Morte Súbita',
+    newCards: [],
+    botSkill: 0.5
+  };
+  go('battle');
+  setupBattle();
+  toast('🔥 Caboclo Valente: Errou 1 pergunta, acabou!');
+}
+
+let cronoTimer = null;
+function startCronometroInsano() {
+  if (typeof initAudio === 'function') initAudio();
+  B = {
+    arena: -1,
+    a: { nome: 'Relógio do Sertão', mode: 'corrida', sky: ['#1c180e', '#000'] },
+    mode: 'corrida',
+    isCronometro: true,
+    cronoLeft: 60,
+    qs: shuffle([...Q]),
+    r: 0,
+    me: 0,
+    bot: 0,
+    hitsMe: 0,
+    results: [],
+    combo: 0,
+    rival: '⏱️ Tempo (60s)',
+    newCards: [],
+    botSkill: 0.45
+  };
+  go('battle');
+  setupBattle();
+  toast('⚡ Cronômetro Insano: 60s corridos na tela!');
+
+  clearInterval(cronoTimer);
+  cronoTimer = setInterval(() => {
+    if (!B || !B.isCronometro) { clearInterval(cronoTimer); return; }
+    B.cronoLeft--;
+    const banner = $('banner');
+    if (banner) banner.textContent = `⚡ CRONÔMETRO INSANO · RESTAM ${B.cronoLeft}s · ${B.hitsMe} ACERTOS`;
+    if (B.cronoLeft <= 0) {
+      clearInterval(cronoTimer);
+      toast('⏰ Fim dos 60 segundos!');
+      endBattle();
+    }
+  }, 1000);
+}
 function setupBattle(){
   $('nmMe').textContent=myTag()+' · '+bond();$('nmBot').textContent=B.rival;
   if(photo)$('avMe').style.backgroundImage=`url(${photo.src})`;
+  else {
+    const avD = getAvatarDisplay(S.avatar);
+    $('avMe').textContent = avD.full;
+    $('avMe').style.display = 'flex';
+    $('avMe').style.alignItems = 'center';
+    $('avMe').style.justifyContent = 'center';
+    $('avMe').style.fontSize = '1.3rem';
+    $('avMe').style.background = '#1a120b';
+    $('avMe').style.border = '2px solid #d49b35';
+  }
   scene.reset();nextRound(true);
 }
 let tmr=null,tLeft=0,tMax=20,answered=false,shield=false;
 function drawRounds(){$('rounds').innerHTML=B.qs.map((_,k)=>`<i class="${k<B.results.length?(B.results[k]>0?'w':B.results[k]<0?'l':''):k===B.r?'c':''}"></i>`).join('')}
 function nextRound(first){
   if(!first)B.r++;
-  if(B.r>=B.qs.length)return endBattle();
+  if(!B.isCaboclo && !B.isCronometro && B.r>=B.qs.length)return endBattle();
+  if((B.isCaboclo || B.isCronometro) && B.r>=B.qs.length) {
+    B.qs = shuffle([...Q]);
+    B.r = 0;
+  }
   const q=B.qs[B.r];B.q=q;answered=false;shield=false;
-  S.seen.push(q.id);save(); // registra ao exibir: sair e voltar não repete
-  const final=B.r===B.qs.length-1;
-  $('banner').textContent=`${MODES[B.mode]} · RODADA ${B.r+1}/5${final?' · VALE DOBRO':''}`;
+  S.seen.push(q.id);save();
+  const final=!B.isCaboclo && !B.isCronometro && B.r===B.qs.length-1;
+  const tTitle = B.isCaboclo ? `🔥 CABOCLO VALENTE · RODADA ${B.r+1}` :
+                 B.isCronometro ? `⚡ CRONÔMETRO INSANO · RESTAM ${B.cronoLeft || 60}s` :
+                 `${MODES[B.mode] || 'DUELO'} · RODADA ${B.r+1}/5${final?' · VALE DOBRO':''}`;
+  $('banner').textContent=tTitle;
   $('qTag').textContent=`${q.uf} · ${q.dif}`;$('qId').textContent=q.id+' · '+q.tema;
   $('qText').textContent=q.q;$('fb').classList.remove('on','bad');
   B.order=shuffle([0,1,2,3]);
@@ -786,22 +927,45 @@ function nextRound(first){
 }
 function answer(i,btn){
   if(answered)return;answered=true;clearInterval(tmr);
-  const q=B.q,ok=i===q.ans,final=B.r===B.qs.length-1,mult=final?2:1;
+  const q=B.q,ok=i===q.ans,final=!B.isCaboclo && !B.isCronometro && B.r===B.qs.length-1,mult=final?2:1;
+  
+  if(typeof audioFX==='function') audioFX(ok?'hit':'miss');
+  if(navigator.vibrate) navigator.vibrate(ok?35:[50,40,50]);
+
   document.querySelectorAll('.opt').forEach(b=>{const bi=+b.dataset.i;b.disabled=true;if(bi===q.ans)b.classList.add('ok');if(bi===i&&!ok)b.classList.add('bad');
     if(!B.botOk&&bi!==q.ans&&!b._m&&Math.random()<.4){} });
-  // marca escolha do rival
+  
   const botPick=B.botOk?q.ans:[0,1,2,3].filter(x=>x!==q.ans)[Math.random()*3|0];
   const bb=[...document.querySelectorAll('.opt')].find(b=>+b.dataset.i===botPick);if(bb)bb.insertAdjacentHTML('beforeend',`<span class="bot">◀ rival</span>`);
+  
   let gMe=0,gBot=0;
-  if(ok){B.combo++;gMe=Math.round((100+tLeft*7.5)*mult*(B.combo>=3?1.5:1));B.hitsMe++;}
-  else B.combo=0;
+  if(ok){
+    B.combo++;
+    const difMult = S.dif === 'dragao' ? 2.5 : S.dif === 'dificil' ? 1.5 : S.dif === 'facil' ? 0.8 : 1.0;
+    gMe=Math.round((100+tLeft*7.5)*mult*(B.combo>=3?1.5:1)*difMult);
+    B.hitsMe++;
+  } else {
+    B.combo=0;
+  }
+  
   const botIn=B.botT<=tMax;
   if(B.botOk&&botIn)gBot=Math.round((100+(tMax-B.botT)*7.5)*mult);
   if(!ok&&shield){gBot=Math.round(gBot/2);}
   B.me+=gMe;B.bot+=gBot;
   const res=gMe>gBot?1:gMe<gBot?-1:0;B.results.push(res);
   $('scMe').textContent=B.me;$('scBot').textContent=B.bot;
-  $('combo').textContent=`🔥 COMBO x${B.combo}${B.combo>=3?' · +50%':''}`;$('combo').classList.toggle('on',B.combo>=2);
+  
+  // COMBO HEROICO (SEM menção a Lampião)
+  if(B.combo>=2){
+    if(typeof audioFX==='function') audioFX('combo');
+    const comboFrase = B.combo>=5 ? '👑 GIGANTE DO NORDESTE! x'+B.combo :
+                       B.combo===4 ? '💥 Cabra da Peste! x4' :
+                       B.combo===3 ? '⚡ Arretado! x3' : '🔥 Eita! x2';
+    $('combo').textContent=`${comboFrase}${B.combo>=3?' · +50%':''}`;
+    $('combo').classList.add('on');
+  } else {
+    $('combo').classList.remove('on');
+  }
   flash(ok?'rgba(63,174,106,.35)':'rgba(200,67,58,.4)');
   scene.round(res,ok,final);
   if(ok&&!S.cards.includes(q.id)){S.cards.push(q.id);B.newCards.push(q);}
@@ -825,7 +989,10 @@ function usePup(k){
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&B&&$('battle').classList.contains('on')&&!answered){S.exits++;save();answer(-1,null);toast('Saiu durante a pergunta: rodada perdida e registrada')}});
 
 function endBattle(){
-  const win=B.me>B.bot,ac=B.hitsMe;
+  clearInterval(tmr);
+  if(typeof cronoTimer !== 'undefined') clearInterval(cronoTimer);
+  const win=B.isCaboclo ? (B.hitsMe >= 3) : B.isCronometro ? (B.hitsMe >= 5) : (B.me>B.bot);
+  const ac=B.hitsMe;
   let st=win?(ac>=5?3:ac>=4?2:1):0;
   const reis=Math.round(B.me/12)+(win?30:5)+(B.a.boss&&win?100:0), xp=Math.round(B.me/4)+(win?80:20);
   S.reis+=reis;S.xp+=xp;S.pts+=B.me;
@@ -1340,7 +1507,7 @@ function startOxedle() {
     hitsMe: 0,
     results: [],
     combo: 0,
-    rival: '🌵 Lampião das 06h',
+    rival: '🌵 Guardião das 06h',
     newCards: [],
     botSkill: 0.55,
     isOxedle: true
@@ -1501,7 +1668,7 @@ function renderStoriesCard(theme = 'dossie') {
   const ctx = scv.getContext('2d');
   const w = 1080, h = 1920;
 
-  const sampleCard = (B && B.newCards && B.newCards.length) ? B.newCards[0] : (Q[0] || { id:'ARENA-001', uf:'RN', tema:'Lampião em Mossoró (1927)' });
+  const sampleCard = (B && B.newCards && B.newCards.length) ? B.newCards[0] : (Q[0] || { id:'ARENA-001', uf:'RN', tema:'A Resistência de Mossoró (1927)' });
   const arenaNome = (B && B.arena >= 0) ? B.a.nome : 'Duelo do Sertão';
   const rivalNome = B ? B.rival : '@desafiante';
   const pts = B ? B.me : S.pts;
