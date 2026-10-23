@@ -1,5 +1,11 @@
 # CHANGELOG — OXE! 2.0: A Grande Jornada dos Nove Sóis
 
+## [v2.3.0 — Controles de toque refeitos] — 2026-10-23
+- PULAR e CHICOTE não funcionavam no celular: os botões estavam com `pointer-events:none` no CSS e o código escutava direto neles. Agora cada lado da tela tem uma área de toque invisível, maior que o botão, com multitoque. Dá para correr e pular ao mesmo tempo e deslizar o polegar entre os botões.
+- Layout novo, simples e compacto: ◀ ▶ à esquerda; ▲ PULAR e ⚡ CHICOTE à direita, menores e semitransparentes, para não tapar a fase.
+- O botão ▼ (Pisão) saiu: a função nunca existiu no jogo. A placa do tatu foi reescrita.
+- Service Worker `oxe-jogo-v8`.
+
 ## [v2.2.0 — Jogabilidade e tela sem tremer] — 2026-10-23
 
 ### Tela tremendo (corrigido)

@@ -127,42 +127,50 @@ window.addEventListener('keyup', e => {
 });
 window.addEventListener('blur', () => { keys.left = keys.right = keys.up = keys.down = false; setJump(false); setWhip(false); });
 
+// v2.3: controle de toque refeito. Antes os botões PULAR e CHICOTE tinham pointer-events:none no CSS
+// e o código escutava direto neles -> nunca recebiam o toque. Agora cada zona escuta os dedos
+// (multitoque, dá para deslizar o polegar entre os botões) e escolhe o botão mais próximo.
 const TouchController = {
-  dpadPointer: null,
+  fingers: new Map(), // pointerId -> { zone, action }
   init() {
-    const zone = document.getElementById('dpadZone') || (document.getElementById('dpadLeft') && document.getElementById('dpadLeft').parentElement);
-    if (zone) {
+    ['dpadZone', 'actionZone'].forEach((zid) => {
+      const zone = document.getElementById(zid); if (!zone) return;
       zone.style.touchAction = 'none';
-      zone.addEventListener('pointerdown', e => { e.preventDefault(); this.dpadPointer = e.pointerId; try { zone.setPointerCapture(e.pointerId); } catch (_) {} this.updateDpad(e); });
-      zone.addEventListener('pointermove', e => { if (e.pointerId === this.dpadPointer) { e.preventDefault(); this.updateDpad(e); } });
-      const end = e => { if (e.pointerId !== this.dpadPointer) return; this.dpadPointer = null; keys.left = keys.right = keys.down = false; this.highlight(); };
-      zone.addEventListener('pointerup', end); zone.addEventListener('pointercancel', end); zone.addEventListener('lostpointercapture', end);
+      const down = (e) => { e.preventDefault(); try { zone.setPointerCapture(e.pointerId); } catch (_) {} this.fingers.set(e.pointerId, { zone: zid, action: this.pick(zid, e.clientX, e.clientY) }); this.apply(true); };
+      const move = (e) => { const f = this.fingers.get(e.pointerId); if (!f) return; e.preventDefault(); const a = this.pick(zid, e.clientX, e.clientY); if (a !== f.action) { f.action = a; this.apply(false); } };
+      const up = (e) => { if (!this.fingers.has(e.pointerId)) return; this.fingers.delete(e.pointerId); this.apply(false); };
+      if (window.PointerEvent) {
+        zone.addEventListener('pointerdown', down); zone.addEventListener('pointermove', move);
+        zone.addEventListener('pointerup', up); zone.addEventListener('pointercancel', up); zone.addEventListener('lostpointercapture', up);
+      } else { // navegadores antigos: eventos de toque
+        const wrap = (fn) => (ev) => { ev.preventDefault(); for (const t of ev.changedTouches) fn({ pointerId: 't' + t.identifier, clientX: t.clientX, clientY: t.clientY, preventDefault() {} }); };
+        zone.addEventListener('touchstart', wrap(down), { passive: false }); zone.addEventListener('touchmove', wrap(move), { passive: false });
+        zone.addEventListener('touchend', wrap(up), { passive: false }); zone.addEventListener('touchcancel', wrap(up), { passive: false });
+      }
+      zone.addEventListener('contextmenu', (e) => e.preventDefault());
+    });
+  },
+  center(id) { const el = document.getElementById(id); if (!el) return null; const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; },
+  pick(zid, x, y) {
+    if (zid === 'dpadZone') {
+      const L = this.center('dpadLeft'), R = this.center('dpadRight'); if (!L || !R) return null;
+      const mid = (L.x + R.x) / 2; const leftSide = L.x < R.x ? x < mid : x >= mid;
+      return leftSide ? 'left' : 'right';
     }
-    this.bindButton('btnJump', setJump); this.bindButton('btnWhip', setWhip);
+    const J = this.center('btnJump'), W = this.center('btnWhip'); if (!J) return 'jump';
+    if (!W) return 'jump';
+    return Math.hypot(x - W.x, y - W.y) < Math.hypot(x - J.x, y - J.y) * 0.9 ? 'whip' : 'jump';
   },
-  rectOf(id) { const el = document.getElementById(id); return el ? el.getBoundingClientRect() : null; },
-  updateDpad(e) {
-    const L = this.rectOf('dpadLeft'), R = this.rectOf('dpadRight'), D = this.rectOf('dpadDown');
-    const x = e.clientX, y = e.clientY;
-    let left = false, right = false, down = false;
-    if (L && R) {
-      const midX = (L.right + R.left) / 2;
-      const downTop = D ? D.top : Infinity;
-      if (D && y >= downTop - 6 && x > L.right - 10 && x < R.left + 10) down = true;
-      else if (x < midX) left = true; else right = true;
-      if (D && y >= downTop + D.height * 0.3) down = true;
-    }
-    keys.left = left; keys.right = right; keys.down = down; this.highlight();
+  apply(isPress) {
+    const on = { left: false, right: false, jump: false, whip: false };
+    this.fingers.forEach((f) => { if (f.action) on[f.action] = true; });
+    keys.left = on.left && !on.right; keys.right = on.right && !on.left;
+    const wasJump = keys.jump, wasWhip = keys.whip;
+    setJump(on.jump); setWhip(on.whip);
+    if (isPress && ((on.jump && !wasJump) || (on.whip && !wasWhip))) triggerHaptic(10);
+    [['dpadLeft', keys.left], ['dpadRight', keys.right], ['btnJump', on.jump], ['btnWhip', on.whip]].forEach(([id, a]) => { const el = document.getElementById(id); if (el) el.classList.toggle('active', a); });
   },
-  highlight() {
-    [['dpadLeft', keys.left], ['dpadRight', keys.right], ['dpadDown', keys.down]].forEach(([id, on]) => { const el = document.getElementById(id); if (el) el.classList.toggle('active', on); });
-  },
-  bindButton(id, setter) {
-    const el = document.getElementById(id); if (!el) return; let pid = null; el.style.touchAction = 'none';
-    el.addEventListener('pointerdown', e => { e.preventDefault(); if (pid !== null) return; pid = e.pointerId; try { el.setPointerCapture(pid); } catch (_) {} setter(true); el.classList.add('active'); triggerHaptic(10); });
-    const end = e => { if (e.pointerId !== pid) return; pid = null; setter(false); el.classList.remove('active'); };
-    el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end); el.addEventListener('lostpointercapture', end);
-  }
+  reset() { this.fingers.clear(); this.apply(false); }
 };
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => TouchController.init()); else TouchController.init();
 
@@ -1788,7 +1796,7 @@ function drawBossGuide(ctx, boss, camX, camY) {
   function syncTouchVisibility() {
     const tc = $('touchControls'); if (!tc) return;
     const playing = currentState === GAME_STATE.PLAYING || currentState === GAME_STATE.CHALLENGE || currentState === GAME_STATE.LEVEL_COMPLETE;
-    if (tc._playing !== playing) { tc._playing = playing; tc.classList.toggle('hidden-by-game', !playing); if (!playing) { keys.left = keys.right = keys.down = false; setJump(false); setWhip(false); } }
+    if (tc._playing !== playing) { tc._playing = playing; tc.classList.toggle('hidden-by-game', !playing); if (!playing) { keys.left = keys.right = keys.down = false; setJump(false); setWhip(false); TouchController.reset(); } }
   }
   function startMainLoop() {
     const STEP = (typeof STEP_MS !== 'undefined') ? STEP_MS : 1000 / 60;

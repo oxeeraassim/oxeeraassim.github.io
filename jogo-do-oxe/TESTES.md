@@ -1,7 +1,7 @@
 # TESTES — Oxe, era assim? 2
 
-> Gerado automaticamente por `test_oxe2_real.js` em 2026-10-23T18:14:46.060Z (Node v22.22.0).
-> Arquivos REAIS carregados de `/tmp/claude-0/-home-claude/f0d99e40-5a8c-505a-9a5e-dfa00bcbece7/scratchpad/jogo` via `vm.runInContext`. Duração: 11078 ms.
+> Gerado automaticamente por `test_oxe2_real.js` em 2026-10-23T18:43:50.382Z (Node v22.22.0).
+> Arquivos REAIS carregados de `/tmp/claude-0/-home-claude/f0d99e40-5a8c-505a-9a5e-dfa00bcbece7/scratchpad/jogo` via `vm.runInContext`. Duração: 9803 ms.
 
 **Resultado: 12/12 aprovados.**
 
@@ -34,9 +34,9 @@
   ],
   "loaded": {
     "audio.js": "36251 bytes",
-    "levels.js": "42509 bytes",
+    "levels.js": "42536 bytes",
     "graphics_hd.js": "74532 bytes",
-    "game.js": "135531 bytes"
+    "game.js": "136409 bytes"
   },
   "swListeners": [
     "install",
@@ -56,7 +56,7 @@
     "OxeLevels": true,
     "__OXE_TEST__": true
   },
-  "idsNoHtml": 86,
+  "idsNoHtml": 85,
   "idsPedidosAusentes": [],
   "stateAposBoot": 0
 }

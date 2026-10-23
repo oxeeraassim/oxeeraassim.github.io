@@ -430,9 +430,9 @@
       { x: 2700, y: 460, title: 'Planar na Corrente Térmica', icon: '🪂',
         textTouch: 'Pule e SEGURE o botão PULAR no ar para planar com o chapéu. O vento quente leva você para o alto!',
         textKey: 'Pule e SEGURE ESPAÇO no ar para planar com o chapéu. O vento quente leva você para o alto!' },
-      { x: 4300, y: 460, title: 'Pisão ▼', icon: '▼',
-        textTouch: 'O tatu tem casco duro! No ar, toque em ▼ para dar um Pisão e quebrar a carapaça.',
-        textKey: 'O tatu tem casco duro! No ar, aperte ↓ (ou S) para dar um Pisão e quebrar a carapaça.' }
+      { x: 4300, y: 460, title: 'Tatu Enrolado', icon: '🛡️',
+        textTouch: 'Enrolado, o tatu tem casco duro! Espere ele desenrolar e pule na cabeça ou dê uma chicotada.',
+        textKey: 'Enrolado, o tatu tem casco duro! Espere ele desenrolar e pule na cabeça ou dê uma chicotada.' }
     ];
 
     // Rapaduras: trilhas + arcos desenhando a parábola ideal antes de cada vão

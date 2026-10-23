@@ -346,151 +346,90 @@
     body.force-touch #touchControls { display: block; }
     #touchControls.hidden-by-game { display: none !important; }
 
-    #touchControls.size-sm { --touch-scale: 0.82; }
+    #touchControls.size-sm { --touch-scale: 0.85; }
     #touchControls.size-md { --touch-scale: 1; }
-    #touchControls.size-lg { --touch-scale: 1.22; }
+    #touchControls.size-lg { --touch-scale: 1.2; }
 
+    /* v2.3: controles simples e compactos. As zonas são áreas de toque invisíveis maiores que os
+       botões (fácil de acertar com o polegar); o JS descobre qual botão está sob cada dedo. */
     .touch-zone {
       position: absolute;
-      bottom: calc(var(--safe-bottom) + 18px);
+      bottom: 0;
+      height: min(62%, 300px);
       pointer-events: auto;
       touch-action: none;
+      -webkit-user-select: none;
+      user-select: none;
     }
-
-    /* Zona esquerda: D-pad em "pílula" contínua para deslizar o polegar entre ◀ e ▶ (B19) */
-    #dpadZone {
-      left: calc(var(--safe-left) + 18px);
-      width: calc(196px * var(--touch-scale));
-      height: calc(170px * var(--touch-scale));
-    }
-
-    #actionZone {
-      right: calc(var(--safe-right) + 18px);
-      width: calc(210px * var(--touch-scale));
-      height: calc(170px * var(--touch-scale));
-    }
+    #dpadZone { left: 0; width: min(42%, 380px); }
+    #actionZone { right: 0; width: min(42%, 380px); }
 
     .touch-btn {
       position: absolute;
-      background: radial-gradient(circle, rgba(245, 159, 0, 0.35) 0%, rgba(26, 18, 11, 0.6) 100%);
-      border: 2.5px solid rgba(255, 212, 59, 0.75);
+      border-radius: 50%;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       color: #FFF9DB;
       font-weight: 900;
-      line-height: 1.05;
-      text-align: center;
-      box-shadow: 0 6px 16px rgba(0,0,0,0.6), inset 0 2px 6px rgba(255,255,255,0.3);
-      backdrop-filter: blur(4px);
-      -webkit-backdrop-filter: blur(4px);
-      touch-action: none;
-      pointer-events: none; /* a zona captura os toques; o JS calcula o botão sob o dedo */
-      transition: transform 0.06s ease, background 0.06s ease, border-color 0.06s ease;
+      line-height: 1;
+      background: rgba(26, 18, 11, 0.42);
+      border: 2px solid rgba(255, 249, 219, 0.55);
+      box-shadow: 0 3px 10px rgba(0,0,0,0.35);
+      pointer-events: none;
+      transition: transform 0.05s ease, background 0.05s ease;
       text-shadow: 0 1px 3px rgba(0,0,0,0.8);
     }
-
-    .touch-btn.active {
-      transform: scale(0.92);
-      background: radial-gradient(circle, rgba(232, 89, 12, 0.65) 0%, rgba(26, 18, 11, 0.85) 100%);
-      border-color: #FFA94D;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.6), 0 0 18px rgba(255, 169, 77, 0.55);
-    }
-
-    /* Trilho de fundo unindo ◀ e ▶ */
-    #dpadZone::before {
-      content: '';
-      position: absolute;
-      left: 0;
-      bottom: 0;
-      width: 100%;
-      height: calc(84px * var(--touch-scale));
-      border-radius: 999px;
-      background: rgba(26, 18, 11, 0.45);
-      border: 2px solid rgba(255, 212, 59, 0.3);
-      box-shadow: inset 0 2px 8px rgba(0,0,0,0.6);
-    }
-
-    #dpadLeft, #dpadRight {
-      bottom: calc(4px * var(--touch-scale));
-      width: calc(94px * var(--touch-scale));
-      height: calc(76px * var(--touch-scale));
-      font-size: calc(1.9rem * var(--touch-scale));
-    }
-    #dpadLeft {
-      left: calc(4px * var(--touch-scale));
-      border-radius: 999px 14px 14px 999px;
-    }
-    #dpadRight {
-      right: calc(4px * var(--touch-scale));
-      border-radius: 14px 999px 999px 14px;
-    }
-    #dpadDown {
-      left: 50%;
-      bottom: calc(92px * var(--touch-scale));
-      margin-left: calc(-34px * var(--touch-scale));
-      width: calc(68px * var(--touch-scale));
-      height: calc(68px * var(--touch-scale));
-      border-radius: 50%;
-      font-size: calc(1.5rem * var(--touch-scale));
-    }
-
-    /* Zona direita: apenas PULAR (segure = planar) e CHICOTE (B20) */
-    #btnJump {
-      right: 0;
-      bottom: calc(4px * var(--touch-scale));
-      width: calc(112px * var(--touch-scale));
-      height: calc(112px * var(--touch-scale));
-      border-radius: 50%;
-      font-size: calc(1.25rem * var(--touch-scale));
-      background: radial-gradient(circle, rgba(16, 152, 173, 0.5) 0%, rgba(26, 18, 11, 0.65) 100%);
-      border-color: #66D9E8;
-      letter-spacing: 1px;
-    }
-    #btnJump small {
-      display: block;
-      margin-top: 4px;
-      font-size: calc(0.6rem * var(--touch-scale));
-      font-weight: 700;
-      letter-spacing: 0.3px;
-      color: #C5F6FA;
+    .touch-btn .lbl {
+      font-size: calc(9px * var(--touch-scale));
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      margin-top: 2px;
       opacity: 0.9;
     }
-    #btnJump.active {
-      background: radial-gradient(circle, rgba(16, 152, 173, 0.85) 0%, rgba(26, 18, 11, 0.85) 100%);
-      border-color: #99E9F2;
-    }
-    #btnJump.gliding {
-      box-shadow: 0 0 22px rgba(102, 217, 232, 0.8), inset 0 2px 6px rgba(255,255,255,0.3);
-    }
+    .touch-btn.active { transform: scale(0.9); background: rgba(232, 89, 12, 0.6); border-color: #FFD43B; }
 
-    #btnWhip {
-      right: calc(122px * var(--touch-scale));
-      bottom: calc(10px * var(--touch-scale));
-      width: calc(80px * var(--touch-scale));
-      height: calc(80px * var(--touch-scale));
-      border-radius: 50%;
-      font-size: calc(0.9rem * var(--touch-scale));
-      background: radial-gradient(circle, rgba(232, 89, 12, 0.5) 0%, rgba(26, 18, 11, 0.65) 100%);
-      border-color: #FFA94D;
+    #dpadLeft, #dpadRight {
+      bottom: calc(var(--safe-bottom) + 18px);
+      width: calc(66px * var(--touch-scale));
+      height: calc(66px * var(--touch-scale));
+      font-size: calc(26px * var(--touch-scale));
     }
-    #btnWhip .ico { font-size: calc(1.4rem * var(--touch-scale)); }
+    #dpadLeft  { left: calc(var(--safe-left) + 18px); }
+    #dpadRight { left: calc(var(--safe-left) + 18px + 80px * var(--touch-scale)); }
 
-    /* Modo canhoto: espelha as zonas */
-    #touchControls.left-handed #dpadZone {
-      left: auto;
+    #btnJump {
       right: calc(var(--safe-right) + 18px);
+      bottom: calc(var(--safe-bottom) + 18px);
+      width: calc(76px * var(--touch-scale));
+      height: calc(76px * var(--touch-scale));
+      font-size: calc(26px * var(--touch-scale));
+      background: rgba(16, 152, 173, 0.45);
+      border-color: rgba(153, 233, 242, 0.8);
     }
-    #touchControls.left-handed #actionZone {
-      right: auto;
-      left: calc(var(--safe-left) + 18px);
+    #btnJump.active { background: rgba(16, 152, 173, 0.85); }
+    #btnWhip {
+      right: calc(var(--safe-right) + 18px + 88px * var(--touch-scale));
+      bottom: calc(var(--safe-bottom) + 26px);
+      width: calc(60px * var(--touch-scale));
+      height: calc(60px * var(--touch-scale));
+      font-size: calc(22px * var(--touch-scale));
+      background: rgba(232, 89, 12, 0.4);
+      border-color: rgba(255, 169, 77, 0.85);
     }
-    #touchControls.left-handed #btnJump { right: auto; left: 0; }
-    #touchControls.left-handed #btnWhip { right: auto; left: calc(122px * var(--touch-scale)); }
+
+    /* Modo canhoto: pular/chicote à esquerda e setas à direita */
+    #touchControls.left-handed #dpadZone { left: auto; right: 0; }
+    #touchControls.left-handed #actionZone { right: auto; left: 0; }
+    #touchControls.left-handed #dpadLeft { left: auto; right: calc(var(--safe-right) + 18px + 80px * var(--touch-scale)); }
+    #touchControls.left-handed #dpadRight { left: auto; right: calc(var(--safe-right) + 18px); }
+    #touchControls.left-handed #btnJump { right: auto; left: calc(var(--safe-left) + 18px); }
+    #touchControls.left-handed #btnWhip { right: auto; left: calc(var(--safe-left) + 18px + 88px * var(--touch-scale)); }
 
     @media (max-height: 380px) {
-      .touch-zone { bottom: calc(var(--safe-bottom) + 8px); }
+      #dpadLeft, #dpadRight, #btnJump { bottom: calc(var(--safe-bottom) + 10px); }
+      #btnWhip { bottom: calc(var(--safe-bottom) + 16px); }
     }
 
     /* ==================== OVERLAY DE ROTAÇÃO (B22) ==================== */
@@ -1146,14 +1085,13 @@
     <!-- ==================== CONTROLES TOUCH "DE CONSOLE" ==================== -->
     <div id="touchControls" class="size-md" aria-hidden="true">
       <div class="touch-zone" id="dpadZone">
-        <div class="touch-btn" id="dpadDown" data-action="down">▼</div>
         <div class="touch-btn" id="dpadLeft" data-action="left">◀</div>
         <div class="touch-btn" id="dpadRight" data-action="right">▶</div>
       </div>
 
       <div class="touch-zone" id="actionZone">
-        <div class="touch-btn" id="btnWhip" data-action="whip"><span class="ico">⚡</span>Chicote</div>
-        <div class="touch-btn" id="btnJump" data-action="jump">PULAR<small>Segure=Planar</small></div>
+        <div class="touch-btn" id="btnWhip" data-action="whip">⚡<span class="lbl">CHICOTE</span></div>
+        <div class="touch-btn" id="btnJump" data-action="jump">▲<span class="lbl">PULAR</span></div>
       </div>
     </div>
 
@@ -1186,7 +1124,7 @@
         🎮 <strong>Controles:</strong> <span class="key-badge">←</span> <span class="key-badge">→</span> ou <span class="key-badge">A</span> <span class="key-badge">D</span> para Correr • <span class="key-badge">Espaço</span> para Pular (segure no ar para <strong>Planar com o Chapéu</strong>) • <span class="key-badge">J</span> ou <span class="key-badge">X</span> para <strong>Chicote de Caroá</strong> • <span class="key-badge">S</span> ou <span class="key-badge">↓</span> para <strong>Pisão de Pedra</strong> • <span class="key-badge">Esc</span> ou <span class="key-badge">P</span> para Pausar.
       </div>
       <div class="controls-hint touch-only">
-        👆 <strong>Toque:</strong> deslize o polegar esquerdo entre ◀ e ▶ para correr, ▼ para o Pisão. Segure <strong>PULAR</strong> no ar para planar e use <strong>⚡ Chicote</strong> para atacar. Ajuste tamanho e lado em ⚙️.
+        👆 <strong>Toque:</strong> use ◀ ▶ para correr (dá para deslizar o polegar). Segure <strong>PULAR</strong> no ar para planar e use <strong>⚡ Chicote</strong> para atacar. Ajuste tamanho e lado em ⚙️.
       </div>
     </div>
 
@@ -1405,7 +1343,7 @@
       var STORAGE_KEY = 'oxe2_settings';
       var DEFAULTS = {
         touchSize: 'md',
-        touchOpacity: 80,
+        touchOpacity: 70,
         leftHanded: false,
         vibration: true,
         assistMode: false,
