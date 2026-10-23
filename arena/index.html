@@ -492,6 +492,101 @@ const save=()=>localStorage.setItem('oxe_arena_v2',JSON.stringify(S));
 const $=id=>document.getElementById(id);
 function toast(m){const t=$('toast');t.textContent=m;t.classList.add('on');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('on'),2200)}
 
+// ---------- WEB AUDIO API SINTETIZADA (SEM ARQUIVOS EXTERNOS) ----------
+let _audioCtx = null;
+function getAudioCtx() {
+  if (!_audioCtx) {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (AudioCtx) _audioCtx = new AudioCtx();
+  }
+  if (_audioCtx && _audioCtx.state === 'suspended') {
+    _audioCtx.resume().catch(()=>{});
+  }
+  return _audioCtx;
+}
+function audioFX(type) {
+  if (typeof S !== 'undefined' && S.soundOff) return;
+  const ctx = getAudioCtx();
+  if (!ctx) return;
+  const t = ctx.currentTime;
+  try {
+    if (type === 'hit') {
+      [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => {
+        const osc = ctx.createOscillator(), g = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(f, t + i * 0.05);
+        g.gain.setValueAtTime(0.001, t + i * 0.05);
+        g.gain.linearRampToValueAtTime(0.14, t + i * 0.05 + 0.015);
+        g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.05 + 0.12);
+        osc.connect(g).connect(ctx.destination);
+        osc.start(t + i * 0.05);
+        osc.stop(t + i * 0.05 + 0.13);
+      });
+    } else if (type === 'miss') {
+      const osc = ctx.createOscillator(), g = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(220, t);
+      osc.frequency.exponentialRampToValueAtTime(75, t + 0.35);
+      g.gain.setValueAtTime(0.18, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.38);
+      osc.connect(g).connect(ctx.destination);
+      osc.start(t);
+      osc.stop(t + 0.4);
+    } else if (type === 'win') {
+      [440, 554.37, 659.25, 880].forEach((f, i) => {
+        const osc = ctx.createOscillator(), g = ctx.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(f, t + i * 0.08);
+        g.gain.setValueAtTime(0.12, t + i * 0.08);
+        g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.08 + 0.22);
+        osc.connect(g).connect(ctx.destination);
+        osc.start(t + i * 0.08);
+        osc.stop(t + i * 0.08 + 0.23);
+      });
+    } else if (type === 'combo') {
+      [783.99, 1046.5, 1318.5].forEach((f, i) => {
+        const osc = ctx.createOscillator(), g = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(f, t + i * 0.06);
+        g.gain.setValueAtTime(0.2, t + i * 0.06);
+        g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.06 + 0.15);
+        osc.connect(g).connect(ctx.destination);
+        osc.start(t + i * 0.06);
+        osc.stop(t + i * 0.06 + 0.16);
+      });
+    }
+  } catch(e) {}
+}
+
+// ---------- AVATAR E DIFICULDADE ----------
+const AVATAR_MAP = {
+  chapeu: { couro: '🤠', palha: '🌾', males: '👳', boina: '🧢' },
+  adereco: { nenhum: '', oculos: '👓', lenco: '🧣', estrela: '⭐', flor: '🌸' }
+};
+function getAvatarDisplay(av) {
+  av = av || (S && S.avatar) || { chapeu: 'couro', adereco: 'nenhum' };
+  const c = (AVATAR_MAP.chapeu && AVATAR_MAP.chapeu[av.chapeu]) || '🤠';
+  const a = (AVATAR_MAP.adereco && AVATAR_MAP.adereco[av.adereco]) || '';
+  return { chapeu: c, adereco: a, full: c + (a ? ' ' + a : '') };
+}
+function updateAvatarConfig() {
+  S.avatar = {
+    chapeu: $('selChapeu').value,
+    adereco: $('selAdereco').value
+  };
+  save();
+  const av = getAvatarDisplay(S.avatar);
+  const badge = $('avatarPreviewBadge');
+  if (badge) badge.textContent = av.full;
+  toast('Avatar atualizado: ' + av.full);
+}
+function updateDificuldadeConfig() {
+  S.dif = $('selDificuldade').value;
+  save();
+  const nomes = { facil: 'Bucho Furado (25s)', medio: 'Cabra Bom (20s)', dificil: 'Canudos (15s)', dragao: 'Dragão do Mar (10s)' };
+  toast('Dificuldade: ' + (nomes[S.dif] || S.dif));
+}
+
 // ---------- home ----------
 function initHome(){
   $('fOrig').innerHTML=UFS_BR.map(u=>`<option ${u===S.orig?'selected':''}>${u}</option>`).join('');
@@ -1008,14 +1103,39 @@ function endBattle(){
   go('result');
 }
 function shareResult(){
-  const st='⭐'.repeat(Object.values(S.stars).reduce((a,b)=>a+b,0)>0?(S.stars[B.arena]||0):0)||'—';
   const grid=B.results.map(r=>r>0?'🟩':r<0?'🟥':'🟨').join('');
-  const msg=`🌵 ARENA DO OXE — ${B.arena>=0?B.a.nome:'Duelo Rápido'}\n${grid}  ${B.me} pts\nEu defendo ${UFS_NE[S.heart]} ❤️\nDuvido tu fazer mais, sem consultar nada! 👉 oxeeraassim.github.io`;
-  window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
+  const tag = myTag();
+  const heart = UFS_NE[S.heart] || 'o Nordeste';
+  const msg = `Ei cabra, acabei de cravar ${B.me} pontos na Arena do Oxe (${B.arena>=0?B.a.nome:'Duelo Rápido'})!
+
+${grid}
+Eu defendo ${heart} com orgulho!
+Duvido tu fazer mais que eu sem pescar no Google!
+
+Bora ver se tu é bom mesmo:
+https://oxeeraassim.github.io/arena-do-oxe/
+
+E confere os causos no Instagram:
+instagram.com/oxe_eraassim`;
+
+  window.open('https://api.whatsapp.com/send?text=' + encodeURIComponent(msg), '_blank');
 }
 function challengeWa(){
-  const msg=`⚔️ ${myTag()} te desafiou na ARENA DO OXE!\nPerguntas sobre a história do Nordeste, 20 segundos cada, sem consulta.\nEu defendo ${UFS_NE[S.heart]}. E tu? 👉 oxeeraassim.github.io`;
-  window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
+  const tag = myTag();
+  const heart = UFS_NE[S.heart] || 'o Nordeste';
+  const msg = `Ei cabra, ${tag} tá te chamando pro duelo na Arena do Oxe!
+
+Se tu diz que sabe das histórias do nosso Nordeste, quero ver provar agora no jogo: 20 segundos por pergunta e sem pescar no Google, viu?
+
+Eu tô defendendo com orgulho ${heart}! E tu, vai correr ou encarar? Se perder, vai ter que me pagar uma buchada de bode ou um cuscuz com ovo!
+
+Jogue direto aqui na Arena:
+https://oxeeraassim.github.io/arena-do-oxe/
+
+E acompanhe as histórias oficiais no Instagram:
+instagram.com/oxe_eraassim`;
+
+  window.open('https://api.whatsapp.com/send?text=' + encodeURIComponent(msg), '_blank');
 }
 
 // ---------- álbum ----------

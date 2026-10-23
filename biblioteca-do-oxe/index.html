@@ -6,66 +6,55 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Biblioteca do Oxe — Acervo &amp; Fontes Históricas (@oxe_eraassim)</title>
-<meta name="description" content="Acervo bibliográfico e histórico oficial do projeto Oxe, era assim? Livros, artigos raros, biografias e documentos coloniais do Nordeste.">
+<title>Biblioteca do Oxe — Acervo Bibliográfico (@oxe_eraassim)</title>
+<meta name="description" content="Acervo oficial de livros, documentos, filmes e artigos catalogados do projeto Oxe, era assim? (@oxe_eraassim).">
 <meta name="robots" content="noarchive, noai, noimageai">
 <meta name="googlebot" content="noarchive">
 <meta name="copyright" content="Oxe, era assim? (@oxe_eraassim)">
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&family=Courier+Prime:wght@400;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;600;700&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&family=Courier+Prime:wght@400;700&display=swap">
 <style>
-/* ==========================================================
-   BIBLIOTECA DO OXE — LUXURY IMPERIAL ARCHIVE DESIGN
-   Design de Alto Padrão: Museu & Acervo Histórico Nobre
-   ========================================================== */
+/* =====================================================================
+   BIBLIOTECA DO OXE — IDENTIDADE OFICIAL DO @oxe_eraassim
+   Fichário Histórico de Biblioteca Pública / Cartório do Nordeste
+   ===================================================================== */
 :root {
-  --bg-deep: #0b0f19;
-  --bg-panel: #131a29;
-  --bg-panel-border: #243047;
+  --bg: #e9e3d6;         /* Madeira clara do fichário */
+  --card: #fbf8f1;       /* Ficha em papel marfim linho */
+  --ink: #1f2a44;        /* Tinta azul-marinho de carimbo de cartório */
+  --muted: #5d6475;      /* Tinta secundária */
+  --rule: #c8433a;       /* Linha vermelha da ficha */
+  --line: #d7cfbf;       /* Linhas pautadas */
+  --accent: #a8521f;     /* Couro e cobre sertanejo */
+  --gold: #d49b35;       /* Ouro velho */
+  --btn: #1f2a44;        /* Botão azul-marinho */
+  --btnfg: #fbf8f1;      /* Texto marfim */
+  --ok: #2e7d32;         /* Selo grátis */
   
-  --gold-300: #fef08a;
-  --gold-400: #facc15;
-  --gold-500: #eab308;
-  --gold-600: #ca8a04;
-  --gold-trim: #b08a4a;
-  --gold-glow: rgba(234, 179, 8, 0.28);
-  
-  --papel-base: #fbf7ee;
-  --papel-border: #d4c5a9;
-  --papel-ink: #0f172a;
-  --papel-muted: #52607a;
-  
-  --crimson-spine: #9e2a2b;
-  --crimson-glow: rgba(158, 42, 43, 0.3);
-  --verde-livre: #2e7d32;
-  
-  --font-display: "Cinzel", Georgia, serif;
-  --font-heading: "Cormorant Garamond", Georgia, serif;
-  --font-body: "Literata", Georgia, serif;
-  --font-mono: "Courier Prime", monospace;
+  --display: "Zilla Slab", Georgia, serif;
+  --body: "Literata", Georgia, serif;
+  --mono: "Courier Prime", monospace;
 }
 
-* {
+*, *::before, *::after {
   box-sizing: border-box;
 }
 
 body {
   margin: 0;
   padding: 0;
-  background-color: var(--bg-deep);
+  background-color: var(--bg);
   background-image: 
-    radial-gradient(1200px 700px at 50% 0%, rgba(201,162,75,0.16) 0%, transparent 70%),
-    radial-gradient(800px 500px at 100% 100%, rgba(158,42,43,0.14) 0%, transparent 65%),
-    radial-gradient(600px 400px at 0% 50%, rgba(14,165,233,0.06) 0%, transparent 60%);
-  background-attachment: fixed;
-  color: #e2e8f0;
-  font-family: var(--font-body);
+    repeating-linear-gradient(90deg, rgba(168, 82, 31, 0.025) 0px 2px, transparent 2px 10px),
+    linear-gradient(180deg, #ede7db 0%, #e4ded0 100%);
+  color: var(--ink);
+  font-family: var(--body);
   font-size: 16px;
-  line-height: 1.6;
+  line-height: 1.55;
   -webkit-font-smoothing: antialiased;
-  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
   touch-action: pan-y;
   -webkit-overflow-scrolling: touch;
 }
@@ -79,8 +68,8 @@ body::before {
   inset: 0;
   pointer-events: none;
   z-index: 999;
-  opacity: 0.035;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='360' height='220'><text x='10' y='120' transform='rotate(-20 180 110)' font-family='Georgia' font-size='22' fill='%23ffffff'>Biblioteca do Oxe · @oxe_eraassim</text></svg>");
+  opacity: 0.045;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='360' height='220'><text x='10' y='120' transform='rotate(-20 180 110)' font-family='Georgia' font-size='22' fill='%231f2a44'>Biblioteca do Oxe · @oxe_eraassim</text></svg>");
 }
 .protegido { display: none; }
 @media print {
@@ -88,234 +77,190 @@ body::before {
   .protegido { display: block !important; font-family: Georgia, serif; padding: 40px; font-size: 20px; color: #000; }
 }
 
-/* 1. Barra de Navegação Superior Integrada */
+/* 1. BARRA SUPERIOR COMPACTA (1 LINHA SEM QUEBRA NO MOBILE) */
 .oxe-nav-switcher {
-  background: #090d15;
-  color: #f8fafc;
-  padding: 12px 18px;
-  font-family: var(--font-mono);
-  font-size: 12.5px;
   display: flex;
+  flex-wrap: nowrap;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 2px solid var(--gold-trim);
-  width: 100%;
+  background: var(--ink);
+  color: var(--card);
+  padding: 8px max(14px, env(safe-area-inset-right));
+  padding-left: max(14px, env(safe-area-inset-left));
+  border-bottom: 2px solid var(--rule);
   position: sticky;
   top: 0;
   z-index: 1000;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-}
-.oxe-nav-switcher a.nav-link {
-  color: #facc15;
-  text-decoration: none;
-  font-weight: 700;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  transition: all 0.2s;
-}
-.oxe-nav-switcher a.nav-link:hover {
-  color: #ffffff;
-  text-shadow: 0 0 10px rgba(250,204,21,0.5);
-}
-.oxe-nav-switcher a.arena-btn {
-  color: #38bdf8;
-  background: rgba(56,189,248,0.12);
-  border: 1px solid rgba(56,189,248,0.4);
-  padding: 6px 14px;
-  border-radius: 8px;
-  text-decoration: none;
-  font-weight: 700;
-  transition: all 0.2s;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-.oxe-nav-switcher a.arena-btn:hover {
-  background: rgba(56,189,248,0.25);
-  border-color: #38bdf8;
-  box-shadow: 0 0 12px rgba(56,189,248,0.3);
-  transform: translateY(-1px);
-}
-
-/* 2. Container Principal */
-.wrap {
-  max-width: 1080px;
-  margin: 0 auto;
-  padding: 24px 18px 64px;
-  position: relative;
-}
-
-/* 3. Hero Header de Museu Imperial */
-header.hero-museu {
-  background: linear-gradient(135deg, #151d2c 0%, #0a0f18 100%);
-  border: 1.5px solid var(--gold-trim);
-  border-radius: 22px;
-  padding: clamp(24px, 5vw, 44px) clamp(20px, 4vw, 36px);
-  box-shadow: 0 18px 45px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08);
-  margin-bottom: 30px;
-  position: relative;
-  overflow: hidden;
-}
-header.hero-museu::before {
-  content: "";
-  position: absolute;
-  top: -40px;
-  right: -40px;
-  width: 220px;
-  height: 220px;
-  background: radial-gradient(circle, rgba(234,179,8,0.18) 0%, transparent 70%);
-  border-radius: 50%;
-  pointer-events: none;
-}
-header.hero-museu::after {
-  content: "";
-  position: absolute;
-  bottom: -30px;
-  left: -30px;
-  width: 180px;
-  height: 180px;
-  background: radial-gradient(circle, rgba(158,42,43,0.15) 0%, transparent 70%);
-  border-radius: 50%;
-  pointer-events: none;
-}
-
-.hero-badge {
-  display: inline-flex;
-  align-items: center;
+  min-height: 46px;
   gap: 8px;
-  background: rgba(201,162,75,0.16);
-  border: 1px solid rgba(234,179,8,0.45);
-  color: #fef08a;
-  padding: 6px 16px;
-  border-radius: 999px;
-  font-family: var(--font-display);
+  box-shadow: 0 2px 10px rgba(31, 42, 68, 0.25);
+}
+.oxe-nav-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: var(--mono);
+  font-size: 12px;
+}
+.oxe-nav-left a {
+  color: #f59e0b;
+  text-decoration: none;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.oxe-nav-left a:hover {
+  text-decoration: underline;
+}
+.oxe-nav-left .nav-curr {
+  color: #ffffff;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.oxe-nav-left .nav-sep {
+  color: #7a8294;
+}
+.oxe-nav-right {
+  flex-shrink: 0;
+}
+.oxe-nav-right a.arena-pill {
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  padding: 4px 10px;
+  border-radius: 6px;
+  text-decoration: none;
+  font-family: var(--mono);
   font-size: 11.5px;
   font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  margin-bottom: 16px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-}
-
-h1.hero-title {
-  font-family: var(--font-display);
-  font-size: clamp(34px, 6vw, 56px);
-  font-weight: 800;
-  line-height: 1.08;
-  margin: 0 0 10px;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  color: #ffffff;
-  text-shadow: 0 4px 16px rgba(0,0,0,0.7);
-}
-h1.hero-title span.gold-leaf {
-  background: linear-gradient(180deg, #fffbeb 0%, #facc15 50%, #b45309 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  display: inline-block;
-  filter: drop-shadow(0 2px 8px rgba(250,204,21,0.3));
-}
-
-.hero-ornament {
-  font-size: 12px;
-  letter-spacing: 0.8em;
-  color: var(--gold-trim);
-  margin: 6px 0 16px;
-}
-
-p.hero-lead {
-  font-family: var(--font-body);
-  font-size: clamp(15.5px, 2.5vw, 17.5px);
-  color: #cbd5e1;
-  max-width: 68ch;
-  line-height: 1.65;
-  margin: 0 0 26px;
-}
-
-/* Faixa de Estatísticas de Ouro */
-.hero-stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-  gap: 12px;
-  border-top: 1px solid rgba(201,162,75,0.3);
-  padding-top: 22px;
-}
-.stat-box {
-  background: rgba(255,255,255,0.035);
-  border: 1px solid rgba(201,162,75,0.22);
-  border-radius: 12px;
-  padding: 12px 14px;
-  text-align: center;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
   transition: all 0.2s;
 }
-.stat-box:hover {
-  background: rgba(255,255,255,0.06);
-  border-color: rgba(250,204,21,0.5);
-  transform: translateY(-2px);
+.oxe-nav-right a.arena-pill:hover {
+  background: rgba(56, 189, 248, 0.3);
+  border-color: #38bdf8;
 }
-.stat-val {
-  font-family: var(--font-display);
-  font-size: 21px;
+
+/* 2. CONTAINER PRINCIPAL */
+.wrap {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 24px 16px 56px;
+  position: relative;
+}
+
+/* 3. CABEÇALHO DO FICHÁRIO */
+header.bib-header {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-left: 6px solid var(--accent);
+  border-radius: 8px;
+  padding: 24px 20px;
+  box-shadow: 0 4px 14px rgba(50, 35, 15, 0.08);
+  margin-bottom: 22px;
+  position: relative;
+}
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
   font-weight: 700;
-  color: #fef08a;
-  line-height: 1.2;
+  margin-bottom: 8px;
 }
-.stat-box:nth-child(2) .stat-val { color: #38bdf8; }
-.stat-box:nth-child(3) .stat-val { color: #f87171; }
-.stat-box:nth-child(4) .stat-val { color: #4ade80; }
+h1.bib-title {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: clamp(30px, 6vw, 48px);
+  line-height: 1.05;
+  margin: 0 0 10px;
+  color: var(--ink);
+}
+h1.bib-title span {
+  color: var(--rule);
+}
+p.lead {
+  font-family: var(--body);
+  font-size: 15.5px;
+  color: var(--muted);
+  max-width: 65ch;
+  line-height: 1.6;
+  margin: 0 0 20px;
+}
+
+/* Faixa de Estatísticas do Fichário */
+.stats-fichario {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 10px;
+  border-top: 1px dashed var(--line);
+  padding-top: 16px;
+}
+.stat-item {
+  background: rgba(233, 227, 214, 0.4);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px 10px;
+  text-align: center;
+}
+.stat-num {
+  font-family: var(--display);
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--ink);
+  display: block;
+}
 .stat-lbl {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: #94a3b8;
-  margin-top: 3px;
-  letter-spacing: 0.05em;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--muted);
   text-transform: uppercase;
 }
 
-/* 4. Console de Busca e Filtros */
+/* 4. FERRAMENTAS DE BUSCA E ABAS (GAVETAS) */
 .tools {
-  background: rgba(15, 22, 36, 0.94);
-  border: 1.5px solid var(--gold-trim);
-  border-radius: 18px;
-  padding: 18px;
-  margin-bottom: 24px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  margin: 18px 0 16px;
+  position: sticky;
+  top: 48px;
+  z-index: 100;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.06);
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  position: sticky;
-  top: 56px;
-  z-index: 99;
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  box-shadow: 0 14px 34px rgba(0,0,0,0.5);
+  gap: 10px;
 }
-
 .tools input#busca {
   width: 100%;
-  background: #080c14;
-  color: #ffffff;
-  border: 1.5px solid #2e3c54;
-  border-radius: 12px;
-  padding: 14px 20px;
-  font-family: var(--font-body);
-  font-size: 15.5px;
+  font-family: var(--body);
+  font-size: 15px;
+  padding: 11px 14px;
+  border: 1.5px solid var(--line);
+  border-radius: 6px;
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
   outline: none;
-  box-shadow: inset 0 2px 6px rgba(0,0,0,0.5);
-  transition: all 0.25s;
-}
-.tools input#busca::placeholder {
-  color: #64748b;
-  font-style: italic;
+  transition: border-color 0.2s;
 }
 .tools input#busca:focus {
-  border-color: var(--gold-400);
-  box-shadow: 0 0 0 3px rgba(250,204,21,0.22), inset 0 2px 6px rgba(0,0,0,0.3);
+  border-color: var(--ink);
+  box-shadow: 0 0 0 3px rgba(31, 42, 68, 0.12);
 }
 
 .tabs, .tipos {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: nowrap;
   overflow-x: auto;
   scrollbar-width: none;
@@ -327,407 +272,366 @@ p.hero-lead {
 }
 
 .tab {
-  font-family: var(--font-display);
-  font-size: 11.5px;
+  font-family: var(--mono);
+  font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  padding: 8px 16px;
-  background: #182234;
-  color: #cbd5e1;
-  border: 1px solid #334460;
-  border-radius: 999px;
+  padding: 7px 12px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--card);
+  color: var(--ink);
   cursor: pointer;
   white-space: nowrap;
   flex: 0 0 auto;
-  transition: all 0.2s cubic-bezier(0.16,1,0.3,1);
+  transition: all 0.15s ease;
 }
 .tab:hover {
-  background: #24334d;
-  color: #ffffff;
-  border-color: var(--gold-trim);
-  transform: translateY(-2px);
+  background: #f3ecda;
+  border-color: var(--accent);
 }
 .tab[aria-pressed="true"] {
-  background: linear-gradient(135deg, #f59e0b, #d97706) !important;
-  color: #0b0f19 !important;
-  border-color: #fef08a !important;
-  font-weight: 900 !important;
-  box-shadow: 0 4px 14px rgba(245,158,11,0.45) !important;
-  transform: translateY(-1px);
+  background: var(--ink) !important;
+  color: var(--card) !important;
+  border-color: var(--ink) !important;
+  box-shadow: 0 2px 6px rgba(31, 42, 68, 0.25);
 }
 
-/* 5. Seções (Gavetas) */
+/* 5. GAVETAS & FICHAS CATALOGRÁFICAS (ZERO CORTE NO MOBILE) */
 section.gaveta {
-  margin-top: 42px;
+  margin-top: 32px;
 }
 .gaveta h2 {
-  font-family: var(--font-display);
-  font-size: clamp(22px, 4vw, 29px);
+  font-family: var(--display);
   font-weight: 700;
-  color: #fef08a;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  margin: 0 0 16px;
+  font-size: clamp(22px, 4vw, 26px);
+  color: var(--ink);
+  margin: 0 0 14px;
   display: flex;
   align-items: baseline;
-  gap: 12px;
-  border-bottom: 1.5px solid rgba(201,162,75,0.35);
-  padding-bottom: 10px;
-}
-.gaveta h2::before {
-  content: "⚜️";
-  font-size: 18px;
+  gap: 10px;
+  border-bottom: 1.5px solid var(--line);
+  padding-bottom: 6px;
 }
 
-/* 6. Grid de Fichas Catalográficas Nobres */
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(315px, 1fr));
-  gap: 18px;
-  margin-top: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 16px;
 }
 
-/* A Ficha: Papel Encorpado de Arquivo com Moldura Dourada e Lombada Rubra */
+/* A Ficha: Papel Marfim Encorpado com Régua Vermelha Superior */
 .ficha {
-  background: var(--papel-base);
-  color: var(--papel-ink);
-  border: 1.5px solid var(--papel-border);
-  border-left: 6px solid var(--crimson-spine);
-  border-radius: 12px;
-  padding: 20px 22px 24px;
-  display: grid;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-left: 5px solid var(--rule);
+  border-radius: 6px;
+  padding: 16px 16px 18px;
+  display: flex;
+  flex-direction: column;
   gap: 8px;
   position: relative;
   min-width: 0;
-  box-shadow: 0 10px 28px rgba(0,0,0,0.38), 0 2px 6px rgba(0,0,0,0.2);
-  transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
-  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(50, 35, 15, 0.08);
+  box-sizing: border-box;
+  overflow: visible; /* Garante que sombra e borda de botão não cortem */
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.ficha:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 22px rgba(50, 35, 15, 0.14);
 }
 .ficha::before {
   content: "";
   position: absolute;
   left: 0;
   right: 0;
-  top: 7px;
-  border-top: 2px solid var(--crimson-spine);
-  opacity: 0.85;
-}
-.ficha:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 20px 45px rgba(0,0,0,0.55), 0 0 0 2px var(--gold-trim);
-  border-color: var(--gold-trim);
+  top: 6px;
+  border-top: 1.5px solid var(--rule);
+  opacity: 0.8;
 }
 
 .ficha h3 {
-  font-family: var(--font-heading);
+  font-family: var(--display);
   font-weight: 700;
-  font-size: 23px;
+  font-size: 21px;
   line-height: 1.25;
-  color: #0b111e;
-  margin: 10px 0 4px;
+  color: var(--ink);
+  margin: 8px 0 2px;
   text-wrap: balance;
-  letter-spacing: -0.01em;
+  word-break: break-word;
 }
 
-/* Seções Internas da Ficha */
+/* Seções Internas */
 .sec {
-  font-family: var(--font-display);
+  margin: 12px 0 2px;
+  font-family: var(--mono);
   font-size: 11.5px;
   font-weight: 700;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--crimson-spine);
+  color: var(--accent);
   display: flex;
   align-items: center;
   gap: 8px;
-  margin: 14px 0 4px;
 }
 .sec::after {
   content: "";
   flex: 1;
-  border-top: 1px dotted #c4b69d;
+  border-top: 1px dotted var(--line);
 }
 
+/* LISTA DE LIVROS (CORREÇÃO TOTAL DOS BOTÕES CORTADOS) */
 .livros {
   list-style: none;
   margin: 4px 0 8px;
   padding: 0;
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 0;
+  width: 100%;
 }
 .livros li {
   display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
   align-items: center;
-  padding: 10px 0;
-  border-bottom: 1px dotted #dbd1be;
+  padding: 9px 0;
+  border-bottom: 1px dotted var(--line);
+  width: 100%;
+  box-sizing: border-box;
 }
 .livros li:last-child {
-  border-bottom: none;
+  border-bottom: 0;
+}
+.livros li > span {
+  min-width: 0;
+  word-break: break-word;
 }
 
 .lt {
-  font-family: var(--font-body);
+  font-family: var(--body);
   font-weight: 600;
   font-size: 15px;
-  color: #1a2333;
   line-height: 1.35;
+  color: var(--ink);
 }
 .la {
   display: block;
-  font-family: var(--font-mono);
+  font-family: var(--mono);
   font-size: 12.5px;
-  color: var(--papel-muted);
-  margin-top: 3px;
-}
-
-/* Tags de Status e Origem */
-.tag {
-  display: inline-block;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 600;
-  padding: 2px 6px;
-  border-radius: 4px;
-  margin-right: 4px;
-  vertical-align: 1px;
-  background: rgba(0,0,0,0.04);
-  border: 1px solid #cbd5e1;
-  color: #475569;
-}
-.tag.free {
-  background: rgba(46,125,50,0.12);
-  border-color: #2e7d32;
-  color: #2e7d32;
-  font-weight: 700;
-}
-.tag.sebo {
-  background: rgba(158,42,43,0.1);
-  border-color: var(--crimson-spine);
-  color: var(--crimson-spine);
-}
-
-.indic {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  color: #a8521f;
+  color: var(--muted);
   margin-top: 2px;
 }
 
-/* Botões de Ação na Ficha */
-a.mini, a.buy {
+/* TAGS */
+.tag {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  color: var(--muted);
+  margin-right: 4px;
+  vertical-align: 1px;
+}
+.tag.free {
+  border-color: var(--ok);
+  color: var(--ok);
+  background: rgba(46, 125, 50, 0.08);
+}
+.tag.sebo {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(168, 82, 31, 0.08);
+}
+
+.indic {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--accent);
+  margin-top: 2px;
+}
+
+/* BOTÕES: VER, LER, ASSISTIR (ZERO CORTE, SETA INTEIRA) */
+a.mini {
+  flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-family: var(--font-mono);
+  font-family: var(--mono);
   font-size: 12.5px;
   font-weight: 700;
   text-decoration: none;
-  background: linear-gradient(135deg, #182234, #0f1522);
-  color: #fde047;
-  border: 1px solid var(--gold-trim);
-  border-radius: 8px;
-  padding: 7px 12px;
-  box-shadow: 0 3px 8px rgba(0,0,0,0.18);
-  transition: all 0.2s cubic-bezier(0.16,1,0.3,1);
+  color: var(--btnfg);
+  background: var(--btn);
+  padding: 6px 11px;
+  border-radius: 5px;
   white-space: nowrap;
+  box-sizing: border-box;
+  box-shadow: 0 2px 5px rgba(31, 42, 68, 0.2);
+  transition: all 0.15s ease;
+  margin-right: 1px;
 }
-a.mini:hover, a.buy:hover {
-  background: var(--crimson-spine);
-  color: #ffffff;
-  border-color: #fef08a;
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(158,42,43,0.45);
+a.mini:hover {
+  background: var(--accent);
+  color: var(--card);
+  transform: translateY(-1px);
 }
 a.mini.lite {
-  background: #ede3ce;
-  color: #1e293b;
-  border: 1px solid #b5a486;
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid var(--ink);
 }
 a.mini.lite:hover {
-  background: #1e293b;
-  color: #fde047;
-  border-color: var(--gold-trim);
+  background: var(--ink);
+  color: var(--card);
 }
 
 a.buy.alt {
   display: block;
   background: transparent;
-  color: #1e293b;
-  border: 1.5px dashed var(--crimson-spine);
-  border-radius: 8px;
-  padding: 10px 14px;
-  font-family: var(--font-display);
-  font-size: 11.5px;
+  color: var(--ink);
+  border: 1px solid var(--ink);
+  border-radius: 5px;
+  padding: 9px 12px;
+  font-family: var(--mono);
+  font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
   text-align: center;
-  margin-top: 10px;
   text-decoration: none;
-  transition: all 0.2s;
+  margin-top: 10px;
+  box-sizing: border-box;
+  transition: all 0.15s ease;
 }
 a.buy.alt:hover {
-  background: #0f172a;
-  color: #fde047;
-  border-style: solid;
-  border-color: var(--gold-trim);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(0,0,0,0.25);
+  background: var(--ink);
+  color: var(--card);
 }
 
-/* 7. Mensagem Vazia */
+/* 6. MENSAGEM VAZIA */
 .vazio {
-  font-family: var(--font-mono);
-  color: #94a3b8;
-  font-size: 15px;
+  font-family: var(--mono);
+  color: var(--muted);
+  margin-top: 28px;
   text-align: center;
-  padding: 40px 20px;
-  background: rgba(255,255,255,0.03);
-  border: 1px dashed rgba(201,162,75,0.3);
-  border-radius: 12px;
-  margin-top: 30px;
+  padding: 24px;
 }
 
-/* 8. Caixa "Sugira um Livro" Nobre */
+/* 7. ASIDE "SUGIRA UM LIVRO" */
 aside.sugira {
-  margin-top: 48px;
-  background: linear-gradient(135deg, #161e2e 0%, #0c111a 100%);
-  color: #f8fafc;
-  border: 1.5px solid var(--gold-trim);
-  border-radius: 18px;
-  padding: 28px 30px;
+  margin-top: 40px;
+  background: var(--ink);
+  color: var(--card);
+  border-radius: 8px;
+  padding: 24px 22px;
   display: grid;
-  gap: 10px;
-  box-shadow: 0 16px 40px rgba(0,0,0,0.5);
-  position: relative;
-  overflow: hidden;
-}
-aside.sugira::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  width: 6px;
-  background: linear-gradient(180deg, #f59e0b, #9e2a2b);
+  gap: 8px;
+  box-shadow: 0 6px 18px rgba(31, 42, 68, 0.2);
 }
 aside.sugira h2 {
-  font-family: var(--font-display);
-  font-size: 24px;
+  font-family: var(--display);
   font-weight: 700;
-  color: #fef08a;
+  font-size: 24px;
   margin: 0;
-  letter-spacing: 0.02em;
+  color: #f5eedb;
 }
 aside.sugira p {
-  font-family: var(--font-body);
-  font-size: 15.5px;
-  color: #cbd5e1;
   margin: 0;
+  font-size: 15px;
+  color: #cbd5e1;
+  line-height: 1.6;
+}
+aside.sugira b {
+  color: #ffd166;
+}
+
+/* 8. RODAPÉ */
+footer {
+  margin-top: 48px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--muted);
+  display: grid;
+  gap: 6px;
+  border-top: 1px solid var(--line);
+  padding-top: 24px;
+  text-align: center;
   line-height: 1.6;
 }
 
-/* 9. Rodapé */
-footer {
-  margin-top: 50px;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  color: #94a3b8;
-  display: grid;
-  gap: 8px;
-  text-align: center;
-  border-top: 1px solid rgba(201,162,75,0.25);
-  padding-top: 28px;
-  line-height: 1.7;
-}
-
-@media (max-width: 600px) {
-  .tools {
-    position: static;
-    padding: 14px;
-  }
+/* AJUSTES MOBILE EXTREMOS (PARA TELAS DE 320PX A 480PX) */
+@media (max-width: 480px) {
   .wrap {
-    padding-inline: 12px;
+    padding-inline: 10px;
   }
-  .grid {
-    grid-template-columns: 1fr;
+  header.bib-header {
+    padding: 18px 14px;
+  }
+  .ficha {
+    padding: 14px 12px 16px;
+  }
+  .livros li {
+    gap: 8px;
+  }
+  a.mini {
+    padding: 5px 9px;
+    font-size: 12px;
   }
 }
 </style>
 </head>
 <body>
 
-<!-- BARRA DE NAVEGAÇÃO SUPERIOR -->
+<!-- BARRA DE NAVEGAÇÃO INTEGRADA (NUNCA QUEBRA NO MOBILE) -->
 <div class="oxe-nav-switcher">
-  <div>
-    <a href="/" class="nav-link">&larr; Portal Central Oxe</a>
-    <span style="color: #64748b; margin: 0 8px;">&bull;</span>
-    <span style="color: #ffffff; font-weight: 700;">🏛️ Biblioteca do Oxe</span>
+  <div class="oxe-nav-left">
+    <a href="/">← Portal <b>Oxe</b></a>
+    <span class="nav-sep">•</span>
+    <span class="nav-curr">📚 Biblioteca do Oxe</span>
   </div>
-  <div>
-    <a href="/arena-do-oxe/" class="arena-btn">🎮 Arena do Oxe &rarr;</a>
+  <div class="oxe-nav-right">
+    <a href="/arena-do-oxe/" class="arena-pill">🎮 Arena &rarr;</a>
   </div>
 </div>
 
 <div class="wrap">
-  <!-- HERO HEADER IMPERIAL -->
-  <header class="hero-museu">
-    <div class="hero-badge">
-      <span>⚜️</span> Acervo Histórico &amp; Bibliográfico Oficial • Edição de Luxo
-    </div>
-    <h1 class="hero-title">
-      Biblioteca do <span class="gold-leaf">Oxe</span>
-    </h1>
-    <div class="hero-ornament">✦ ✦ ✦</div>
-    <p class="hero-lead">
-      Livros raros, documentos coloniais, filmes e fontes primárias checadas sobre as histórias contadas em mais de 2.000 episódios do projeto. Cada ficha é um dossiê histórico com links oficiais e parcerias verificadas.
-    </p>
-
-    <!-- FAIXA DE ESTATÍSTICAS IMPERIAIS -->
-    <div class="hero-stats-grid">
-      <div class="stat-box">
-        <div class="stat-val">140+ Obras</div>
-        <div class="stat-lbl">Catalogadas</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-val">9 Estados</div>
-        <div class="stat-lbl">Nordestinos</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-val">2.000+ Fatos</div>
-        <div class="stat-lbl">Apurações Reais</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-val">100% Fontes</div>
-        <div class="stat-lbl">Oficiais &amp; Livros</div>
-      </div>
+  <!-- CABEÇALHO AUTÊNTICO DO FICHÁRIO -->
+  <header class="bib-header">
+    <div class="eyebrow">@oxe_eraassim · uma biblioteca do Nordeste</div>
+    <h1 class="bib-title">Biblioteca do <span>Oxe</span></h1>
+    <p class="lead">Livros, textos gratuitos, filmes e acervos sobre as histórias que já contamos na página. Cada ficha é um personagem ou episódio checado nas fontes.</p>
+    
+    <div class="stats-fichario">
+      <div class="stat-item"><b class="stat-num">140+</b><span class="stat-lbl">Obras</span></div>
+      <div class="stat-item"><b class="stat-num">9</b><span class="stat-lbl">Estados</span></div>
+      <div class="stat-item"><b class="stat-num">2.000+</b><span class="stat-lbl">Fatos</span></div>
+      <div class="stat-item"><b class="stat-num">100%</b><span class="stat-lbl">Fontes</span></div>
     </div>
   </header>
 
-  <!-- CONSOLE DE BUSCA E GAVETAS -->
+  <!-- BUSCA E GAVETAS -->
   <div class="tools">
-    <input id="busca" type="search" placeholder="🔍 Procure um tema, autor, livro ou filme (ex.: cangaço, Bahia, seca, Padre Cícero)..." aria-label="Procurar na biblioteca">
+    <input id="busca" type="search" placeholder="Procure um tema, autor ou filme (ex.: cangaço, Bahia, seca, Padre Cícero)" aria-label="Procurar na biblioteca">
     <div class="tabs" id="tabs" role="group" aria-label="Gavetas"></div>
     <div class="tipos" id="tipos" role="group" aria-label="Tipo de material"></div>
   </div>
 
   <main id="lista"></main>
-  <p class="vazio" id="vazio" hidden>Nenhum documento encontrado com esse termo. Tente outro tema ou limpe o campo de busca.</p>
+  <p class="vazio" id="vazio" hidden>Nada com esse termo. Tente outro nome ou limpe a busca.</p>
 
   <aside class="sugira">
     <h2>Falta alguma coisa na estante?</h2>
-    <p>Conhece um livro, um filme, um artigo raro ou um autor da sua cidade sobre uma história que contamos? Comente no Instagram <b>@oxe_eraassim</b>. As melhores indicações entram na Biblioteca oficial com o seu nome registrado.</p>
+    <p>Conhece um livro, um filme, um artigo ou um autor da sua cidade sobre uma história que contamos? Comente no Instagram <b>@oxe_eraassim</b>. As melhores indicações entram na Biblioteca com o seu nome.</p>
   </aside>
 
   <footer>
-    <span>Biblioteca do Oxe · Museu Bibliográfico do Nordeste</span>
-    <span>Curadoria &amp; Pesquisa: Oxe, era assim? · Instagram @oxe_eraassim</span>
-    <span>Os links gratuitos levam diretamente aos portais das instituições que preservam o material.</span>
-    <span>Links bibliográficos associados ao acervo oficial.</span>
-    <span>© 2026 Oxe, era assim? Todos os direitos reservados. Protegido contra extração não autorizada.</span>
+    <span>Biblioteca do Oxe · uma biblioteca do Nordeste</span>
+    <span>Curadoria: Oxe, era assim? · Instagram @oxe_eraassim</span>
+    <span>Os links gratuitos levam aos sites das instituições que publicam o material.</span>
+    <span>Links de parceria com a Amazon.</span>
+    <span>© 2026 Oxe, era assim? Curadoria própria. Não é permitido copiar ou republicar esta lista sem autorização.</span>
   </footer>
 </div>
 
