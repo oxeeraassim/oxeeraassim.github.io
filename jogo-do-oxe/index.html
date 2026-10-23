@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Oxe! A Odisseia dos Nove Sóis — Jogo Oficial 2D</title>
+  <meta name="description" content="Um jogo de plataforma 2D surpreendente com a identidade visual do Oxe, era assim? Gráficos incríveis, física fluida e trilha de forró 8-bit sintetizada!">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Outfit:wght@400;600;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --oxe-orange: #E8590C;
+      --oxe-yellow: #F59F00;
+      --oxe-gold: #FFD43B;
+      --oxe-dark: #1A120B;
+      --oxe-brown: #3C2A21;
+      --oxe-cream: #FFF9DB;
+      --oxe-teal: #1098AD;
+      --oxe-red: #FA5252;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #0B0806;
+      font-family: 'Outfit', sans-serif;
+      color: #fff;
+    }
+
+    #gameContainer {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at center, #2C1810 0%, #0B0806 100%);
+    }
+
+    canvas#gameCanvas {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      image-rendering: -webkit-optimize-contrast;
+      image-rendering: crisp-edges;
+      image-rendering: pixelated;
+    }
+
+    /* ==================== HUD SUPERIOR ==================== */
+    #hud {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      padding: env(safe-area-inset-top, 16px) 20px 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      pointer-events: none;
+      z-index: 10;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.8), 0 0 10px rgba(0,0,0,0.5);
+    }
+
+    .hud-left, .hud-center, .hud-right {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .hud-card {
+      background: rgba(26, 18, 11, 0.85);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 2px solid rgba(245, 159, 0, 0.6);
+      border-radius: 14px;
+      padding: 6px 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.2);
+    }
+
+    .hearts-box {
+      display: flex;
+      gap: 4px;
+    }
+
+    .heart-icon {
+      width: 26px;
+      height: 26px;
+      filter: drop-shadow(0 2px 4px rgba(250, 82, 82, 0.5));
+      transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .heart-icon.lost {
+      filter: grayscale(1) opacity(0.35);
+      transform: scale(0.8);
+    }
+
+    .hud-val {
+      font-size: 1.2rem;
+      font-weight: 900;
+      color: var(--oxe-gold);
+      letter-spacing: 0.5px;
+    }
+
+    .hud-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #E9ECEF;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .caju-gems {
+      display: flex;
+      gap: 6px;
+    }
+
+    .caju-gem {
+      width: 22px;
+      height: 22px;
+      filter: grayscale(1) opacity(0.3);
+      transition: all 0.3s ease;
+    }
+
+    .caju-gem.collected {
+      filter: drop-shadow(0 0 8px #FFD43B);
+      transform: scale(1.15);
+    }
+
+    /* BOSS HEALTH BAR */
+    #bossBarContainer {
+      position: absolute;
+      top: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(90%, 460px);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    #bossName {
+      font-family: 'Cinzel', serif;
+      font-size: 1.1rem;
+      font-weight: 900;
+      color: #FFF;
+      letter-spacing: 2px;
+      text-shadow: 0 0 10px #FA5252, 0 2px 4px #000;
+      text-transform: uppercase;
+    }
+
+    .boss-bar-frame {
+      width: 100%;
+      height: 18px;
+      background: rgba(20, 10, 5, 0.9);
+      border: 2px solid #FA5252;
+      border-radius: 9px;
+      padding: 2px;
+      box-shadow: 0 0 15px rgba(250, 82, 82, 0.4), inset 0 2px 4px rgba(0,0,0,0.8);
+    }
+
+    #bossHpFill {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, #F03E3E, #FF922B, #FCC419);
+      border-radius: 6px;
+      transition: width 0.25s ease;
+      box-shadow: 0 0 10px #F03E3E;
+    }
+
+    /* ==================== DIALOGUE BOX ==================== */
+    #dialogueBox {
+      position: absolute;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(92%, 680px);
+      background: rgba(26, 18, 11, 0.94);
+      border: 3px solid var(--oxe-yellow);
+      border-radius: 18px;
+      padding: 16px 20px;
+      display: none;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.8), 0 0 20px rgba(245, 159, 0, 0.3);
+      z-index: 20;
+      backdrop-filter: blur(10px);
+    }
+
+    .dialogue-avatar {
+      width: 72px;
+      height: 72px;
+      border-radius: 16px;
+      border: 2px solid var(--oxe-gold);
+      background: #3C2A21;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.2rem;
+      flex-shrink: 0;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    }
+
+    .dialogue-content {
+      flex: 1;
+    }
+
+    .dialogue-speaker {
+      font-family: 'Cinzel', serif;
+      font-size: 1rem;
+      font-weight: 900;
+      color: var(--oxe-gold);
+      margin-bottom: 4px;
+      letter-spacing: 1px;
+    }
+
+    .dialogue-text {
+      font-size: 0.95rem;
+      line-height: 1.45;
+      color: #FFF9DB;
+      font-weight: 500;
+    }
+
+    .dialogue-prompt {
+      align-self: flex-end;
+      font-size: 0.75rem;
+      font-weight: 800;
+      color: var(--oxe-yellow);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      animation: pulseText 1s infinite alternate;
+    }
+
+    @keyframes pulseText {
+      from { opacity: 0.5; transform: translateY(0); }
+      to { opacity: 1; transform: translateY(-2px); }
+    }
+
+    /* ==================== TOUCH CONTROLS (MOBILE) ==================== */
+    #touchControls {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 15;
+      display: none;
+    }
+
+    .touch-btn {
+      pointer-events: auto;
+      position: absolute;
+      background: radial-gradient(circle, rgba(245, 159, 0, 0.35) 0%, rgba(26, 18, 11, 0.6) 100%);
+      border: 2.5px solid rgba(255, 212, 59, 0.75);
+      border-radius: 50%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #FFF9DB;
+      font-weight: 900;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.6), inset 0 2px 6px rgba(255,255,255,0.3);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      touch-action: manipulation;
+    }
+
+    .touch-btn:active, .touch-btn.active {
+      transform: scale(0.92);
+      background: radial-gradient(circle, rgba(232, 89, 12, 0.6) 0%, rgba(26, 18, 11, 0.8) 100%);
+      border-color: #FFA94D;
+    }
+
+    /* D-PAD */
+    #dpadLeft {
+      left: 24px;
+      bottom: 36px;
+      width: 68px;
+      height: 68px;
+      font-size: 1.8rem;
+    }
+
+    #dpadRight {
+      left: 104px;
+      bottom: 36px;
+      width: 68px;
+      height: 68px;
+      font-size: 1.8rem;
+    }
+
+    #dpadDown {
+      left: 64px;
+      bottom: 110px;
+      width: 64px;
+      height: 64px;
+      font-size: 1.5rem;
+    }
+
+    /* ACTION BUTTONS */
+    #btnJump {
+      right: 28px;
+      bottom: 44px;
+      width: 82px;
+      height: 82px;
+      font-size: 1.3rem;
+      background: radial-gradient(circle, rgba(16, 152, 173, 0.45) 0%, rgba(26, 18, 11, 0.65) 100%);
+      border-color: #66D9E8;
+    }
+
+    #btnWhip {
+      right: 120px;
+      bottom: 36px;
+      width: 72px;
+      height: 72px;
+      font-size: 1.1rem;
+      background: radial-gradient(circle, rgba(232, 89, 12, 0.45) 0%, rgba(26, 18, 11, 0.65) 100%);
+      border-color: #FFA94D;
+    }
+
+    #btnGlide {
+      right: 48px;
+      bottom: 136px;
+      width: 64px;
+      height: 64px;
+      font-size: 0.95rem;
+      background: radial-gradient(circle, rgba(245, 159, 0, 0.45) 0%, rgba(26, 18, 11, 0.65) 100%);
+      border-color: #FFD43B;
+    }
+
+    /* ==================== TELAS OVERLAY (TITLE, OVERWORLD, PAUSE, VICTORY) ==================== */
+    .screen-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(11, 8, 6, 0.92);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+      padding: 24px;
+      text-align: center;
+    }
+
+    .game-logo {
+      font-family: 'Cinzel', serif;
+      font-size: clamp(2rem, 6vw, 3.8rem);
+      font-weight: 900;
+      letter-spacing: 2px;
+      background: linear-gradient(180deg, #FFF9DB 0%, #FFD43B 40%, #E8590C 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      filter: drop-shadow(0 6px 12px rgba(232, 89, 12, 0.5));
+      margin-bottom: 6px;
+      line-height: 1.1;
+    }
+
+    .game-sub {
+      font-size: clamp(0.9rem, 2.5vw, 1.25rem);
+      color: #FFA94D;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 4px;
+      margin-bottom: 24px;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(245, 159, 0, 0.15);
+      border: 1px solid rgba(245, 159, 0, 0.4);
+      border-radius: 99px;
+      padding: 6px 16px;
+      margin-bottom: 28px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #FFE066;
+    }
+
+    .menu-btn {
+      width: min(85%, 340px);
+      padding: 14px 28px;
+      background: linear-gradient(180deg, #F59F00 0%, #D9480F 100%);
+      border: none;
+      border-radius: 16px;
+      color: #FFF9DB;
+      font-family: 'Cinzel', serif;
+      font-size: 1.15rem;
+      font-weight: 900;
+      letter-spacing: 1.5px;
+      cursor: pointer;
+      box-shadow: 0 8px 24px rgba(217, 72, 15, 0.5), inset 0 2px 0 rgba(255,255,255,0.4);
+      transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .menu-btn:hover {
+      transform: translateY(-3px) scale(1.02);
+      box-shadow: 0 12px 30px rgba(217, 72, 15, 0.7);
+    }
+
+    .menu-btn:active {
+      transform: translateY(1px) scale(0.98);
+    }
+
+    .menu-btn.sec {
+      background: rgba(60, 42, 33, 0.8);
+      border: 2px solid rgba(245, 159, 0, 0.4);
+      box-shadow: 0 4px 14px rgba(0,0,0,0.5);
+      color: #E9ECEF;
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 700;
+    }
+
+    .menu-btn.sec:hover {
+      background: rgba(80, 56, 44, 0.9);
+      border-color: #F59F00;
+    }
+
+    .controls-hint {
+      margin-top: 24px;
+      font-size: 0.85rem;
+      color: #ADB5BD;
+      max-width: 440px;
+      line-height: 1.6;
+    }
+
+    .key-badge {
+      display: inline-block;
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 6px;
+      padding: 2px 7px;
+      font-size: 0.75rem;
+      font-weight: 800;
+      color: #FFF;
+      margin: 0 2px;
+    }
+
+    /* MAPA DOS MUNDOS */
+    #worldMapScreen {
+      display: none;
+    }
+
+    .world-title {
+      font-family: 'Cinzel', serif;
+      font-size: 1.6rem;
+      font-weight: 900;
+      color: var(--oxe-gold);
+      margin-bottom: 16px;
+      letter-spacing: 1px;
+    }
+
+    .level-grid {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 16px;
+      max-width: 500px;
+      margin-bottom: 24px;
+    }
+
+    .level-card {
+      width: 100px;
+      height: 120px;
+      background: rgba(44, 24, 16, 0.9);
+      border: 2px solid rgba(245, 159, 0, 0.5);
+      border-radius: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    }
+
+    .level-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--oxe-gold);
+      background: rgba(70, 38, 26, 0.95);
+      box-shadow: 0 8px 20px rgba(245, 159, 0, 0.4);
+    }
+
+    .level-card.locked {
+      opacity: 0.4;
+      pointer-events: none;
+      border-color: #495057;
+    }
+
+    .level-num {
+      font-size: 1.4rem;
+      font-weight: 900;
+      color: #FFF;
+    }
+
+    .level-stars {
+      display: flex;
+      gap: 2px;
+      font-size: 0.75rem;
+      color: #FFD43B;
+    }
+
+    /* MUDO BUTTON */
+    #soundToggle {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      z-index: 60;
+      background: rgba(26, 18, 11, 0.85);
+      border: 2px solid rgba(245, 159, 0, 0.6);
+      border-radius: 50%;
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      cursor: pointer;
+      color: #FFF9DB;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.6);
+    }
+  </style>
+</head>
+<body>
+
+  <div id="gameContainer">
+    <canvas id="gameCanvas" width="960" height="540"></canvas>
+
+    <!-- HUD SUPERIOR -->
+    <div id="hud">
+      <div class="hud-left">
+        <div class="hud-card">
+          <div class="hearts-box" id="heartsBox">
+            <svg class="heart-icon" viewBox="0 0 24 24" fill="#FA5252"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+            <svg class="heart-icon" viewBox="0 0 24 24" fill="#FA5252"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+            <svg class="heart-icon" viewBox="0 0 24 24" fill="#FA5252"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+          </div>
+        </div>
+        <div class="hud-card">
+          <span>🍬</span>
+          <span class="hud-val" id="hudRapaduras">00</span>
+        </div>
+      </div>
+
+      <div class="hud-center">
+        <div class="hud-card">
+          <div class="caju-gems">
+            <svg class="caju-gem" id="caju1" viewBox="0 0 24 24" fill="#F59F00"><path d="M12 2C8.5 2 5.5 4.5 5 8c-.6 4 2 9 7 14 5-5 7.6-10 7-14-.5-3.5-3.5-6-7-6z"/></svg>
+            <svg class="caju-gem" id="caju2" viewBox="0 0 24 24" fill="#F59F00"><path d="M12 2C8.5 2 5.5 4.5 5 8c-.6 4 2 9 7 14 5-5 7.6-10 7-14-.5-3.5-3.5-6-7-6z"/></svg>
+            <svg class="caju-gem" id="caju3" viewBox="0 0 24 24" fill="#F59F00"><path d="M12 2C8.5 2 5.5 4.5 5 8c-.6 4 2 9 7 14 5-5 7.6-10 7-14-.5-3.5-3.5-6-7-6z"/></svg>
+          </div>
+        </div>
+      </div>
+
+      <div class="hud-right">
+        <div class="hud-card">
+          <span class="hud-label" id="hudStageName">Fase 1-1</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- BARRA DO CHEFÃO -->
+    <div id="bossBarContainer">
+      <div id="bossName">O Touro Encantado de Fogo</div>
+      <div class="boss-bar-frame">
+        <div id="bossHpFill"></div>
+      </div>
+    </div>
+
+    <!-- CAIXA DE DIÁLOGO / CORDEL -->
+    <div id="dialogueBox">
+      <div class="dialogue-avatar" id="dialogueAvatar">🤠</div>
+      <div class="dialogue-content">
+        <div class="dialogue-speaker" id="dialogueSpeaker">Avô Vaqueiro</div>
+        <div class="dialogue-text" id="dialogueText">Tonho, meu neto! A Sombra da Seca roubou os 9 Fragmentos do Sol. Use seu chapéu de couro e a corda de caroá para salvar o sertão!</div>
+      </div>
+      <div class="dialogue-prompt">Toque para continuar ▶</div>
+    </div>
+
+    <!-- CONTROLES MOBILE TOUCH -->
+    <div id="touchControls">
+      <div class="touch-btn" id="dpadLeft">◀</div>
+      <div class="touch-btn" id="dpadRight">▶</div>
+      <div class="touch-btn" id="dpadDown">▼</div>
+      
+      <div class="touch-btn" id="btnGlide">🪂 Planar</div>
+      <div class="touch-btn" id="btnWhip">⚡ Chicote</div>
+      <div class="touch-btn" id="btnJump">PULAR</div>
+    </div>
+
+    <!-- BOTÃO MUDO FLUTUANTE -->
+    <button id="soundToggle" title="Ativar/Desativar Som">🔊</button>
+
+    <!-- TELA 1: TELA DE TÍTULO -->
+    <div class="screen-overlay" id="titleScreen">
+      <div class="hero-badge">🌵 UMA AVENTURA ÉPICA NO SERTÃO</div>
+      <h1 class="game-logo">OXE!</h1>
+      <div class="game-sub">A Odisseia dos Nove Sóis</div>
+
+      <button class="menu-btn" id="btnStartGame">
+        <span>▶</span> INICIAR JORNADA
+      </button>
+      <button class="menu-btn sec" id="btnOpenMap">
+        <span>🗺️</span> MAPA DOS MUNDOS
+      </button>
+      <button class="menu-btn sec" onclick="location.href='/arena-do-oxe/'">
+        <span>⚔️</span> IR PARA A ARENA DO OXE
+      </button>
+
+      <div class="controls-hint">
+        🎮 <strong>Controles:</strong> <span class="key-badge">←</span> <span class="key-badge">→</span> ou <span class="key-badge">A</span> <span class="key-badge">D</span> para Correr • <span class="key-badge">Espaço</span> para Pular (segure no ar para <strong>Planar com o Chapéu</strong>) • <span class="key-badge">J</span> ou <span class="key-badge">X</span> para <strong>Chicote de Caroá</strong> • <span class="key-badge">S</span> ou <span class="key-badge">↓</span> para <strong>Pisão de Pedra</strong>.
+      </div>
+    </div>
+
+    <!-- TELA 2: MAPA DOS MUNDOS -->
+    <div class="screen-overlay" id="worldMapScreen">
+      <div class="hero-badge">🗺️ MAPA DO SERTÃO</div>
+      <h2 class="world-title" id="worldTitleText">Mundo 1: O Sertão dos Cactos Encantados</h2>
+
+      <div class="level-grid" id="levelGrid">
+        <div class="level-card" onclick="selectLevel(0)">
+          <div class="level-num">1-1</div>
+          <div class="level-stars">★★★</div>
+          <span style="font-size:0.75rem; color:#ADB5BD;">Mandacaru</span>
+        </div>
+        <div class="level-card" onclick="selectLevel(1)">
+          <div class="level-num">1-2</div>
+          <div class="level-stars">★★★</div>
+          <span style="font-size:0.75rem; color:#ADB5BD;">Tatu-Bola</span>
+        </div>
+        <div class="level-card" onclick="selectLevel(2)">
+          <div class="level-num">1-3</div>
+          <div class="level-stars">★★★</div>
+          <span style="font-size:0.75rem; color:#ADB5BD;">Ruínas</span>
+        </div>
+        <div class="level-card" onclick="selectLevel(3)" style="border-color:#FA5252;">
+          <div class="level-num" style="color:#FA5252;">👑 1-4</div>
+          <div class="level-stars">★★★</div>
+          <span style="font-size:0.75rem; color:#FA5252; font-weight:800;">CHEFÃO</span>
+        </div>
+      </div>
+
+      <button class="menu-btn sec" id="btnCloseMap">
+        <span>◀</span> VOLTAR
+      </button>
+    </div>
+
+    <!-- TELA 3: PAUSA -->
+    <div class="screen-overlay" id="pauseScreen" style="display:none;">
+      <h2 class="game-logo" style="font-size:2.5rem;">PAUSA</h2>
+      <button class="menu-btn" id="btnResume">CONTINUAR</button>
+      <button class="menu-btn sec" id="btnRestart">REINICIAR FASE</button>
+      <button class="menu-btn sec" id="btnQuitMap">MAPA DOS MUNDOS</button>
+    </div>
+
+    <!-- TELA 4: VITÓRIA / CONCLUSÃO DE FASE -->
+    <div class="screen-overlay" id="victoryScreen" style="display:none;">
+      <div class="hero-badge">☀️ FRAGMENTO DO SOL RECUPERADO!</div>
+      <h2 class="game-logo" style="font-size:2.6rem;">VITÓRIA ARRETADA!</h2>
+      <p style="color:#FFF9DB; font-size:1.1rem; margin-bottom:20px;" id="victoryMsg">Você derrotou o Touro de Fogo e restaurou a luz sobre o primeiro sertão!</p>
+
+      <button class="menu-btn" id="btnNextStage">PRÓXIMA FASE ▶</button>
+      <button class="menu-btn sec" id="btnVictoryMap">MAPA DOS MUNDOS</button>
+    </div>
+
+  </div>
+
+  <!-- SCRIPT DE ÁUDIO PROCEDURAL SINTETIZADO -->
+  <script src="audio.js"></script>
+
+  <!-- MOTOR DO JOGO COMPLETO -->
+  <script src="game.js"></script>
+
+</body>
+</html>
