@@ -1310,48 +1310,44 @@ if (isInstagram) {
   if (igB) igB.classList.add('on');
 }
 
-// 3. MODO OXEDLE: O DESAFIO DO DIA (Sincronizado por data)
+// 3. MODO OXEDLE: O DESAFIO DO DIA (Sincronizado por data no Fuso BRT)
 function getDailySeed() {
-  const now = new Date();
-  return now.getFullYear() * 10000 + (now.getMonth() + 1) * 100 + now.getDate();
+  const d = new Date();
+  return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
 }
 
-let isOxedleMode = false;
-let oxedleAnswers = [];
-
 function startOxedle() {
-  initAudio();
-  isOxedleMode = true;
-  oxedleAnswers = [];
+  if (typeof initAudio === 'function') initAudio();
   
-  // Escolher 5 perguntas determinísticas baseadas no dia
+  // 5 perguntas determinísticas do dia
   const seed = getDailySeed();
   const qList = [];
+  const poolLen = Q.length;
   for (let i = 0; i < 5; i++) {
-    const idx = (seed + i * 37) % Q.length;
+    const idx = Math.abs((seed * 31 + i * 47 + 13)) % poolLen;
     qList.push(Q[idx]);
   }
-  
+
+  // Objeto B 100% compatível com a engine de batalha do jogo
   B = {
-    arena: -1,
-    a: { uf: 'NE', nome: 'Oxedle do Sertão', sub: 'O Desafio Oficial do Dia', mode: 'cabo' },
-    qList: qList,
-    qIdx: 0,
+    arena: -99,
+    a: { uf: 'NE', nome: '🌵 Oxedle: Desafio do Dia', sub: 'Palpite Diário das 06h', mode: 'cabo' },
+    mode: 'cabo',
+    qs: qList,
+    r: 0,
     me: 0,
     bot: 0,
     hitsMe: 0,
-    hitsBot: 0,
-    streakMe: 0,
-    streakBot: 0,
-    rival: '@desafio_diario',
-    ufRival: 'NE',
-    botSkill: 0.6,
-    newCards: []
+    results: [],
+    combo: 0,
+    rival: '🌵 Lampião das 06h',
+    newCards: [],
+    botSkill: 0.55,
+    isOxedle: true
   };
-  
+
   go('battle');
-  setupBattleUI();
-  nextRound();
+  setupBattle();
 }
 
 // 4. DUELO DA BUCHADA DE BODE
