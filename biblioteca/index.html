@@ -78,6 +78,167 @@ a.mini{font-family:var(--mono);font-size:13px;font-weight:700;text-decoration:no
 a.mini:hover{background:var(--accent)}
 a.mini:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .grid{grid-template-columns:repeat(auto-fill,minmax(310px,1fr))}
+
+/* ==========================================================
+   BIBLIOTECA DO OXE — LUXURY EDITORIAL ARCHIVE LAYER
+   Melhoria visual premium sem alterar nenhum conteúdo ou dados
+   ========================================================== */
+:root {
+  --bg: #ece6da;
+  --card: #fdfaf3;
+  --ink: #1b2540;
+  --rule: #b93d34;
+  --accent: #9a4b1a;
+  --gold: #b08a4a;
+  --gold-glow: rgba(176, 138, 74, 0.25);
+  --line: #d8cebe;
+  --shadow-card: 0 6px 20px rgba(55, 40, 20, 0.07), 0 2px 6px rgba(55, 40, 20, 0.04);
+  --shadow-hover: 0 14px 32px rgba(55, 40, 20, 0.13), 0 4px 10px rgba(55, 40, 20, 0.06);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1117;
+    --card: #181d26;
+    --ink: #ede6d8;
+    --muted: #9aa1b3;
+    --rule: #df584c;
+    --line: #2d3545;
+    --accent: #dca062;
+    --gold: #d4af37;
+    --gold-glow: rgba(212, 175, 55, 0.2);
+    --btn: #2d3545;
+    --btnfg: #fdfaf3;
+    --shadow-card: 0 8px 24px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.3);
+    --shadow-hover: 0 16px 36px rgba(0, 0, 0, 0.65), 0 4px 12px rgba(0, 0, 0, 0.4);
+  }
+}
+
+body {
+  background-color: var(--bg);
+  background-image: radial-gradient(circle at 10% 10%, rgba(176, 138, 74, 0.04) 0%, transparent 50%),
+                    radial-gradient(circle at 90% 90%, rgba(185, 61, 52, 0.03) 0%, transparent 50%);
+  color: var(--ink);
+  letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Barra de Topo Integrada */
+.oxe-nav-switcher {
+  background: #121824 !important;
+  border-bottom: 2px solid var(--rule) !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+}
+
+/* Header Editorial Nobre */
+.eyebrow {
+  color: var(--gold) !important;
+  font-weight: 700;
+  letter-spacing: 0.12em !important;
+}
+
+h1 {
+  color: var(--ink);
+  text-shadow: 0 1px 0 rgba(255,255,255,0.4);
+}
+
+/* Ferramenta de Busca & Gavetas com acabamento de arquivo de museu */
+.tools {
+  background: var(--bg) !important;
+  border-radius: 12px;
+  backdrop-filter: blur(8px);
+}
+
+.tools input {
+  background: var(--card) !important;
+  border: 1.5px solid var(--line) !important;
+  border-radius: 8px !important;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.03), 0 2px 8px rgba(0,0,0,0.04);
+  transition: all 0.2s ease;
+}
+
+.tools input:focus {
+  border-color: var(--gold) !important;
+  box-shadow: 0 0 0 3px var(--gold-glow), inset 0 2px 4px rgba(0,0,0,0.02) !important;
+  outline: none !important;
+}
+
+/* Abas de Gavetas (Fichário de Madeira e Couro) */
+.tab {
+  background: var(--card) !important;
+  border: 1px solid var(--line) !important;
+  border-bottom: none !important;
+  border-radius: 6px 6px 0 0 !important;
+  transition: all 0.15s ease;
+  font-weight: 600;
+}
+
+.tab:hover {
+  background: #f5ede0 !important;
+  transform: translateY(-2px);
+}
+
+.tab[aria-pressed="true"] {
+  background: var(--ink) !important;
+  color: var(--card) !important;
+  border-color: var(--ink) !important;
+  box-shadow: 0 -3px 8px rgba(0,0,0,0.08);
+}
+
+/* Título das Gavetas */
+.gaveta h2 {
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 8px;
+  letter-spacing: -0.02em;
+}
+
+/* Fichas Catalográficas em Papel Encorpado de Luxo */
+.ficha {
+  background: var(--card) !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 6px !important;
+  box-shadow: var(--shadow-card) !important;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.ficha:hover {
+  transform: translateY(-4px) !important;
+  box-shadow: var(--shadow-hover) !important;
+  border-color: #baa894 !important;
+}
+
+/* Linha Vermelha de Catálogo e Furo Central em Relevo */
+.ficha::before {
+  border-top: 2px solid var(--rule) !important;
+  opacity: 0.9 !important;
+}
+
+.ficha::after {
+  background: var(--bg) !important;
+  border: 1.5px solid var(--line) !important;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);
+}
+
+/* Botões de Ação com Estilo de Selo / Couro */
+a.buy, a.mini {
+  border-radius: 6px !important;
+  font-weight: 700 !important;
+  transition: all 0.15s ease !important;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+}
+
+a.buy:hover, a.mini:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+}
+
+/* Caixa "Sugira um Livro" nobre */
+.sugira {
+  border-radius: 12px !important;
+  border-left: 4px solid var(--gold) !important;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+}
+
 </style><style>
 .sec{margin:10px 0 2px;font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);display:flex;align-items:center;gap:8px}
 .sec::after{content:"";flex:1;border-top:1px dotted var(--line)}
