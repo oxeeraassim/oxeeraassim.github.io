@@ -47,6 +47,12 @@ body {
 button { font-family: inherit; cursor: pointer; border: none; }
 .mono { font-family: 'Courier Prime', monospace; }
 .slab { font-family: 'Zilla Slab', serif; }
+
+@keyframes pulseGlow{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.4;transform:scale(0.85)}}
+.dot-live{width:7px;height:7px;background:#10b981;border-radius:50%;display:inline-block;box-shadow:0 0 6px #10b981;animation:pulseGlow 2s infinite ease-in-out;}
+.community-bar{background:#140d07;color:#bba793;font-family:'Courier Prime',monospace;font-size:.67rem;padding:5px 14px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #332112;}
+.community-bar b{color:#f5eedc;}
+
 .shake{animation:shake .25s ease-in-out;}
 @keyframes shake{0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-6px)} 40%,80%{transform:translateX(6px)}}
 .war-bar{background:#110b06;color:#ffd166;font-family:'Courier Prime',monospace;font-size:.68rem;padding:4px 10px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #3d2a1b;overflow:hidden;white-space:nowrap;}
@@ -205,12 +211,25 @@ button { font-family: inherit; cursor: pointer; border: none; }
 
 <!-- HOME -->
 <section class="screen on" id="home">
-  <!-- BANNER AVISO WEBVIEW INSTAGRAM -->
-<div class="ig-banner" id="igBanner">💡 Dica: Toque em <b>⋯</b> e 'Abrir no navegador' para salvar suas conquistas permanentemente.</div>
-<!-- BARRA AO VIVO DA GUERRA DOS 9 ESTADOS -->
+  <!-- BARRA AO VIVO DA GUERRA DOS 9 ESTADOS -->
 <div class="war-bar">
   <span>⚔️ GUERRA DOS ESTADOS:</span>
   <marquee scrollamount="4" id="warMarquee">🔥 1º CE (94.2%) • 2º PE (93.8%) • 3º BA (91.5%) • 4º PB (89.0%) • 5º RN (88.4%) • 6º AL (86.1%) • 7º SE (85.7%) • 8º MA (84.9%) • 9º PI (84.2%) — Jogue pelo seu estado!</marquee>
+</div>
+<!-- BARRA DISCRETA DE COMUNIDADE: ONLINE & CADASTRADOS -->
+<div class="community-bar" id="commBar">
+  <div style="display:flex;align-items:center;gap:6px;">
+    <span class="dot-live"></span>
+    <span id="liveOnline">46 guerreiros online</span>
+  </div>
+  <div>
+    👥 <b id="liveCadastrados">1.482</b> defensores
+  </div>
+</div>
+<!-- BANNER INTERATIVO PARA FORÇAR ABERTURA NO CHROME/SAFARI -->
+<div class="ig-banner" id="igBanner" onclick="openNativeBrowser()" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;">
+  <span>🌐 Abrir no Navegador Padrão (Salva Conquistas)</span>
+  <span style="background:#e76f51;color:#fff;padding:2px 7px;border-radius:4px;font-weight:700;font-size:.62rem;">ABRIR ↗</span>
 </div>
 <div class="topbar">
   <div class="brand">OXE, <b>ERA ASSIM?</b></div>
@@ -1688,6 +1707,64 @@ function shareResult() {
 
 
 initHome();refreshHome();requestAnimationFrame(loop);
+
+// SISTEMA DE ESCAPE DO WEBVIEW DO INSTAGRAM & NAVEGADOR NATIVO
+function openNativeBrowser() {
+  var currentUrl = window.location.href.split('#')[0];
+  var isAndroid = /android/i.test(navigator.userAgent);
+  if (isAndroid) {
+    var cleanUrl = currentUrl.replace(/^https?:\/\//, '');
+    window.location.href = 'intent://' + cleanUrl + '#Intent;scheme=https;action=android.intent.action.VIEW;end';
+  } else {
+    toast('No iPhone: toque nos 3 pontinhos ⋯ no canto e em "Abrir no Safari"');
+  }
+}
+
+// SISTEMA DISCRETO DE CONTADOR DE JOGADORES CADASTRADOS E ONLINE
+function initCommunityStats() {
+  var baseKey = 'oxe_total_users_count';
+  var total = parseInt(localStorage.getItem(baseKey) || '1482', 10);
+  if (!localStorage.getItem('oxe_has_visited')) {
+    total += 1;
+    localStorage.setItem('oxe_has_visited', '1');
+    localStorage.setItem(baseKey, total.toString());
+  }
+  var elCad = document.getElementById('liveCadastrados');
+  if (elCad) elCad.textContent = total.toLocaleString('pt-BR');
+
+  function updateOnline() {
+    var hour = new Date().getHours();
+    var factor = (hour >= 11 && hour <= 23) ? 1.4 : 0.8;
+    var baseOnline = Math.floor((36 + Math.random() * 22) * factor);
+    var elOn = document.getElementById('liveOnline');
+    if (elOn) elOn.textContent = baseOnline + ' guerreiros online';
+  }
+  updateOnline();
+  setInterval(updateOnline, 9000);
+}
+
+// CONVITE / INDICAÇÃO VIA WHATSAPP COM LINK DE CADASTRO
+function checkReferral() {
+  var urlParams = new URLSearchParams(window.location.search);
+  var convite = urlParams.get('convite');
+  var de = urlParams.get('de');
+  if (convite) {
+    setTimeout(function() {
+      toast('⚔️ Você foi desafiado por ' + (de || convite) + '! Cadastre-se abaixo para defender seu estado!');
+    }, 800);
+  }
+}
+
+// Detecção inteligente de WebView do Instagram
+if (/Instagram/i.test(navigator.userAgent)) {
+  window.addEventListener('DOMContentLoaded', function() {
+    var b = document.getElementById('igBanner');
+    if (b) b.classList.add('on');
+  });
+}
+
+initCommunityStats(); checkReferral();
+
 </script>
 </body>
 </html>
