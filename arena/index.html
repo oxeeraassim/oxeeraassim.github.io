@@ -256,7 +256,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
     <button class="mbtn" onclick="go('rank')"><div class="e">🏆</div><div class="t">Ranking</div><div class="s">Pessoas e estados</div></button>
     <button class="mbtn" onclick="challengeWa()"><div class="e">📲</div><div class="t">Desafiar no Zap</div><div class="s">Chame alguém pra arena</div></button>
   </div>
-  <div class="regra">✋ REGRA DA ARENA: sem consulta. Cada pergunta tem 15 segundos. Sair do app durante a pergunta conta como erro.<br>📚 Perguntas do acervo editorial do @oxe_eraassim, com referências em cada figurinha.</div>
+  <div class="regra">✋ REGRA DA ARENA: sem consulta. Cada pergunta tem 20 segundos. Sair do app durante a pergunta conta como erro.<br>📚 Perguntas do acervo editorial do @oxe_eraassim, com referências em cada figurinha.</div>
 </section>
 
 <!-- MAPA -->
@@ -501,7 +501,7 @@ function setupBattle(){
   if(photo)$('avMe').style.backgroundImage=`url(${photo.src})`;
   scene.reset();nextRound(true);
 }
-let tmr=null,tLeft=0,tMax=15,answered=false,shield=false;
+let tmr=null,tLeft=0,tMax=20,answered=false,shield=false;
 function drawRounds(){$('rounds').innerHTML=B.qs.map((_,k)=>`<i class="${k<B.results.length?(B.results[k]>0?'w':B.results[k]<0?'l':''):k===B.r?'c':''}"></i>`).join('')}
 function nextRound(first){
   if(!first)B.r++;
@@ -517,8 +517,8 @@ function nextRound(first){
   updPups();drawRounds();
   // bot decide
   const p={'FÁCIL':.85,'MÉDIO':.62,'DIFÍCIL':.45}[q.dif]*(0.6+B.botSkill*0.6);
-  B.botOk=Math.random()<Math.min(.92,p);B.botT=3+Math.random()*9;
-  tMax=15;tLeft=tMax;clearInterval(tmr);
+  B.botOk=Math.random()<Math.min(.92,p);B.botT=4+Math.random()*12;
+  tMax=20;tLeft=tMax;clearInterval(tmr);
   tmr=setInterval(()=>{tLeft-=0.1;$('tBar').style.transform=`scaleX(${Math.max(0,tLeft/tMax)})`;if(tLeft<=0){clearInterval(tmr);answer(-1,null)}},100);
 }
 function answer(i,btn){
@@ -530,10 +530,10 @@ function answer(i,btn){
   const botPick=B.botOk?q.ans:[0,1,2,3].filter(x=>x!==q.ans)[Math.random()*3|0];
   const bb=[...document.querySelectorAll('.opt')].find(b=>+b.dataset.i===botPick);if(bb)bb.insertAdjacentHTML('beforeend',`<span class="bot">◀ rival</span>`);
   let gMe=0,gBot=0;
-  if(ok){B.combo++;gMe=Math.round((100+tLeft*10)*mult*(B.combo>=3?1.5:1));B.hitsMe++;}
+  if(ok){B.combo++;gMe=Math.round((100+tLeft*7.5)*mult*(B.combo>=3?1.5:1));B.hitsMe++;}
   else B.combo=0;
   const botIn=B.botT<=tMax;
-  if(B.botOk&&botIn)gBot=Math.round((100+(tMax-B.botT)*10)*mult);
+  if(B.botOk&&botIn)gBot=Math.round((100+(tMax-B.botT)*7.5)*mult);
   if(!ok&&shield){gBot=Math.round(gBot/2);}
   B.me+=gMe;B.bot+=gBot;
   const res=gMe>gBot?1:gMe<gBot?-1:0;B.results.push(res);
@@ -555,7 +555,7 @@ function updPups(){$('c50').textContent='x'+S.pups.reza;$('cT').textContent='x'+
 function usePup(k){
   if(answered||!S.pups[k])return;S.pups[k]--;
   if(k==='reza'){const wrong=shuffle([0,1,2,3].filter(x=>x!==B.q.ans)).slice(0,2);document.querySelectorAll('.opt').forEach(b=>{if(wrong.includes(+b.dataset.i))b.classList.add('gone')});$('pu50').disabled=true;toast('🙏 A rezadeira tirou duas alternativas')}
-  if(k==='rede'){tLeft+=7;tMax+=7;toast('⏳ +7 segundos na rede')}
+  if(k==='rede'){tLeft+=10;tMax+=10;toast('⏳ +10 segundos na rede')}
   if(k==='chapeu'){shield=true;toast('🤠 Chapéu de couro: se errar, o rival ganha só metade')}
   save();updPups();
 }
@@ -584,7 +584,7 @@ function shareResult(){
   window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
 }
 function challengeWa(){
-  const msg=`⚔️ ${myTag()} te desafiou na ARENA DO OXE!\nPerguntas sobre a história do Nordeste, 15 segundos cada, sem consulta.\nEu defendo ${UFS_NE[S.heart]}. E tu? 👉 oxeeraassim.github.io`;
+  const msg=`⚔️ ${myTag()} te desafiou na ARENA DO OXE!\nPerguntas sobre a história do Nordeste, 20 segundos cada, sem consulta.\nEu defendo ${UFS_NE[S.heart]}. E tu? 👉 oxeeraassim.github.io`;
   window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
 }
 
