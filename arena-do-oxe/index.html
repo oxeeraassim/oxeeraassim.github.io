@@ -9,7 +9,7 @@
 :root{--bg:#e9e3d6;--card:#fbf8f1;--ink:#1f2a44;--rule:#c8433a;--accent:#a8521f;--gold:#d49b35;--dark:#1a120b;--ok:#2f7d4f}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%}
-body{background:var(--dark);font-family:'Literata',Georgia,serif;color:var(--ink);display:flex;justify-content:center}
+body{background:var(--dark);font-family:'Literata',Georgia,serif;color:var(--ink);display:flex;flex-direction:column;align-items:center;margin:0;padding:0;width:100%;min-height:100vh;min-height:100dvh;overflow-x:hidden}
 #app{width:100%;max-width:480px;min-height:100%;background:var(--bg);position:relative;overflow:hidden;display:flex;flex-direction:column}
 .screen{display:none;flex-direction:column;flex:1;min-height:100vh}
 .screen.on{display:flex}
@@ -170,19 +170,12 @@ html,body{height:100%; overscroll-behavior:none; touch-action:none;}
 </style>
 </head>
 <body>
-
-<!-- OXE TOP SWITCHER BAR -->
-<div style="background: #0f172a; color: #f8fafc; padding: 10px 20px; font-family: system-ui, -apple-system, sans-serif; font-size: 13px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ff334b; position: sticky; top: 0; z-index: 9999;">
-  <div>
-    <a href="/" style="color: #f59e0b; text-decoration: none; font-weight: bold;">&larr; Portal Oxe</a> &bull;
-    <span style="color: #fff; font-weight: bold;">🎮 Arena do Oxe</span>
-  </div>
-  <div>
-    <a href="/biblioteca-do-oxe/" style="color: #38bdf8; text-decoration: none; font-weight: bold; background: rgba(56,189,248,0.15); padding: 4px 12px; border-radius: 6px; border: 1px solid #38bdf8;">📚 Ir para a Biblioteca do Oxe &rarr;</a>
-  </div>
-</div>
-
 <div id="app">
+<div class="oxe-nav-switcher" style="background: #110b06; color: #f8fafc; padding: 8px 14px; font-family: 'Courier Prime', monospace; font-size: 11px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #3d2a1b; width: 100%; box-sizing: border-box; z-index: 100;">
+  <a href="/" style="color: #f59e0b; text-decoration: none; font-weight: bold;">&larr; Portal</a>
+  <span style="color: #ffd166; font-weight: bold;">🎮 Arena do Oxe</span>
+  <a href="/biblioteca-do-oxe/" style="color: #38bdf8; text-decoration: none; font-weight: bold; background: rgba(56,189,248,0.12); padding: 3px 8px; border-radius: 4px; border: 1px solid rgba(56,189,248,0.3);">📚 Biblioteca &rarr;</a>
+</div>
 
 <!-- HOME -->
 <section class="screen on" id="home">
