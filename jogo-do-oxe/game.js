@@ -16,12 +16,29 @@
   const canvas = document.getElementById('gameCanvas');
   const ctx = canvas.getContext('2d');
 
+  // Polyfill de roundRect para navegadores móveis (Safari iOS < 16, Chrome antigos, WebViews)
+  if (!CanvasRenderingContext2D.prototype.roundRect) {
+    CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, radii) {
+      if (!radii) radii = 0;
+      let r = typeof radii === 'number' ? radii : (Array.isArray(radii) ? radii[0] : 0);
+      r = Math.min(r, Math.abs(w) / 2, Math.abs(h) / 2);
+      this.beginPath();
+      this.moveTo(x + r, y);
+      this.arcTo(x + w, y, x + w, y + h, r);
+      this.arcTo(x + w, y + h, x, y + h, r);
+      this.arcTo(x, y + h, x, y, r);
+      this.arcTo(x, y, x + w, y, r);
+      this.closePath();
+      return this;
+    };
+  }
+
   // Ajuste de DPI para renderização cristalina em telas Retina / 4K
   function resizeCanvas() {
     const dpr = window.devicePixelRatio || 1;
     canvas.width = CANVAS_W * dpr;
     canvas.height = CANVAS_H * dpr;
-    ctx.scale(dpr, dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
   window.addEventListener('resize', resizeCanvas);
   resizeCanvas();
@@ -64,7 +81,7 @@
   // Suporte a teclado
   window.addEventListener('keydown', (e) => {
     if (e.repeat) return;
-    if (AudioEngine && !AudioEngine.unlocked) AudioEngine.unlock();
+    if (window.AudioEngine && !window.AudioEngine.unlocked) window.AudioEngine.unlock();
 
     switch (e.code) {
       case 'ArrowLeft': case 'KeyA': keys.left = true; break;
@@ -112,23 +129,29 @@
   // Suporte a Touchscreen (Mobile)
   const isMobile = /Android|iPhone|iPad|iPod|Windows Phone/i.test(navigator.userAgent) || ('ontouchstart' in window);
   if (isMobile) {
-    document.getElementById('touchControls').style.display = 'block';
+    const tc = document.getElementById('touchControls');
+    if (tc) tc.style.display = 'block';
   }
 
   function bindTouch(id, onDown, onUp) {
     const el = document.getElementById(id);
     if (!el) return;
-    el.addEventListener('touchstart', (e) => {
+    const startHandler = (e) => {
       e.preventDefault();
-      if (AudioEngine && !AudioEngine.unlocked) AudioEngine.unlock();
+      if (window.AudioEngine && !window.AudioEngine.unlocked) window.AudioEngine.unlock();
       el.classList.add('active');
       onDown();
-    });
-    el.addEventListener('touchend', (e) => {
+    };
+    const endHandler = (e) => {
       e.preventDefault();
       el.classList.remove('active');
       onUp();
-    });
+    };
+    el.addEventListener('touchstart', startHandler, { passive: false });
+    el.addEventListener('touchend', endHandler, { passive: false });
+    el.addEventListener('touchcancel', endHandler, { passive: false });
+    el.addEventListener('mousedown', (e) => { el.classList.add('active'); onDown(); });
+    el.addEventListener('mouseup', (e) => { el.classList.remove('active'); onUp(); });
   }
 
   bindTouch('dpadLeft', () => keys.left = true, () => keys.left = false);
@@ -140,13 +163,18 @@
 
   // Botão de Áudio
   const soundBtn = document.getElementById('soundToggle');
-  soundBtn.addEventListener('click', () => {
-    if (AudioEngine) {
-      AudioEngine.unlock();
-      const m = AudioEngine.toggleMute();
-      soundBtn.textContent = m ? '🔇' : '🔊';
-    }
-  });
+  if (soundBtn) {
+    const handleToggle = (e) => {
+      if (e) e.preventDefault();
+      if (window.AudioEngine) {
+        window.AudioEngine.unlock();
+        const m = window.AudioEngine.toggleMute();
+        soundBtn.textContent = m ? '🔇' : '🔊';
+      }
+    };
+    soundBtn.addEventListener('click', handleToggle);
+    soundBtn.addEventListener('touchend', handleToggle);
+  }
 
   // ==================== SISTEMA DE PARTÍCULAS ====================
   const particles = [];
@@ -291,13 +319,14 @@
       this.h = 48;
       this.vx = 0;
       this.vy = 0;
-      this.acc = 0.55;
+      this.acc = 0.58;
       this.friction = 0.82;
       this.maxSpeed = 4.8;
-      this.jumpPower = -10.8;
+      this.jumpPower = -11.0;
       this.facing = 1; // 1 = direita, -1 = esquerda
 
       this.onGround = false;
+      this.wasOnGround = false;
       this.coyoteCounter = 0;
       this.jumpBufferCounter = 0;
       this.hasDoubleJump = true;
@@ -307,20 +336,42 @@
       this.isGroundPounding = false;
       this.groundPoundTimer = 0;
 
+      // Modo Power-up Asa Branca Dourada (Invencibilidade & Hiper-velocidade)
+      this.asaBrancaTimer = 0;
+      this.trail = [];
+
       // Ataque de Chicote
       this.isAttacking = false;
       this.attackTimer = 0;
       this.attackDuration = 14;
 
-      // Animação & Squash/Stretch
+      // Animação & Squash/Stretch Dinâmico estilo Nintendo
       this.animTime = 0;
       this.scaleX = 1;
       this.scaleY = 1;
+      this.svx = 0;
+      this.svy = 0;
       this.invulnerableTimer = 0;
     }
 
+    squash(sx, sy) {
+      this.scaleX = sx;
+      this.scaleY = sy;
+      this.svx = 0;
+      this.svy = 0;
+    }
+
+    activateAsaBranca() {
+      this.asaBrancaTimer = 480; // 8 segundos gloriosos
+      score += 1000;
+      screenShake = 12;
+      hitstopFrames = 8;
+      if (AudioEngine) AudioEngine.playSFX('checkpoint');
+      spawnFloatingText('⭐ MODO ASA BRANCA!', this.x - 30, this.y - 30, '#FFD43B', 22);
+    }
+
     queueJump() {
-      this.jumpBufferCounter = 8;
+      this.jumpBufferCounter = 10; // 10 frames de buffer perdoador
     }
 
     attack() {
@@ -358,18 +409,20 @@
         this.groundPoundTimer = 4;
         this.vx = 0;
         this.vy = 0;
+        this.squash(0.7, 1.35);
         spawnDust(this.x + this.w / 2, this.y + this.h, 6, '#FFD43B');
       }
     }
 
     takeDamage(amount = 1) {
-      if (this.invulnerableTimer > 0) return;
+      if (this.invulnerableTimer > 0 || this.asaBrancaTimer > 0) return;
       health -= amount;
       this.invulnerableTimer = 60; // 1s invulnerabilidade
       screenShake = 12;
       hitstopFrames = 6;
       this.vy = -6;
       this.vx = -this.facing * 4;
+      this.squash(1.4, 0.7);
       if (AudioEngine) AudioEngine.playSFX('hit');
       spawnFloatingText('AI MEU DEUS!', this.x, this.y - 16, '#FA5252', 18);
       updateHUD();
@@ -397,9 +450,34 @@
       this.animTime++;
       if (this.invulnerableTimer > 0) this.invulnerableTimer--;
 
-      // Buffer de pulo & Coyote Time
+      // Gerenciamento do Modo Asa Branca
+      if (this.asaBrancaTimer > 0) {
+        this.asaBrancaTimer--;
+        this.invulnerableTimer = Math.max(this.invulnerableTimer, 2);
+        if (this.animTime % 2 === 0) {
+          this.trail.unshift({
+            x: this.x + this.w / 2,
+            y: this.y + this.h / 2,
+            hue: (this.animTime * 14) % 360
+          });
+          if (this.trail.length > 8) this.trail.pop();
+        }
+
+        // Atropela qualquer inimigo comum instantaneamente
+        currentLevel.enemies.forEach(en => {
+          if (!en.dead && checkAABB(this, en)) {
+            en.takeHit(3, this.facing);
+            hitstopFrames = 4;
+            spawnFloatingText('POW!', en.x, en.y - 12, '#FFD43B', 22);
+          }
+        });
+      } else {
+        this.trail.length = 0;
+      }
+
+      // Buffer de pulo & Coyote Time (8 frames para perdoar pulos na borda)
       if (this.onGround) {
-        this.coyoteCounter = 7;
+        this.coyoteCounter = 8;
         this.hasDoubleJump = true;
       } else {
         if (this.coyoteCounter > 0) this.coyoteCounter--;
@@ -408,6 +486,7 @@
       if (this.jumpBufferCounter > 0) this.jumpBufferCounter--;
 
       // MOVIMENTO HORIZONTAL
+      const currentMaxSpeed = this.asaBrancaTimer > 0 ? this.maxSpeed * 1.4 : this.maxSpeed;
       if (!this.isGroundPounding) {
         if (keys.left) {
           this.vx -= this.acc;
@@ -421,36 +500,49 @@
         }
       }
 
-      this.vx = Math.max(-this.maxSpeed, Math.min(this.vx, this.maxSpeed));
+      this.vx = Math.max(-currentMaxSpeed, Math.min(this.vx, currentMaxSpeed));
 
-      // PULO
+      // PULO COM SQUASH & STRETCH
       if (this.jumpBufferCounter > 0) {
         if (this.coyoteCounter > 0) {
           this.vy = this.jumpPower;
           this.coyoteCounter = 0;
           this.jumpBufferCounter = 0;
           this.onGround = false;
-          this.scaleX = 0.75;
-          this.scaleY = 1.35;
+          this.squash(0.68, 1.38);
           spawnDust(this.x + this.w / 2, this.y + this.h, 6);
           if (AudioEngine) AudioEngine.playSFX('jump');
         } else if (this.hasDoubleJump && !this.onGround) {
-          this.vy = this.jumpPower * 0.88;
+          this.vy = this.jumpPower * 0.9;
           this.hasDoubleJump = false;
           this.jumpBufferCounter = 0;
-          this.scaleX = 0.8;
-          this.scaleY = 1.25;
-          spawnSparks(this.x + this.w / 2, this.y + this.h, 8, '#66D9E8');
+          this.squash(0.72, 1.3);
+          spawnSparks(this.x + this.w / 2, this.y + this.h, 10, '#66D9E8');
           if (AudioEngine) AudioEngine.playSFX('doubleJump');
         }
       }
 
-      // PLANAR COM CHAPÉU (GLIDE)
-      if (keys.glide && !this.onGround && this.vy > 1.2) {
+      // Altura variável no pulo: soltar o botão de pulo corta a subida suavemente
+      if (!keys.jump && this.vy < -3.5) {
+        this.vy *= 0.55;
+      }
+
+      // PLANAR COM CHAPÉU E CORRENTES TÉRMICAS ASCENDENTES
+      if (keys.glide && !this.onGround && this.vy > 1.0) {
         this.isGliding = true;
-        this.vy = 1.4; // Queda super suave
-        if (this.animTime % 8 === 0) {
+        this.vy = 1.3; // Queda super suave
+        if (this.animTime % 7 === 0) {
           particles.push(new Particle(this.x + this.w/2 + (Math.random()-0.5)*16, this.y - 6, (Math.random()-0.5)*1, -1, 'rgba(255, 212, 59, 0.6)', 3, 15, 'star', 0.02));
+        }
+
+        // Correntes de ar quente ascendentes em colunas do mapa
+        if (currentLevel && currentLevel.updrafts) {
+          currentLevel.updrafts.forEach(ud => {
+            if (this.x >= ud.x && this.x <= ud.x + ud.w && this.y >= ud.y && this.y <= ud.y + ud.h) {
+              this.vy = -3.8; // Elevação térmica mágica!
+              spawnSparks(this.x + this.w / 2, this.y + this.h, 2, '#FFD43B');
+            }
+          });
         }
       } else {
         this.isGliding = false;
@@ -463,14 +555,15 @@
           this.vy = 0;
           this.vx = 0;
         } else {
-          this.vy = 14.0; // Despenca com força
+          this.vy = 14.5;
           if (this.animTime % 4 === 0) {
             spawnDust(this.x + this.w / 2, this.y + this.h / 2, 3, '#FFA94D');
           }
         }
       } else {
-        // Gravidade normal
-        this.vy += GRAVITY;
+        // Gravidade com Ápice Float (hang time no topo do salto estilo Nintendo)
+        const apexBonus = Math.abs(this.vy) < 1.6 && keys.jump ? 0.5 : 1.0;
+        this.vy += GRAVITY * apexBonus;
         if (this.vy > MAX_FALL_SPEED) this.vy = MAX_FALL_SPEED;
       }
 
@@ -480,9 +573,14 @@
         if (this.attackTimer <= 0) this.isAttacking = false;
       }
 
-      // Squash and stretch decay
-      this.scaleX += (1 - this.scaleX) * 0.15;
-      this.scaleY += (1 - this.scaleY) * 0.15;
+      // Mola amortecida de Squash & Stretch (retorna ao normal organicamente)
+      this.svx += (1 - this.scaleX) * 0.25;
+      this.svx *= 0.72;
+      this.scaleX += this.svx;
+
+      this.svy += (1 - this.scaleY) * 0.25;
+      this.svy *= 0.72;
+      this.scaleY += this.svy;
 
       // APLICAÇÃO DE MOVIMENTO & COLISÃO
       this.x += this.vx;
@@ -521,44 +619,65 @@
       this.onGround = false;
       currentLevel.platforms.forEach(p => {
         if (checkAABB(this, p)) {
-          if (this.vy > 0 && this.y + this.h - this.vy <= p.y + 10) {
+          if (this.vy > 0 && this.y + this.h - this.vy <= p.y + 12) {
             // Pouso
             this.y = p.y - this.h;
             this.vy = 0;
             this.onGround = true;
 
+            if (!this.wasOnGround) {
+              // Impacto de aterrissagem com Squash elástico
+              this.squash(1.36, 0.68);
+              spawnDust(this.x + this.w / 2, this.y + this.h, 6);
+              if (AudioEngine && Math.abs(this.scaleY - 1) > 0.2) AudioEngine.playSFX('stomp');
+            }
+
             if (this.isGroundPounding) {
               this.isGroundPounding = false;
-              screenShake = 14;
-              spawnDust(this.x + this.w / 2, this.y + this.h, 16, '#F59F00');
+              screenShake = 16;
+              hitstopFrames = 5;
+              this.squash(1.5, 0.5);
+              spawnDust(this.x + this.w / 2, this.y + this.h, 25, '#FFD43B');
               if (AudioEngine) AudioEngine.playSFX('stomp');
-              spawnFloatingText('CABRA DA PESTE!', this.x - 10, this.y - 20, '#FFD43B', 20);
+              spawnFloatingText('PISÃO DE PEDRA!', this.x - 20, this.y - 20, '#FFD43B', 20);
 
               // Shockwave derrota inimigos no chão próximos
               currentLevel.enemies.forEach(en => {
-                if (!en.dead && Math.abs(en.x - this.x) < 110 && Math.abs(en.y - this.y) < 30) {
+                if (!en.dead && Math.abs(en.x - this.x) < 120 && Math.abs(en.y - this.y) < 30) {
                   en.takeHit(2, en.x > this.x ? 1 : -1);
                 }
               });
-            } else if (this.scaleY > 1.1) {
-              spawnDust(this.x + this.w / 2, this.y + this.h, 5);
             }
-
-            this.scaleX = 1.35;
-            this.scaleY = 0.75;
           } else if (this.vy < 0) {
             // Bateu a cabeça no teto
             this.y = p.y + p.h;
             this.vy = 0;
+            this.squash(1.25, 0.8);
             if (p.isBlock) p.hit();
           }
         }
       });
+      this.wasOnGround = this.onGround;
     }
 
     draw(ctx, camX, camY) {
       if (this.invulnerableTimer > 0 && Math.floor(this.animTime / 4) % 2 === 0) {
         return; // Efeito de piscar ao levar dano
+      }
+
+      // Rastro multicolorido do Modo Asa Branca (Rainbow Afterimages)
+      if (this.asaBrancaTimer > 0 && this.trail.length > 1) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        for (let i = 0; i < this.trail.length; i++) {
+          const pt = this.trail[i];
+          const k = 1 - (i / this.trail.length);
+          ctx.fillStyle = `hsla(${pt.hue}, 100%, 65%, ${k * 0.45})`;
+          ctx.beginPath();
+          ctx.arc(pt.x - camX, pt.y - camY, 18 * k, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
       }
 
       ctx.save();
@@ -698,6 +817,32 @@
         ctx.fill();
       }
 
+      // 6. Asinhas Brancas e Aura Cósmica do Modo Asa Branca
+      if (this.asaBrancaTimer > 0) {
+        const flap = Math.sin(this.animTime * 0.45) * 8;
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+        ctx.strokeStyle = '#FFD43B';
+        ctx.lineWidth = 1.5;
+
+        // Asa esquerda
+        ctx.beginPath();
+        ctx.ellipse(-14, -28 + bob, 15, 6 + flap * 0.2, -0.4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Asa direita
+        ctx.beginPath();
+        ctx.ellipse(14, -28 + bob, 15, 6 - flap * 0.2, 0.4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Auréola solar pulsante
+        ctx.fillStyle = 'rgba(255, 212, 59, 0.3)';
+        ctx.beginPath();
+        ctx.arc(0, -32 + bob, 32 + Math.sin(this.animTime * 0.2) * 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
       ctx.restore();
     }
   }
@@ -707,16 +852,24 @@
     constructor(x, y, type = 'calango') {
       this.x = x;
       this.y = y;
+      this.baseY = y;
       this.type = type;
-      this.w = type === 'calango' ? 36 : type === 'tatu' ? 32 : 28;
-      this.h = type === 'calango' ? 24 : type === 'tatu' ? 26 : 28;
-      this.vx = type === 'calango' ? 1.2 : 1.0;
+      this.w = type === 'calango' ? 36 : type === 'tatu' ? 32 : type === 'carcara' ? 38 : 28;
+      this.h = type === 'calango' ? 24 : type === 'tatu' ? 26 : type === 'carcara' ? 26 : 28;
+      this.vx = type === 'calango' ? 1.2 : type === 'tatu' ? 1.0 : 0;
       this.vy = 0;
       this.facing = 1;
       this.dead = false;
       this.isShell = false; // Tatu-bola no casco
       this.shellSpeed = 8.5;
       this.animTime = Math.random() * 100;
+
+      // Estado do Carcará (Pássaro de rapina sertanejo com telegrafia)
+      this.state = 'hover'; // 'hover', 'warning', 'dive', 'ascend'
+      this.hoverTimer = 60;
+      this.warningTimer = 0;
+      this.diveVx = 0;
+      this.diveVy = 0;
     }
 
     takeHit(damage = 1, dir = 1) {
@@ -726,6 +879,7 @@
         this.w = 26;
         this.h = 24;
         this.vx = 0;
+        hitstopFrames = 3;
         spawnDust(this.x + this.w / 2, this.y + this.h, 8, '#C2783B');
         if (AudioEngine) AudioEngine.playSFX('stomp');
         spawnFloatingText('ENTROU NO CASCO!', this.x, this.y - 12, '#FFD43B', 15);
@@ -733,6 +887,8 @@
       } else if (this.isShell && this.vx === 0) {
         // Chuta o casco
         this.vx = dir * this.shellSpeed;
+        hitstopFrames = 4;
+        screenShake = 6;
         spawnSparks(this.x + this.w / 2, this.y + this.h / 2, 8);
         if (AudioEngine) AudioEngine.playSFX('coin');
         spawnFloatingText('CHUTE DE CRAQUE!', this.x, this.y - 14, '#66D9E8', 18);
@@ -741,16 +897,55 @@
 
       this.dead = true;
       score += 150;
-      spawnSparks(this.x + this.w / 2, this.y + this.h / 2, 12, '#FA5252');
+      hitstopFrames = 5;
+      screenShake = 8;
+      spawnSparks(this.x + this.w / 2, this.y + this.h / 2, 14, '#FA5252');
       if (AudioEngine) AudioEngine.playSFX('hit');
-      spawnFloatingText('+150', this.x, this.y - 14, '#FFD43B', 18);
+
+      const popups = ['POW!', 'VIXE!', 'CABRA DA PESTE!', 'OXE!', 'TOMA!'];
+      const chosen = popups[Math.floor(Math.random() * popups.length)];
+      spawnFloatingText(chosen, this.x, this.y - 16, '#FFD43B', 20);
     }
 
     update() {
       if (this.dead) return;
       this.animTime++;
 
-      if (this.type === 'morcego') {
+      if (this.type === 'carcara') {
+        // Lógica do Carcará com telegrafia visual para crianças
+        if (this.state === 'hover') {
+          this.hoverTimer--;
+          this.x += Math.sin(this.animTime * 0.05) * 1.5;
+          this.y = this.baseY + Math.cos(this.animTime * 0.08) * 6;
+          if (player && Math.abs(player.x - this.x) < 220 && this.hoverTimer <= 0) {
+            this.state = 'warning';
+            this.warningTimer = 35; // 35 frames de aviso visual ("⚠️ CUIDADO!")
+            if (AudioEngine) AudioEngine.playSFX('caju');
+          }
+        } else if (this.state === 'warning') {
+          this.warningTimer--;
+          this.y = this.baseY + Math.sin(this.animTime * 0.2) * 3;
+          if (this.warningTimer <= 0) {
+            this.state = 'dive';
+            this.diveVx = (player && player.x < this.x ? -1 : 1) * 6.5;
+            this.diveVy = 4.8;
+          }
+        } else if (this.state === 'dive') {
+          this.x += this.diveVx;
+          this.y += this.diveVy;
+          if (this.y > 420) {
+            this.state = 'ascend';
+          }
+        } else if (this.state === 'ascend') {
+          this.y -= 3.2;
+          this.x += Math.sign(this.diveVx) * 1.5;
+          if (this.y <= this.baseY) {
+            this.y = this.baseY;
+            this.state = 'hover';
+            this.hoverTimer = 90;
+          }
+        }
+      } else if (this.type === 'morcego') {
         this.x += Math.sin(this.animTime * 0.05) * 2;
         this.y += Math.cos(this.animTime * 0.08) * 2.5;
       } else {
@@ -788,15 +983,16 @@
 
       // Colisão com Tonho
       if (!this.dead && player && checkAABB(this, player)) {
-        if (player.vy > 1.5 && player.y + player.h - player.vy <= this.y + 14) {
+        if (player.vy > 1.2 && player.y + player.h - player.vy <= this.y + 14) {
           // Tonho pisou em cima
-          player.vy = player.jumpPower * 0.85; // Salto após pisão
-          player.scaleX = 1.3;
-          player.scaleY = 0.7;
+          player.vy = player.jumpPower * 0.88; // Salto após pisão
+          player.squash(1.35, 0.68);
           this.takeHit(1, player.facing);
         } else {
-          // Inimigo atinge Tonho
-          if (!this.isShell || (this.isShell && this.vx !== 0)) {
+          // Inimigo atinge Tonho (a menos que Tonho esteja no modo Asa Branca)
+          if (player.asaBrancaTimer > 0) {
+            this.takeHit(3, player.facing);
+          } else if (!this.isShell || (this.isShell && this.vx !== 0)) {
             player.takeDamage(1);
           } else if (this.isShell && this.vx === 0) {
             // Chuta o casco parado
@@ -914,6 +1110,73 @@
         ctx.arc(-2, -9, 1.5, 0, Math.PI * 2);
         ctx.arc(2, -9, 1.5, 0, Math.PI * 2);
         ctx.fill();
+      } else if (this.type === 'carcara') {
+        // Carcará Sertanejo (penas escuras, peito rajado, bico adunco amarelo)
+        const wingFlap = Math.sin(this.animTime * 0.35) * 12;
+        ctx.fillStyle = '#3E2723';
+        ctx.strokeStyle = '#1A120B';
+        ctx.lineWidth = 2;
+
+        // Asas abertas
+        ctx.beginPath();
+        ctx.moveTo(0, -12);
+        ctx.lineTo(-18, -26 + wingFlap);
+        ctx.lineTo(-8, -12);
+        ctx.lineTo(0, -12);
+        ctx.lineTo(8, -12);
+        ctx.lineTo(18, -26 + wingFlap);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Corpo
+        ctx.fillStyle = '#6D4C41';
+        ctx.beginPath();
+        ctx.ellipse(0, -10, 10, 14, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Bico curvo amarelo
+        ctx.fillStyle = '#FFD43B';
+        ctx.beginPath();
+        ctx.moveTo(6, -14);
+        ctx.lineTo(15, -11);
+        ctx.lineTo(6, -8);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Olho vivo
+        ctx.fillStyle = '#FFF';
+        ctx.beginPath();
+        ctx.arc(4, -14, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#000';
+        ctx.beginPath();
+        ctx.arc(5, -14, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // BALÃO TELEGRAFADO DE ALERTA "⚠️" (para crianças e jogadores casuais desviarem a tempo)
+        if (this.state === 'warning') {
+          const pulse = 1 + Math.sin(this.animTime * 0.3) * 0.2;
+          ctx.save();
+          ctx.translate(0, -42);
+          ctx.scale(pulse, pulse);
+          ctx.fillStyle = '#FA5252';
+          ctx.beginPath();
+          ctx.arc(0, 0, 13, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = '#FFF';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+
+          ctx.fillStyle = '#FFF';
+          ctx.font = '900 13px Outfit, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('⚠️', 0, 1);
+          ctx.restore();
+        }
       }
 
       ctx.restore();
@@ -1181,6 +1444,45 @@
         ctx.fill();
       }
 
+      // ESTRELINHAS GIRATÓRIAS DE ATORDOAMENTO ESTILO DESENHO
+      if (this.state === 'stunned') {
+        const t = this.animTime * 0.12;
+        for (let i = 0; i < 3; i++) {
+          const a = t + (i * Math.PI * 2 / 3);
+          const sx = 32 + Math.cos(a) * 24;
+          const sy = -80 + Math.sin(a) * 8;
+          ctx.fillStyle = '#FFD43B';
+          ctx.beginPath();
+          ctx.arc(sx, sy, 5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = '#D9480F';
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+        }
+      }
+
+      // BALÃO DE ALERTA TELEGRAFADO "!" NA INVESTIDA
+      if (this.state === 'windup') {
+        const pulse = 1 + Math.sin(this.animTime * 0.35) * 0.18;
+        ctx.save();
+        ctx.translate(34, -85);
+        ctx.scale(pulse, pulse);
+        ctx.fillStyle = '#FA5252';
+        ctx.beginPath();
+        ctx.arc(0, 0, 15, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#FFF';
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+
+        ctx.fillStyle = '#FFF';
+        ctx.font = '900 16px Outfit, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('!', 0, 1);
+        ctx.restore();
+      }
+
       ctx.restore();
     }
   }
@@ -1190,6 +1492,8 @@
     constructor(x, y) {
       this.x = x;
       this.y = y;
+      this.vx = 0;
+      this.vy = 0;
       this.w = 20;
       this.h = 20;
       this.collected = false;
@@ -1199,6 +1503,22 @@
     update() {
       if (this.collected) return;
       this.animTime++;
+
+      // Coin Magnet: atrai suavemente em direção ao Tonho quando próximo
+      if (player && !this.collected) {
+        const dx = (player.x + player.w / 2) - (this.x + 10);
+        const dy = (player.y + player.h / 2) - (this.y + 10);
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 110) {
+          this.vx += (dx / dist) * 1.5;
+          this.vy += (dy / dist) * 1.5;
+          this.x += this.vx;
+          this.y += this.vy;
+          this.vx *= 0.88;
+          this.vy *= 0.88;
+        }
+      }
+
       if (player && checkAABB(this, player)) {
         this.collected = true;
         rapaduras++;
@@ -1245,6 +1565,8 @@
     constructor(x, y, idx) {
       this.x = x;
       this.y = y;
+      this.vx = 0;
+      this.vy = 0;
       this.w = 28;
       this.h = 32;
       this.idx = idx; // 0, 1 ou 2
@@ -1255,6 +1577,22 @@
     update() {
       if (this.collected) return;
       this.animTime++;
+
+      // Magnet para o Caju
+      if (player && !this.collected) {
+        const dx = (player.x + player.w / 2) - (this.x + 14);
+        const dy = (player.y + player.h / 2) - (this.y + 16);
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 90) {
+          this.vx += (dx / dist) * 1.2;
+          this.vy += (dy / dist) * 1.2;
+          this.x += this.vx;
+          this.y += this.vy;
+          this.vx *= 0.88;
+          this.vy *= 0.88;
+        }
+      }
+
       if (player && checkAABB(this, player)) {
         this.collected = true;
         collectedCajus[this.idx] = true;
@@ -1300,6 +1638,137 @@
     }
   }
 
+  // Estrela da Asa Branca (Power-up de Invencibilidade e Velocidade)
+  class AsaBrancaStar {
+    constructor(x, y) {
+      this.x = x;
+      this.y = y;
+      this.w = 28;
+      this.h = 28;
+      this.collected = false;
+      this.animTime = 0;
+    }
+
+    update() {
+      if (this.collected) return;
+      this.animTime++;
+      if (player && checkAABB(this, player)) {
+        this.collected = true;
+        player.activateAsaBranca();
+      }
+    }
+
+    draw(ctx, camX, camY) {
+      if (this.collected) return;
+      ctx.save();
+      const px = this.x - camX + 14;
+      const py = this.y - camY + 14 + Math.sin(this.animTime * 0.12) * 4;
+      const hue = (this.animTime * 12) % 360;
+      ctx.translate(px, py);
+
+      // Halo pulsante
+      ctx.fillStyle = `hsla(${hue}, 100%, 60%, 0.35)`;
+      ctx.beginPath();
+      ctx.arc(0, 0, 20 + Math.sin(this.animTime * 0.2) * 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Estrela de 5 pontas
+      ctx.fillStyle = `hsl(${hue}, 100%, 65%)`;
+      ctx.strokeStyle = '#FFF';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (let i = 0; i < 10; i++) {
+        const r = i % 2 === 0 ? 14 : 6;
+        const a = (i * Math.PI) / 5 - Math.PI / 2;
+        const x = Math.cos(a) * r;
+        const y = Math.sin(a) * r;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.restore();
+    }
+  }
+
+  // Fogueira de São João (Checkpoint com Cura e Salvamento)
+  class CampfireCheckpoint {
+    constructor(x, y) {
+      this.x = x;
+      this.y = y;
+      this.w = 38;
+      this.h = 42;
+      this.lit = false;
+      this.animTime = 0;
+    }
+
+    update() {
+      this.animTime++;
+      if (player && !this.lit && checkAABB(this, player)) {
+        this.lit = true;
+        currentLevel.respawnX = this.x;
+        currentLevel.respawnY = this.y - 10;
+        health = maxHealth;
+        updateHUD();
+        screenShake = 6;
+        if (AudioEngine) AudioEngine.playSFX('checkpoint');
+        spawnSparks(this.x + 19, this.y + 10, 25, '#FFD43B');
+        spawnFloatingText('🔥 PONTO SALVO!', this.x - 20, this.y - 25, '#FFD43B', 20);
+      }
+
+      if (this.lit && this.animTime % 4 === 0) {
+        particles.push(new Particle(
+          this.x + 19 + (Math.random() - 0.5) * 12,
+          this.y + 16,
+          (Math.random() - 0.5) * 1,
+          -Math.random() * 2.5 - 1,
+          Math.random() < 0.5 ? '#FA5252' : '#FFD43B',
+          Math.random() * 3 + 2,
+          25,
+          'circle',
+          -0.02
+        ));
+      }
+    }
+
+    draw(ctx, camX, camY) {
+      const px = this.x - camX;
+      const py = this.y - camY;
+      ctx.save();
+
+      // Pedras ao redor
+      ctx.fillStyle = '#6E5D53';
+      ctx.fillRect(px + 4, py + 30, 30, 10);
+      // Troncos cruzados
+      ctx.fillStyle = '#5C2C16';
+      ctx.fillRect(px + 8, py + 24, 22, 8);
+
+      if (this.lit) {
+        // Chamas da fogueira de São João
+        const flick = Math.sin(this.animTime * 0.3) * 4;
+        ctx.fillStyle = '#FA5252';
+        ctx.beginPath();
+        ctx.moveTo(px + 10, py + 24);
+        ctx.quadraticCurveTo(px + 19 + flick, py - 4, px + 28, py + 24);
+        ctx.fill();
+
+        ctx.fillStyle = '#FFD43B';
+        ctx.beginPath();
+        ctx.moveTo(px + 13, py + 24);
+        ctx.quadraticCurveTo(px + 19, py + 8 + flick * 0.5, px + 25, py + 24);
+        ctx.fill();
+      } else {
+        // Fogueira apagada
+        ctx.fillStyle = '#3C1808';
+        ctx.fillRect(px + 13, py + 18, 12, 6);
+      }
+
+      ctx.restore();
+    }
+  }
+
   class Flagpole {
     constructor(x, y) {
       this.x = x;
@@ -1312,15 +1781,32 @@
     update() {
       if (!this.activated && player && checkAABB(this, player)) {
         this.activated = true;
+        screenShake = 16;
         if (AudioEngine) {
           AudioEngine.playSFX('checkpoint');
           AudioEngine.playMusic('victory');
         }
-        spawnSparks(this.x + 12, this.y + 20, 30, '#FFD43B');
-        spawnFloatingText('FASE CONCLUÍDA!', this.x - 30, this.y - 20, '#FFD43B', 24);
+        spawnFloatingText('👑 VITÓRIA ARRETADA!', player.x - 30, player.y - 30, '#FFD43B', 24);
+
+        // Chuva triunfal de confetes coloridos
+        const colors = ['#FA5252', '#FFD43B', '#51CF66', '#339AF0', '#FFA94D', '#FFF'];
+        for (let i = 0; i < 80; i++) {
+          particles.push(new Particle(
+            this.x + (Math.random() - 0.5) * 80,
+            this.y + (Math.random() - 0.5) * 60,
+            (Math.random() - 0.5) * 6,
+            -Math.random() * 5 - 2,
+            colors[i % colors.length],
+            Math.random() * 4 + 3,
+            80,
+            'rect',
+            0.15
+          ));
+        }
+
         setTimeout(() => {
           showVictoryScreen();
-        }, 1500);
+        }, 1600);
       }
     }
 
@@ -1354,6 +1840,8 @@
     const platforms = [];
     const enemies = [];
     const collectibles = [];
+    const checkpoints = [];
+    const updrafts = [];
     let boss = null;
     let flagpole = null;
     let respawnX = 60;
@@ -1379,13 +1867,22 @@
 
       platforms.push({ x: 2000, y: 340, w: 180, h: 24, theme: 'stone' });
 
-      // Inimigos fáceis
+      // Inimigos
       enemies.push(new Enemy(480, 430, 'calango'));
       enemies.push(new Enemy(980, 430, 'calango'));
       enemies.push(new Enemy(1350, 430, 'tatu'));
       enemies.push(new Enemy(2100, 430, 'calango'));
 
-      // Rapaduras douradas
+      // Checkpoint de Fogueira Sertaneja
+      checkpoints.push(new CampfireCheckpoint(1250, 418));
+
+      // Estrela Power-up Asa Branca
+      collectibles.push(new AsaBrancaStar(1060, 230));
+
+      // Corrente térmica ascendente
+      updrafts.push({ x: 720, y: 150, w: 80, h: 320 });
+
+      // Rapaduras douradas com Coin Magnet
       for (let i = 0; i < 8; i++) collectibles.push(new Rapadura(350 + i * 35, 320));
       for (let i = 0; i < 8; i++) collectibles.push(new Rapadura(1020 + i * 35, 250));
       for (let i = 0; i < 10; i++) collectibles.push(new Rapadura(2020 + i * 30, 300));
@@ -1399,7 +1896,7 @@
       flagpole = new Flagpole(2600, 300);
 
     } else if (idx === 1) {
-      // ===== FASE 1-2: O VALE DO TATU-BOLA =====
+      // ===== FASE 1-2: O VALE DO TATU-BOLA & NIDAL DO CARCARÁ =====
       levelW = 3200;
 
       platforms.push({ x: 0, y: 460, w: 600, h: 80, theme: 'soil' });
@@ -1417,13 +1914,21 @@
       platforms.push({ x: 1700, y: 350, w: 200, h: 20, theme: 'stone' });
       platforms.push({ x: 1980, y: 280, w: 160, h: 20, theme: 'stone' });
 
-      // Tatus-Bolas para usar o casco como arremesso
+      // Inimigos com Carcará Telegrafado
       enemies.push(new Enemy(420, 430, 'tatu'));
       enemies.push(new Enemy(850, 430, 'tatu'));
       enemies.push(new Enemy(1100, 260, 'tatu'));
+      enemies.push(new Enemy(1350, 180, 'carcara')); // Carcará com alerta ⚠️
       enemies.push(new Enemy(1680, 430, 'morcego'));
       enemies.push(new Enemy(1900, 430, 'calango'));
+      enemies.push(new Enemy(2200, 190, 'carcara'));
       enemies.push(new Enemy(2550, 430, 'tatu'));
+
+      // Checkpoint de Fogueira
+      checkpoints.push(new CampfireCheckpoint(1540, 418));
+
+      // Estrela Asa Branca
+      collectibles.push(new AsaBrancaStar(1780, 210));
 
       for (let i = 0; i < 12; i++) collectibles.push(new Rapadura(750 + i * 35, 320));
       for (let i = 0; i < 12; i++) collectibles.push(new Rapadura(1720 + i * 35, 310));
@@ -1456,9 +1961,13 @@
 
       enemies.push(new Enemy(400, 430, 'calango'));
       enemies.push(new Enemy(880, 430, 'morcego'));
-      enemies.push(new Enemy(1350, 430, 'morcego'));
+      enemies.push(new Enemy(1250, 190, 'carcara'));
       enemies.push(new Enemy(1480, 310, 'tatu'));
       enemies.push(new Enemy(2200, 430, 'calango'));
+
+      // Checkpoint
+      checkpoints.push(new CampfireCheckpoint(1300, 418));
+      collectibles.push(new AsaBrancaStar(1450, 200));
 
       collectibles.push(new GoldenCaju(580, 160, 0));
       collectibles.push(new GoldenCaju(1720, 210, 1));
@@ -1496,6 +2005,8 @@
       platforms,
       enemies,
       collectibles,
+      checkpoints,
+      updrafts,
       boss,
       flagpole,
       respawnX,
@@ -1539,6 +2050,22 @@
     ctx.beginPath();
     ctx.arc(sunX, sunY, 140, 0, Math.PI * 2);
     ctx.fill();
+
+    // GOD RAYS VOLUMÉTRICOS PROCEDURAIS (Raios de Sol do Sertão com Respiração Senoidal)
+    const nowTime = performance.now();
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+    for (let r = 0; r < 5; r++) {
+      const rayAlpha = 0.045 + 0.025 * Math.sin(nowTime * 0.0012 + r * 1.6);
+      ctx.fillStyle = `rgba(255, 230, 140, ${rayAlpha})`;
+      ctx.beginPath();
+      ctx.moveTo(sunX + (r - 2) * 22, sunY);
+      ctx.lineTo(sunX - 220 + r * 150, CANVAS_H);
+      ctx.lineTo(sunX - 160 + r * 150, CANVAS_H);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
 
     // CAMADA 1: SILHUETAS DISTANTES DA CHAPADA DIAMANTINA & SERRAS (Parallax 0.08)
     ctx.fillStyle = '#49180E';
@@ -1613,6 +2140,22 @@
           ctx.moveTo(x, py + 18);
           ctx.lineTo(x + 8, py + 34);
           ctx.stroke();
+        }
+
+        // GRAMA DO SERTÃO VIVA (Oscila com vento e dobra quando o Tonho passa)
+        const tGrass = performance.now();
+        ctx.fillStyle = '#C28E3B';
+        for (let gx = px + 6; gx < px + p.w - 6; gx += 15) {
+          const worldGx = gx + camX;
+          let bend = Math.sin(tGrass * 0.0035 + worldGx * 0.06) * 4;
+          if (player && Math.abs((player.x + player.w / 2) - worldGx) < 26 && player.onGround) {
+            bend = player.facing * 8; // Dobra elástica sob os passos do Tonho!
+          }
+          ctx.beginPath();
+          ctx.moveTo(gx, py);
+          ctx.quadraticCurveTo(gx + bend * 0.7, py - 6, gx + bend * 1.3, py - 10);
+          ctx.lineTo(gx + 3, py);
+          ctx.fill();
         }
       } else if (p.theme === 'stone') {
         // Cantaria de pedra histórica
@@ -1770,37 +2313,57 @@
     showTitleScreen();
   }
 
-  // Event Listeners de Menus
-  document.getElementById('btnStartGame').addEventListener('click', () => {
-    if (AudioEngine) AudioEngine.unlock();
+  // Função universal para clique e toque mobile imediato
+  function attachButton(id, callback) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    let lastTap = 0;
+    const trigger = (e) => {
+      const now = Date.now();
+      if (now - lastTap < 300) return;
+      lastTap = now;
+      if (e && e.cancelable) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      try {
+        if (window.AudioEngine) window.AudioEngine.unlock();
+      } catch (err) {}
+      callback(e);
+    };
+    el.addEventListener('click', trigger);
+    el.addEventListener('touchend', trigger, { passive: false });
+  }
+
+  // Event Listeners de Menus com suporte mobile touch e áudio
+  attachButton('btnStartGame', () => {
     startGame(0);
   });
 
-  document.getElementById('btnOpenMap').addEventListener('click', () => {
-    if (AudioEngine) AudioEngine.unlock();
+  attachButton('btnOpenMap', () => {
     showWorldMap();
   });
 
-  document.getElementById('btnCloseMap').addEventListener('click', () => {
+  attachButton('btnCloseMap', () => {
     showTitleScreen();
   });
 
-  document.getElementById('btnResume').addEventListener('click', () => {
+  attachButton('btnResume', () => {
     togglePause();
   });
 
-  document.getElementById('btnRestart').addEventListener('click', () => {
+  attachButton('btnRestart', () => {
     document.getElementById('pauseScreen').style.display = 'none';
     currentState = GAME_STATE.PLAYING;
     health = maxHealth;
     loadLevel(currentLevelIdx);
   });
 
-  document.getElementById('btnQuitMap').addEventListener('click', () => {
+  attachButton('btnQuitMap', () => {
     showWorldMap();
   });
 
-  document.getElementById('btnNextStage').addEventListener('click', () => {
+  attachButton('btnNextStage', () => {
     document.getElementById('victoryScreen').style.display = 'none';
     if (currentLevelIdx < 3) {
       startGame(currentLevelIdx + 1);
@@ -1809,13 +2372,15 @@
     }
   });
 
-  document.getElementById('btnVictoryMap').addEventListener('click', () => {
+  attachButton('btnVictoryMap', () => {
     document.getElementById('victoryScreen').style.display = 'none';
     showWorldMap();
   });
 
   window.selectLevel = (idx) => {
-    if (AudioEngine) AudioEngine.unlock();
+    try {
+      if (window.AudioEngine) window.AudioEngine.unlock();
+    } catch (err) {}
     startGame(idx);
   };
 
@@ -1835,6 +2400,7 @@
       // 1. UPDATE
       if (player) player.update();
 
+      if (currentLevel.checkpoints) currentLevel.checkpoints.forEach(cp => cp.update());
       currentLevel.enemies.forEach(en => en.update());
       currentLevel.collectibles.forEach(col => col.update());
       if (currentLevel.boss) currentLevel.boss.update();
@@ -1863,6 +2429,9 @@
 
       // Plataformas
       drawPlatforms(ctx, camera.x, camera.y);
+
+      // Checkpoints (Fogueiras de São João)
+      if (currentLevel.checkpoints) currentLevel.checkpoints.forEach(cp => cp.draw(ctx, camera.x, camera.y));
 
       // Mastro
       if (currentLevel.flagpole) currentLevel.flagpole.draw(ctx, camera.x, camera.y);

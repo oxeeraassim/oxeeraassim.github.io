@@ -5,6 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Oxe! A Odisseia dos Nove Sóis — Jogo Oficial 2D</title>
   <meta name="description" content="Um jogo de plataforma 2D surpreendente com a identidade visual do Oxe, era assim? Gráficos incríveis, física fluida e trilha de forró 8-bit sintetizada!">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="icon" type="image/svg+xml" href="icon.svg">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Jogo do Oxe">
+  <meta name="theme-color" content="#E8590C">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Outfit:wght@400;600;800;900&display=swap" rel="stylesheet">
@@ -547,6 +555,69 @@
       color: #FFF9DB;
       box-shadow: 0 4px 10px rgba(0,0,0,0.6);
     }
+
+    /* MODAL DE INSTALAÇÃO NO CELULAR (PWA) */
+    #installModal {
+      display: none;
+      position: absolute;
+      inset: 0;
+      background: rgba(11, 8, 6, 0.95);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      z-index: 70;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-card {
+      background: linear-gradient(145deg, rgba(44, 24, 16, 0.98), rgba(26, 18, 11, 0.98));
+      border: 2px solid #F59F00;
+      border-radius: 20px;
+      max-width: 480px;
+      width: 100%;
+      padding: 24px;
+      text-align: center;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.8), 0 0 30px rgba(245, 159, 0, 0.25);
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .modal-icon {
+      width: 72px;
+      height: 72px;
+      margin: 0 auto 12px auto;
+      border-radius: 16px;
+      box-shadow: 0 8px 20px rgba(232, 89, 12, 0.4);
+    }
+
+    .install-step {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(245, 159, 0, 0.3);
+      border-radius: 12px;
+      padding: 12px;
+      margin: 10px 0;
+      text-align: left;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      font-size: 0.9rem;
+      line-height: 1.4;
+    }
+
+    .step-num {
+      background: #F59F00;
+      color: #1A120B;
+      font-weight: 900;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 0.8rem;
+    }
   </style>
 </head>
 <body>
@@ -628,6 +699,9 @@
       <button class="menu-btn" id="btnStartGame">
         <span>▶</span> INICIAR JORNADA
       </button>
+      <button class="menu-btn sec" id="btnInstallApp" style="border-color: #1098AD; color: #E3FAFC; background: rgba(16, 152, 173, 0.2);">
+        <span>📲</span> BAIXAR JOGO NO CELULAR
+      </button>
       <button class="menu-btn sec" id="btnOpenMap">
         <span>🗺️</span> MAPA DOS MUNDOS
       </button>
@@ -691,6 +765,50 @@
       <button class="menu-btn sec" id="btnVictoryMap">MAPA DOS MUNDOS</button>
     </div>
 
+    <!-- TELA 5: MODAL DE INSTALAÇÃO NO CELULAR (PWA & OFFLINE) -->
+    <div id="installModal">
+      <div class="modal-card">
+        <img src="icon-192.png" alt="Ícone Jogo do Oxe" class="modal-icon">
+        <h2 style="font-family:'Cinzel',serif; color:#FFD43B; font-size:1.5rem; margin-bottom:6px;">Instalar no Celular</h2>
+        <p style="color:#FFF9DB; font-size:0.88rem; margin-bottom:16px;">
+          Jogue em <strong>tela cheia</strong> com ícone direto na tela de início, <strong>100% offline</strong> sem gastar dados de internet!
+        </p>
+
+        <!-- Seção Android / Chrome / Desktop -->
+        <div id="androidInstallSection" style="display:none; margin-bottom:14px;">
+          <button class="menu-btn" id="btnNativeInstall" style="width:100%; margin-bottom:8px; background:linear-gradient(180deg,#1098AD 0%,#0C8599 100%);">
+            📲 INSTALAR APLICATIVO AGORA
+          </button>
+        </div>
+
+        <!-- Seção iPhone / iPad (iOS Safari) -->
+        <div id="iosInstallSection" style="margin-bottom:14px;">
+          <div class="install-step">
+            <span class="step-num">1</span>
+            <div>Toque no botão <strong>Compartilhar</strong> do Safari (<span style="font-size:1.1rem;">📤</span> quadradinho com seta para cima).</div>
+          </div>
+          <div class="install-step">
+            <span class="step-num">2</span>
+            <div>Role para baixo e selecione <strong>"Adicionar à Tela de Início"</strong> (<span style="font-weight:900;">➕</span>).</div>
+          </div>
+          <div class="install-step">
+            <span class="step-num">3</span>
+            <div>Toque em <strong>"Adicionar"</strong> no canto superior direito. Pronto! O app aparecerá na sua tela inicial!</div>
+          </div>
+        </div>
+
+        <!-- Opção de Download ZIP Offline -->
+        <div style="margin-top:16px; padding-top:14px; border-top:1px solid rgba(245,159,0,0.3);">
+          <a href="oxe-jogo-offline.zip" download="oxe-jogo-offline.zip" class="menu-btn sec" style="width:100%; text-decoration:none; margin-bottom:10px;">
+            💾 BAIXAR PACOTE COMPLETO (.ZIP OFFLINE)
+          </a>
+          <button class="menu-btn sec" id="btnCloseInstallModal" style="width:100%;">
+            FECHAR
+          </button>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <!-- SCRIPT DE ÁUDIO PROCEDURAL SINTETIZADO -->
@@ -698,6 +816,60 @@
 
   <!-- MOTOR DO JOGO COMPLETO -->
   <script src="game.js"></script>
+
+  <!-- REGISTRO PWA E SERVICE WORKER -->
+  <script>
+    // Registro do Service Worker para funcionalidade 100% Offline
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+          .then(reg => console.log('[PWA] Service Worker registrado com sucesso:', reg.scope))
+          .catch(err => console.warn('[PWA] Falha ao registrar Service Worker:', err));
+      });
+    }
+
+    // Gerenciador de Instalação PWA
+    let deferredPrompt = null;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      const androidSection = document.getElementById('androidInstallSection');
+      if (androidSection) androidSection.style.display = 'block';
+    });
+
+    const modal = document.getElementById('installModal');
+    const btnOpenInstall = document.getElementById('btnInstallApp');
+    const btnCloseInstall = document.getElementById('btnCloseInstallModal');
+    const btnNativeInstall = document.getElementById('btnNativeInstall');
+
+    if (btnOpenInstall) {
+      btnOpenInstall.addEventListener('click', (e) => {
+        e.preventDefault();
+        modal.style.display = 'flex';
+      });
+    }
+
+    if (btnCloseInstall) {
+      btnCloseInstall.addEventListener('click', (e) => {
+        e.preventDefault();
+        modal.style.display = 'none';
+      });
+    }
+
+    if (btnNativeInstall) {
+      btnNativeInstall.addEventListener('click', async () => {
+        if (deferredPrompt) {
+          deferredPrompt.prompt();
+          const { outcome } = await deferredPrompt.userChoice;
+          console.log('[PWA] Escolha do usuário:', outcome);
+          deferredPrompt = null;
+          modal.style.display = 'none';
+        } else {
+          alert('Para instalar: toque no menu de 3 pontinhos do navegador e selecione "Instalar aplicativo" ou "Adicionar à tela inicial"!');
+        }
+      });
+    }
+  </script>
 
 </body>
 </html>
