@@ -274,6 +274,13 @@
       display: none;
     }
 
+    /* Ativa automaticamente em telas sensíveis ao toque (smartphones e tablets) */
+    @media (hover: none) and (pointer: coarse), (max-width: 1024px) {
+      #touchControls {
+        display: block !important;
+      }
+    }
+
     .touch-btn {
       pointer-events: auto;
       position: absolute;
@@ -740,8 +747,8 @@
       <button class="menu-btn sec" id="btnOpenMap">
         <span>🗺️</span> MAPA DOS MUNDOS
       </button>
-      <button class="menu-btn sec" onclick="location.href='/arena-do-oxe/'">
-        <span>⚔️</span> IR PARA A ARENA DO OXE
+      <button class="menu-btn sec" id="btnStartChallenge" style="border-color: #FFD43B; color: #FFE066; background: rgba(245, 159, 0, 0.18);">
+        <span>⚡</span> DESAFIO SERTANEJO (30s)
       </button>
 
       <div class="controls-hint">
@@ -786,6 +793,40 @@
 
       <button class="menu-btn" id="btnNextStage">PRÓXIMA FASE ▶</button>
       <button class="menu-btn sec" id="btnVictoryMap">MAPA DOS MUNDOS</button>
+    </div>
+
+    <!-- TELA 5: GAME OVER ACOLHEDOR (SEM ALERT BLOQUEANTE) -->
+    <div class="screen-overlay" id="gameOverScreen" style="display:none;">
+      <div class="hero-badge" style="border-color:#FA5252; color:#FFA8A8; background:rgba(250,82,82,0.15);">💔 OXE, NÃO FOI DESSA VEZ!</div>
+      <h2 class="game-logo" style="font-size: clamp(2rem, 5vw, 3.2rem); background: linear-gradient(180deg, #FFF5F5 0%, #FA5252 50%, #C92A2A 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">TENTAR DE NOVO?</h2>
+      <p style="color:#E9ECEF; font-size:1.05rem; max-width:440px; text-align:center; line-height:1.5; margin-bottom:24px;">
+        O sertanejo não desiste nunca! Respire fundo, aprume o chapéu e retome a caminhada.
+      </p>
+      <button class="menu-btn" id="btnRestartFromCheckpoint">
+        <span>🔄</span> VOLTAR DO CHECKPOINT
+      </button>
+      <button class="menu-btn sec" id="btnRestartFullLevel">
+        <span>⏪</span> REINICIAR FASE
+      </button>
+      <button class="menu-btn sec" id="btnGameOverMap">
+        <span>🗺️</span> MAPA DOS MUNDOS
+      </button>
+    </div>
+
+    <!-- TELA 6: RESULTADO DO DESAFIO SERTANEJO (30s) -->
+    <div class="screen-overlay" id="challengeResultScreen" style="display:none;">
+      <div class="hero-badge" style="border-color:#FFD43B; color:#FFE066; background:rgba(245,159,0,0.15);">⚡ DESAFIO SERTANEJO (30s)</div>
+      <h2 class="game-logo" style="font-size: clamp(2.2rem, 6vw, 3.2rem);">CABRA DA PESTE!</h2>
+      <div id="challengeStats" style="color:#FFF9DB; font-size:1.15rem; font-weight:700; margin-bottom:20px; text-align:center; line-height:1.6;"></div>
+      <button class="menu-btn" id="btnShareChallenge">
+        <span>📲</span> BAIXAR CARTÃO DE RESULTADO (9:16)
+      </button>
+      <button class="menu-btn sec" id="btnRetryChallenge">
+        <span>🔄</span> JOGAR NOVAMENTE
+      </button>
+      <button class="menu-btn sec" id="btnCloseChallenge">
+        <span>◀</span> MENU PRINCIPAL
+      </button>
     </div>
 
     <!-- TELA 5: MODAL DE INSTALAÇÃO NO CELULAR (PWA & OFFLINE) -->

@@ -1,23 +1,23 @@
 /**
- * OXE! A ODISSEIA DOS NOVE SÓIS — MEGA EXPANSÃO
+ * OXE! 2.0 — A GRANDE JORNADA DOS NOVE SÓIS
  * Motor de Jogo 2D em HTML5 Canvas + Web Audio API
- * Estilo: Console Platformer 2D de Alta Qualidade (Mario / Sonic / Rayman com identidade sertaneja)
- * 12 Fases Épicas • 3 Mundos • Lendas do Nordeste • Didática Visual de Chefões
+ * Implementação dos Marcos P0 e P1 (Auditoria Crítica + Vertical Slice Fase 1-1 + Touro de Fogo + Desafio 30s)
  */
 
 (() => {
   'use strict';
 
-  // ==================== CONFIGURAÇÃO GERAL ====================
+  // ==================== CONFIGURAÇÃO DO DISPLAY & CANVAS ====================
   const CANVAS_W = 960;
   const CANVAS_H = 540;
+  const FIXED_DELTA = 1000 / 60; // 60 Hz física fixa determinística
   const GRAVITY = 0.52;
   const MAX_FALL_SPEED = 12.0;
 
   const canvas = document.getElementById('gameCanvas');
   const ctx = canvas.getContext('2d');
 
-  // Polyfill de roundRect para navegadores móveis (Safari iOS < 16, Chrome antigos, WebViews)
+  // Polyfill de roundRect para dispositivos móveis legados
   if (!CanvasRenderingContext2D.prototype.roundRect) {
     CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, radii) {
       if (!radii) radii = 0;
@@ -34,9 +34,8 @@
     };
   }
 
-  // Ajuste de DPI para renderização cristalina em telas Retina / 4K
   function resizeCanvas() {
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2.5); // Limita DPR máximo para economia de bateria
     canvas.width = CANVAS_W * dpr;
     canvas.height = CANVAS_H * dpr;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -44,15 +43,78 @@
   window.addEventListener('resize', resizeCanvas);
   resizeCanvas();
 
-  // ==================== ESTADO DO JOGO ====================
+  // ==================== PRNG DETERMINÍSTICO (MULBERRY32) ====================
+  function mulberry32(seed) {
+    return function() {
+      let t = seed += 0x6D2B79F5;
+      t = Math.imul(t ^ t >>> 15, t | 1);
+      t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+
+  // ==================== SAVE MANAGER (LOCALSTORAGE VERSIONADO) ====================
+  const SaveManager = {
+    KEY: 'oxe_save_v2',
+    data: {
+      unlockedLevels: 0, // Inicia na 1-1 (índice 0)
+      levelData: {},     // { [idx]: { cleared: bool, stars: 0..3, cajus: [b,b,b], bestTime: segs } }
+      challengeHighScore: 0,
+      soundEnabled: true
+    },
+    init() {
+      try {
+        const raw = localStorage.getItem(this.KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          Object.assign(this.data, parsed);
+        }
+      } catch (e) {
+        console.warn('[SaveManager] Erro ao carregar save:', e);
+      }
+    },
+    save() {
+      try {
+        localStorage.setItem(this.KEY, JSON.stringify(this.data));
+      } catch (e) {
+        console.warn('[SaveManager] Erro ao salvar:', e);
+      }
+    },
+    isUnlocked(levelIdx) {
+      if (levelIdx === 0) return true;
+      return levelIdx <= this.data.unlockedLevels;
+    },
+    unlockNext(levelIdx) {
+      if (levelIdx + 1 > this.data.unlockedLevels) {
+        this.data.unlockedLevels = Math.min(11, levelIdx + 1);
+        this.save();
+      }
+    },
+    recordClear(idx, stars, cajus, timeSec) {
+      if (!this.data.levelData[idx]) {
+        this.data.levelData[idx] = { cleared: false, stars: 0, cajus: [false, false, false], bestTime: 9999 };
+      }
+      const rec = this.data.levelData[idx];
+      rec.cleared = true;
+      rec.stars = Math.max(rec.stars, stars);
+      rec.cajus = [rec.cajus[0] || cajus[0], rec.cajus[1] || cajus[1], rec.cajus[2] || cajus[2]];
+      rec.bestTime = Math.min(rec.bestTime, timeSec);
+      this.unlockNext(idx);
+      this.save();
+    }
+  };
+  SaveManager.init();
+
+  // ==================== ESTADO GLOBAL DO JOGO ====================
   const GAME_STATE = {
     TITLE: 0,
     MAP: 1,
-    DIALOGUE: 2,
-    PLAYING: 3,
-    PAUSED: 4,
-    VICTORY: 5,
-    GAMEOVER: 6
+    PLAYING: 2,
+    PAUSED: 3,
+    VICTORY: 4,
+    GAMEOVER: 5,
+    CHALLENGE: 6,
+    CHALLENGE_RESULT: 7
   };
 
   let currentState = GAME_STATE.TITLE;
@@ -64,12 +126,19 @@
   let health = 3;
   let maxHealth = 3;
   let collectedCajus = [false, false, false];
+  let stageTimerSeconds = 0;
+  let stageTimerFrames = 0;
 
   // Freeze frame (hitstop) e Screen shake
   let hitstopFrames = 0;
   let screenShake = 0;
 
-  // ==================== ENTRADAS / CONTROLES ====================
+  // Estado do Modo Desafio (30s)
+  let challengeTimeLeft = 30.0;
+  let challengeScore = 0;
+  let challengeRapaduras = 0;
+
+  // ==================== INPUT MANAGER UNIFICADO & ROBUSTO ====================
   const keys = {
     left: false,
     right: false,
@@ -80,7 +149,14 @@
     glide: false
   };
 
+  // Prevenção de rolagem de página ao usar setas e espaço durante a partida
   window.addEventListener('keydown', (e) => {
+    if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
+      if (currentState === GAME_STATE.PLAYING || currentState === GAME_STATE.CHALLENGE) {
+        e.preventDefault();
+      }
+    }
+
     switch (e.code) {
       case 'ArrowLeft':
       case 'KeyA':
@@ -138,35 +214,62 @@
     }
   });
 
-  // ==================== TOUCH CONTROLS (MOBILE) ====================
-  function bindTouch(id, prop) {
-    const btn = document.getElementById(id);
-    if (!btn) return;
-    const start = (e) => {
-      e.preventDefault();
-      keys[prop] = true;
-      btn.classList.add('active');
-      if (window.AudioEngine) window.AudioEngine.unlock();
-    };
-    const end = (e) => {
-      e.preventDefault();
-      keys[prop] = false;
-      btn.classList.remove('active');
-    };
-    btn.addEventListener('touchstart', start, { passive: false });
-    btn.addEventListener('touchend', end, { passive: false });
-    btn.addEventListener('touchcancel', end, { passive: false });
-    btn.addEventListener('mousedown', start);
-    btn.addEventListener('mouseup', end);
-    btn.addEventListener('mouseleave', end);
-  }
+  // Limpeza de teclas presas quando a aba perde o foco (Blur)
+  window.addEventListener('blur', () => {
+    for (const k in keys) keys[k] = false;
+    if (currentState === GAME_STATE.PLAYING) {
+      togglePause();
+    }
+  });
 
-  bindTouch('dpadLeft', 'left');
-  bindTouch('dpadRight', 'right');
-  bindTouch('dpadDown', 'down');
-  bindTouch('btnJump', 'jump');
-  bindTouch('btnGlide', 'glide');
-  bindTouch('btnWhip', 'whip');
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      for (const k in keys) keys[k] = false;
+      if (currentState === GAME_STATE.PLAYING) {
+        togglePause();
+      }
+    }
+  });
+
+  // Touch Controls com Pointer Events e Multitouch sem conflito
+  function setupTouchControls() {
+    const isTouchDevice = window.matchMedia('(hover: none) and (pointer: coarse)').matches || ('ontouchstart' in window);
+    const tc = document.getElementById('touchControls');
+    if (tc && isTouchDevice) {
+      tc.style.display = 'block';
+    }
+
+    function bindPointer(id, prop) {
+      const btn = document.getElementById(id);
+      if (!btn) return;
+
+      const onStart = (e) => {
+        e.preventDefault();
+        keys[prop] = true;
+        btn.classList.add('active');
+        if (window.AudioEngine) window.AudioEngine.unlock();
+      };
+
+      const onEnd = (e) => {
+        e.preventDefault();
+        keys[prop] = false;
+        btn.classList.remove('active');
+      };
+
+      btn.addEventListener('pointerdown', onStart, { passive: false });
+      btn.addEventListener('pointerup', onEnd, { passive: false });
+      btn.addEventListener('pointercancel', onEnd, { passive: false });
+      btn.addEventListener('pointerleave', onEnd, { passive: false });
+    }
+
+    bindPointer('dpadLeft', 'left');
+    bindPointer('dpadRight', 'right');
+    bindPointer('dpadDown', 'down');
+    bindPointer('btnJump', 'jump');
+    bindPointer('btnGlide', 'glide');
+    bindPointer('btnWhip', 'whip');
+  }
+  setupTouchControls();
 
   // Botão Mudo
   const soundBtn = document.getElementById('soundToggle');
@@ -180,7 +283,6 @@
       }
     };
     soundBtn.addEventListener('click', handleToggle);
-    soundBtn.addEventListener('touchend', handleToggle);
   }
 
   // ==================== SISTEMA DE PARTÍCULAS ====================
@@ -301,7 +403,7 @@
     });
   }
 
-  // ==================== SISTEMA DE PROJÉTEIS (MEGA EXPANSÃO) ====================
+  // ==================== SISTEMA DE PROJÉTEIS ====================
   let projectiles = [];
 
   class Projectile {
@@ -457,7 +559,7 @@
     }
   }
 
-  // ==================== CÂMERA ====================
+  // ==================== CÂMERA INTELIGENTE ====================
   const camera = {
     x: 0,
     y: 0,
@@ -551,14 +653,23 @@
       lives--;
       if (AudioEngine) AudioEngine.playSFX('hit');
       spawnFloatingText('OXE NÃO!', this.x, this.y - 20, '#FA5252', 24);
+
       setTimeout(() => {
         if (lives > 0) {
+          // CORREÇÃO P0: Respawn direto no checkpoint ativo SEM recriar o mapa aleatoriamente!
+          this.x = currentLevel.activeCheckpointX;
+          this.y = currentLevel.activeCheckpointY;
+          this.vx = 0;
+          this.vy = 0;
           health = maxHealth;
-          loadLevel(currentLevelIdx);
+          this.invulnerableTimer = 120; // 2s de proteção ao reviver
+          updateHUD();
+          spawnDust(this.x + this.w / 2, this.y + this.h, 15, '#FFD43B');
+          spawnFloatingText('DE VOLTA À JORNADA!', this.x - 40, this.y - 30, '#51CF66', 20);
         } else {
           showGameOver();
         }
-      }, 800);
+      }, 700);
     }
 
     update() {
@@ -673,12 +784,12 @@
       this.y += this.vy;
       this.handleVerticalCollisions();
 
-      // Queda em precipícios
+      // Queda em precipícios: reaparece no checkpoint ativo sem recriar mapa
       if (this.y > currentLevel.levelH + 60) {
         this.takeDamage(1);
         if (health > 0) {
-          this.x = currentLevel.respawnX;
-          this.y = currentLevel.respawnY;
+          this.x = currentLevel.activeCheckpointX;
+          this.y = currentLevel.activeCheckpointY;
           this.vx = 0;
           this.vy = 0;
         }
@@ -770,20 +881,18 @@
         ctx.globalAlpha = 0.35;
       }
 
-      // Rastro Dourado do Modo Asa Branca
       if (this.asaBrancaTimer > 0) {
         ctx.shadowColor = '#FFD43B';
         ctx.shadowBlur = 18;
       }
 
-      // CORPO DO TONHO
       // Sombra no chão
       ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
       ctx.beginPath();
       ctx.ellipse(0, 0, 16, 5, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // Pernas / Botas de Couro
+      // Botas
       ctx.fillStyle = '#5C3800';
       const legOffset = Math.sin(this.animTime * 0.3) * (Math.abs(this.vx) > 0.5 ? 6 : 0);
       ctx.fillRect(-10 + legOffset, -14, 8, 14);
@@ -793,20 +902,20 @@
       ctx.fillStyle = '#1864AB';
       ctx.fillRect(-11, -26, 22, 14);
 
-      // Camisa Amarela Xadrez
+      // Camisa Xadrez
       ctx.fillStyle = '#FAB005';
       ctx.fillRect(-10, -40, 20, 16);
       ctx.strokeStyle = '#D9480F';
       ctx.lineWidth = 1;
       ctx.strokeRect(-10, -40, 20, 16);
 
-      // Cabeça / Rosto Expressivo
+      // Rosto
       ctx.fillStyle = '#F59F00';
       ctx.beginPath();
       ctx.arc(0, -46, 11, 0, Math.PI * 2);
       ctx.fill();
 
-      // Olhos grandes estilo gibi
+      // Olhos
       ctx.fillStyle = '#FFF';
       ctx.beginPath();
       ctx.arc(4, -47, 3.5, 0, Math.PI * 2);
@@ -816,14 +925,14 @@
       ctx.arc(5, -47, 1.8, 0, Math.PI * 2);
       ctx.fill();
 
-      // Sorriso Maroto do Sertanejo
+      // Sorriso
       ctx.strokeStyle = '#5C3800';
       ctx.lineWidth = 1.5;
       ctx.beginPath();
       ctx.arc(3, -44, 4, 0.2, Math.PI * 0.8);
       ctx.stroke();
 
-      // CHAPÉU DE COURO TRADICIONAL
+      // Chapéu de Couro
       const hatY = -54 + (this.isGliding ? Math.sin(this.animTime * 0.4) * 2 : 0);
       ctx.fillStyle = '#8B4513';
       ctx.beginPath();
@@ -833,20 +942,20 @@
       ctx.lineWidth = 2;
       ctx.stroke();
 
-      // Copa do chapéu
+      // Copa
       ctx.fillStyle = '#A0522D';
       ctx.beginPath();
       ctx.roundRect(-10, hatY - 9, 20, 10, 5);
       ctx.fill();
       ctx.stroke();
 
-      // Estrela prateada na testa do chapéu
+      // Estrela
       ctx.fillStyle = '#FFF9DB';
       ctx.beginPath();
       ctx.arc(0, hatY - 4, 2.5, 0, Math.PI * 2);
       ctx.fill();
 
-      // Asas douradas se estiver no modo Asa Branca
+      // Asas Asa Branca
       if (this.asaBrancaTimer > 0) {
         ctx.fillStyle = 'rgba(255, 238, 100, 0.85)';
         ctx.beginPath();
@@ -857,7 +966,7 @@
         ctx.fill();
       }
 
-      // Chicote em animação
+      // Chicote
       if (this.isWhipping) {
         ctx.strokeStyle = '#D9480F';
         ctx.lineWidth = 3.5;
@@ -885,7 +994,6 @@
       this.vx = 0;
       this.vy = 0;
 
-      // Configurações por tipo
       if (type === 'calango') {
         this.w = 36; this.h = 24; this.vx = 1.2;
       } else if (type === 'tatu') {
@@ -901,7 +1009,7 @@
         this.shootTimer = 100 + Math.floor(Math.random() * 30);
       } else if (type === 'bode_doido') {
         this.w = 44; this.h = 32;
-        this.state = 'graze'; // 'graze', 'charge', 'stunned'
+        this.state = 'graze';
         this.chargeTimer = 0; this.stunTimer = 0;
       } else if (type === 'fulozinha') {
         this.w = 36; this.h = 48; this.hp = 4; this.maxHp = 4;
@@ -933,7 +1041,6 @@
         return;
       }
 
-      // Inimigos com múltiplos pontos de vida (Fulozinha e Papa-Figo)
       if (this.type === 'fulozinha' || this.type === 'papa_figo') {
         this.hp -= damage;
         screenShake = 8;
@@ -995,7 +1102,6 @@
         this.x += Math.sin(this.animTime * 0.05) * 2;
         this.y += Math.cos(this.animTime * 0.08) * 2.5;
       } else if (this.type === 'cacto_atirador') {
-        // Cacto Atirador: Cospe espinhos
         this.shootTimer--;
         if (this.shootTimer <= 0) {
           this.shootTimer = 110;
@@ -1009,7 +1115,6 @@
           }
         }
       } else if (this.type === 'bode_doido') {
-        // Bode Doido: Pasta, e corre desembestado ao ver o jogador
         if (this.state === 'graze') {
           this.x += Math.sin(this.animTime * 0.04) * 0.5;
           if (player && Math.abs(player.x - this.x) < 280 && Math.abs(player.y - this.y) < 70) {
@@ -1049,7 +1154,6 @@
           }
         }
       } else if (this.type === 'fulozinha') {
-        // Comadre Fulozinha: Espírito que teletransporta e dispara folhas
         this.teleportTimer--;
         this.x += Math.sin(this.animTime * 0.06) * 1.4;
         this.y = this.baseY + Math.cos(this.animTime * 0.08) * 8;
@@ -1061,7 +1165,6 @@
             this.x = player.x + (Math.random() < 0.5 ? -180 : 180);
             this.y = player.y - 40;
             this.baseY = this.y;
-            // Rajada de 3 folhas mágicas
             const dir = player.x < this.x ? -1 : 1;
             projectiles.push(new Projectile(this.x, this.y + 12, dir * 4.5, -1.0, 'leaf'));
             projectiles.push(new Projectile(this.x, this.y + 12, dir * 5.0, 0, 'leaf'));
@@ -1069,7 +1172,6 @@
           }
         }
       } else if (this.type === 'papa_figo') {
-        // Papa-Figo: Persegue lentamente e lança miasmas
         if (player) {
           this.facing = player.x < this.x ? -1 : 1;
           this.x += this.facing * 1.1;
@@ -1083,7 +1185,6 @@
           spawnFloatingText('SUSSURRO...', this.x, this.y - 18, '#845EF7', 16);
         }
       } else {
-        // Calango ou Tatu
         this.x += this.vx;
         this.vy += GRAVITY;
         this.y += this.vy;
@@ -1110,7 +1211,6 @@
         }
       }
 
-      // Colisão com Tonho
       if (!this.dead && player && checkAABB(this, player)) {
         if (player.vy > 1.2 && player.y + player.h - player.vy <= this.y + 16) {
           player.vy = player.jumpPower * 0.88;
@@ -1127,7 +1227,6 @@
         }
       }
 
-      // Casco em alta velocidade destrói outros inimigos
       if (this.isShell && Math.abs(this.vx) > 2) {
         currentLevel.enemies.forEach(other => {
           if (other !== this && !other.dead && checkAABB(this, other)) {
@@ -1198,26 +1297,21 @@
           ctx.stroke();
         }
       } else if (this.type === 'cacto_atirador') {
-        // Cacto Mandacaru Atirador com Olhos e Braços
         const squish = Math.sin(this.animTime * 0.15) * 2;
         ctx.fillStyle = '#2B8A3E';
         ctx.strokeStyle = '#1A120B';
         ctx.lineWidth = 2.5;
 
-        // Tronco central
         ctx.beginPath();
         ctx.roundRect(-10, -42 + squish, 20, 42 - squish, 8);
         ctx.fill();
         ctx.stroke();
 
-        // Braço esquerdo
         ctx.fillRect(-20, -28, 10, 8);
         ctx.fillRect(-20, -38, 8, 12);
-        // Braço direito
         ctx.fillRect(10, -22, 10, 8);
         ctx.fillRect(12, -32, 8, 12);
 
-        // Olhos expressivos
         ctx.fillStyle = '#FFF';
         ctx.beginPath();
         ctx.arc(-3, -34 + squish, 4, 0, Math.PI * 2);
@@ -1229,48 +1323,40 @@
         ctx.arc(6, -34 + squish, 2, 0, Math.PI * 2);
         ctx.fill();
 
-        // Alerta de disparo próximo
         if (this.shootTimer < 25) {
           ctx.fillStyle = '#FA5252';
           ctx.font = '900 14px Outfit, sans-serif';
           ctx.fillText('!', 0, -48);
         }
       } else if (this.type === 'bode_doido') {
-        // Bode Doido Sertanejo
         ctx.fillStyle = '#F8F9FA';
         ctx.strokeStyle = '#1A120B';
         ctx.lineWidth = 2.5;
 
-        // Corpo
         ctx.beginPath();
         ctx.roundRect(-18, -26, 36, 20, 8);
         ctx.fill();
         ctx.stroke();
 
-        // Cabeça
         ctx.beginPath();
         ctx.roundRect(10, -34, 16, 18, 6);
         ctx.fill();
         ctx.stroke();
 
-        // Chifres curvos
         ctx.fillStyle = '#495057';
         ctx.beginPath();
         ctx.moveTo(14, -34);
         ctx.quadraticCurveTo(8, -48, 2, -42);
         ctx.stroke();
 
-        // Barbicha sertaneja
         ctx.fillStyle = '#CED4DA';
         ctx.fillRect(16, -16, 6, 8);
 
-        // Olhos (vermelhos quando em fúria)
         ctx.fillStyle = this.state === 'charge' ? '#FA5252' : '#000';
         ctx.beginPath();
         ctx.arc(20, -28, 2.5, 0, Math.PI * 2);
         ctx.fill();
 
-        // Estrelas de tontura se estiver atordoado
         if (this.state === 'stunned') {
           for (let i = 0; i < 3; i++) {
             const ang = (this.animTime * 0.15) + (i * Math.PI * 2 / 3);
@@ -1283,12 +1369,10 @@
           }
         }
       } else if (this.type === 'fulozinha') {
-        // Comadre Fulozinha: Espírito Eclético das Matas
         ctx.fillStyle = 'rgba(105, 219, 124, 0.9)';
         ctx.strokeStyle = '#087F5B';
         ctx.lineWidth = 2;
 
-        // Vestido de folhas fluindo
         ctx.beginPath();
         ctx.moveTo(0, -44);
         ctx.lineTo(-16, 0);
@@ -1297,13 +1381,11 @@
         ctx.fill();
         ctx.stroke();
 
-        // Cabeça
         ctx.fillStyle = '#FFE066';
         ctx.beginPath();
         ctx.arc(0, -40, 10, 0, Math.PI * 2);
         ctx.fill();
 
-        // Coroa de flores do sertão
         ctx.fillStyle = '#FA5252';
         ctx.beginPath();
         ctx.arc(-5, -48, 3.5, 0, Math.PI * 2);
@@ -1311,12 +1393,10 @@
         ctx.arc(5, -48, 3.5, 0, Math.PI * 2);
         ctx.fill();
       } else if (this.type === 'papa_figo') {
-        // Papa-Figo: Homem do saco lendário
         ctx.fillStyle = '#212529';
         ctx.strokeStyle = '#000';
         ctx.lineWidth = 2.5;
 
-        // Capa esfarrapada
         ctx.beginPath();
         ctx.moveTo(0, -46);
         ctx.lineTo(-18, 0);
@@ -1325,14 +1405,12 @@
         ctx.fill();
         ctx.stroke();
 
-        // Saco de estopa nas costas
         ctx.fillStyle = '#8B5A2B';
         ctx.beginPath();
         ctx.roundRect(-24, -36, 14, 22, 6);
         ctx.fill();
         ctx.stroke();
 
-        // Foice brilhante
         ctx.strokeStyle = '#CED4DA';
         ctx.lineWidth = 3;
         ctx.beginPath();
@@ -1406,7 +1484,7 @@
       this.maxHp = 6;
       this.hp = 6;
       this.phase = 1;
-      this.state = 'idle'; // 'idle', 'charge', 'stunned', 'jump', 'roar'
+      this.state = 'idle'; // 'idle', 'charge', 'stunned', 'jump', 'roar', 'windup'
       this.timer = 60;
       this.facing = -1;
       this.dead = false;
@@ -1480,7 +1558,7 @@
           } else {
             if (this.state === 'charge') {
               this.state = 'stunned';
-              this.timer = 180;
+              this.timer = 180; // 3s atordoado exposto
               screenShake = 22;
               this.vx = 0;
               spawnDust(this.x + (this.facing === 1 ? this.w : 0), this.y + this.h / 2, 30, '#FA5252');
@@ -1635,299 +1713,6 @@
     }
   }
 
-  // ==================== CHEFE 2: COMADRE FULOZINHA (RAINHA DAS MATAS) ====================
-  class BossFulozinha {
-    constructor(x, y) {
-      this.x = x;
-      this.y = y;
-      this.baseY = y;
-      this.w = 60;
-      this.h = 72;
-      this.vx = 0;
-      this.vy = 0;
-      this.maxHp = 8;
-      this.hp = 8;
-      this.state = 'hover'; // 'hover', 'whirlwind', 'stunned'
-      this.timer = 90;
-      this.facing = -1;
-      this.dead = false;
-      this.animTime = 0;
-      this.name = 'Comadre Fulozinha — Rainha das Matas';
-    }
-
-    takeHit(dmg = 1) {
-      if (this.state !== 'stunned') {
-        screenShake = 6;
-        spawnLeaves(this.x + this.w / 2, this.y + this.h / 2, 10);
-        if (AudioEngine) AudioEngine.playSFX('metal') || AudioEngine.playSFX('hit');
-        spawnFloatingText('🛡️ PROTEGIDA PELOS CIPÓS!', this.x, this.y - 20, '#51CF66', 20);
-        spawnFloatingText('ESPERE ELA SE CANSAR!', this.x - 40, this.y - 45, '#FFD43B', 18);
-        return;
-      }
-
-      this.hp -= dmg;
-      screenShake = 16;
-      hitstopFrames = 8;
-      spawnLeaves(this.x + this.w / 2, this.y + this.h / 2, 25);
-      if (AudioEngine) AudioEngine.playSFX('whistle');
-      spawnFloatingText('PONTO FRACO ATINGIDO!', this.x - 20, this.y - 30, '#FFD43B', 24);
-
-      const bar = document.getElementById('bossHpFill');
-      if (bar) bar.style.width = `${(this.hp / this.maxHp) * 100}%`;
-
-      if (this.hp <= 0) {
-        this.die();
-      } else {
-        this.state = 'hover';
-        this.timer = 70;
-      }
-    }
-
-    die() {
-      this.dead = true;
-      document.getElementById('bossBarContainer').style.display = 'none';
-      screenShake = 30;
-      spawnLeaves(this.x + this.w / 2, this.y + this.h / 2, 60);
-      if (AudioEngine) {
-        AudioEngine.playSFX('checkpoint');
-        AudioEngine.playMusic('victory');
-      }
-      setTimeout(() => {
-        showVictoryScreen();
-      }, 1500);
-    }
-
-    update() {
-      if (this.dead) return;
-      this.animTime++;
-      this.timer--;
-
-      if (this.state === 'hover') {
-        this.x += Math.sin(this.animTime * 0.05) * 2.5;
-        this.y = this.baseY + Math.cos(this.animTime * 0.08) * 10;
-        if (player) this.facing = player.x < this.x ? -1 : 1;
-
-        if (this.timer % 30 === 0 && this.timer > 0) {
-          // Rajada de folhas
-          const dir = this.facing;
-          projectiles.push(new Projectile(this.x + this.w / 2, this.y + 20, dir * 5.2, -1.2, 'leaf'));
-          projectiles.push(new Projectile(this.x + this.w / 2, this.y + 20, dir * 5.6, 0.4, 'leaf'));
-          if (AudioEngine) AudioEngine.playSFX('leaf') || AudioEngine.playSFX('spine');
-        }
-
-        if (this.timer <= 0) {
-          this.state = 'whirlwind';
-          this.timer = 100;
-          if (AudioEngine) AudioEngine.playSFX('whistle');
-        }
-      } else if (this.state === 'whirlwind') {
-        // Rodopio veloz no chão
-        this.y = 410;
-        this.x += this.facing * 7.5;
-        spawnLeaves(this.x + this.w / 2, this.y + this.h, 4);
-        if (this.x < 100 || this.x > currentLevel.levelW - 140 || this.timer <= 0) {
-          this.state = 'stunned';
-          this.timer = 180; // 3s atordoada
-          screenShake = 16;
-          if (AudioEngine) AudioEngine.playSFX('bonk');
-          spawnFloatingText('ATORDOADA! PULE NA CABEÇA!', this.x - 30, this.y - 25, '#FFD43B', 22);
-        }
-      } else if (this.state === 'stunned') {
-        if (this.timer <= 0) {
-          this.state = 'hover';
-          this.timer = 120;
-          this.y = this.baseY;
-        }
-      }
-
-      if (player && checkAABB(this, player)) {
-        if (player.vy > 1.2 && player.y + player.h - player.vy <= this.y + 24) {
-          player.vy = player.jumpPower * 0.95;
-          player.squash(1.4, 0.65);
-          this.takeHit(1);
-        } else if (this.state !== 'stunned') {
-          player.takeDamage(1);
-        }
-      }
-    }
-
-    draw(ctx, camX, camY) {
-      if (this.dead) return;
-      ctx.save();
-      const px = this.x - camX + this.w / 2;
-      const py = this.y - camY + this.h;
-      ctx.translate(px, py);
-      ctx.scale(this.facing, 1);
-
-      // Espírito Eclético
-      ctx.fillStyle = this.state === 'stunned' ? '#51CF66' : 'rgba(105, 219, 124, 0.9)';
-      ctx.beginPath();
-      ctx.moveTo(0, -60);
-      ctx.lineTo(-24, 0);
-      ctx.lineTo(24, 0);
-      ctx.closePath();
-      ctx.fill();
-      ctx.strokeStyle = '#087F5B';
-      ctx.lineWidth = 3;
-      ctx.stroke();
-
-      // Flor Dourada na cabeça (Ponto Fraco)
-      ctx.fillStyle = '#FFD43B';
-      ctx.beginPath();
-      ctx.arc(0, -58, 14, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = '#E8590C';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-
-      ctx.restore();
-    }
-  }
-
-  // ==================== CHEFE 3: PAPA-FIGO SUPREMO & A SOMBRA DA SECA ====================
-  class BossPapaFigo {
-    constructor(x, y) {
-      this.x = x;
-      this.y = y;
-      this.w = 70;
-      this.h = 86;
-      this.vx = 0;
-      this.vy = 0;
-      this.maxHp = 10;
-      this.hp = 10;
-      this.state = 'stalk'; // 'stalk', 'leap_smash', 'stunned'
-      this.timer = 90;
-      this.facing = -1;
-      this.dead = false;
-      this.animTime = 0;
-      this.name = 'O Papa-Figo Supremo & A Sombra da Seca';
-    }
-
-    takeHit(dmg = 1) {
-      if (this.state !== 'stunned') {
-        screenShake = 6;
-        spawnDust(this.x + this.w / 2, this.y + 10, 10, '#7950F2');
-        if (AudioEngine) AudioEngine.playSFX('metal') || AudioEngine.playSFX('hit');
-        spawnFloatingText('🛡️ MANTO TENEBROSO!', this.x, this.y - 20, '#845EF7', 22);
-        spawnFloatingText('DESVIE DO SALTO MORTAL!', this.x - 40, this.y - 45, '#FFD43B', 18);
-        return;
-      }
-
-      this.hp -= dmg;
-      screenShake = 20;
-      hitstopFrames = 10;
-      spawnSparks(this.x + this.w / 2, this.y + this.h / 2, 30, '#FA5252');
-      if (AudioEngine) AudioEngine.playSFX('miasma') || AudioEngine.playSFX('bossRoar');
-      spawnFloatingText('ACERTO FATAL NA NUCA!', this.x - 20, this.y - 30, '#FFD43B', 24);
-
-      const bar = document.getElementById('bossHpFill');
-      if (bar) bar.style.width = `${(this.hp / this.maxHp) * 100}%`;
-
-      if (this.hp <= 0) {
-        this.die();
-      } else {
-        this.state = 'stalk';
-        this.timer = 80;
-      }
-    }
-
-    die() {
-      this.dead = true;
-      document.getElementById('bossBarContainer').style.display = 'none';
-      screenShake = 40;
-      spawnSparks(this.x + this.w / 2, this.y + this.h / 2, 80, '#FFD43B');
-      if (AudioEngine) {
-        AudioEngine.playSFX('checkpoint');
-        AudioEngine.playMusic('victory');
-      }
-      setTimeout(() => {
-        showVictoryScreen();
-      }, 1500);
-    }
-
-    update() {
-      if (this.dead) return;
-      this.animTime++;
-      this.timer--;
-
-      if (this.state === 'stalk') {
-        if (player) {
-          this.facing = player.x < this.x ? -1 : 1;
-          this.x += this.facing * 1.8;
-        }
-        if (this.timer % 40 === 0 && this.timer > 0) {
-          projectiles.push(new Projectile(this.x + this.w / 2, this.y + 20, this.facing * 3.5, 0, 'miasma'));
-          if (AudioEngine) AudioEngine.playSFX('miasma');
-        }
-        if (this.timer <= 0) {
-          this.state = 'leap_smash';
-          this.vy = -14;
-          this.vx = this.facing * 5.0;
-        }
-      } else if (this.state === 'leap_smash') {
-        this.vy += GRAVITY;
-        this.x += this.vx;
-        this.y += this.vy;
-        if (this.y >= 390) {
-          this.y = 390;
-          this.state = 'stunned';
-          this.timer = 200; // Foice fincada na pedra por 3.3s
-          screenShake = 24;
-          if (AudioEngine) AudioEngine.playSFX('bonk');
-          spawnSparks(this.x + this.w / 2, this.y + this.h, 20, '#FA5252');
-          spawnFloatingText('FOICE PRESA NA PEDRA! PULE NA NUCA!', this.x - 50, this.y - 25, '#FFD43B', 22);
-        }
-      } else if (this.state === 'stunned') {
-        if (this.timer <= 0) {
-          this.state = 'stalk';
-          this.timer = 100;
-        }
-      }
-
-      if (player && checkAABB(this, player)) {
-        if (player.vy > 1.2 && player.y + player.h - player.vy <= this.y + 26) {
-          player.vy = player.jumpPower * 0.95;
-          player.squash(1.4, 0.65);
-          this.takeHit(1);
-        } else if (this.state !== 'stunned') {
-          player.takeDamage(1);
-        }
-      }
-    }
-
-    draw(ctx, camX, camY) {
-      if (this.dead) return;
-      ctx.save();
-      const px = this.x - camX + this.w / 2;
-      const py = this.y - camY + this.h;
-      ctx.translate(px, py);
-      ctx.scale(this.facing, 1);
-
-      // Capa Tenebrosa
-      ctx.fillStyle = '#140A1C';
-      ctx.beginPath();
-      ctx.moveTo(0, -78);
-      ctx.lineTo(-30, 0);
-      ctx.lineTo(30, 0);
-      ctx.closePath();
-      ctx.fill();
-      ctx.strokeStyle = '#845EF7';
-      ctx.lineWidth = 3;
-      ctx.stroke();
-
-      // Foice gigante
-      ctx.strokeStyle = '#CED4DA';
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.moveTo(20, -10);
-      ctx.lineTo(35, -60);
-      ctx.quadraticCurveTo(55, -65, 48, -45);
-      ctx.stroke();
-
-      ctx.restore();
-    }
-  }
-
   // ==================== GUIA DIDÁTICO VISUAL DOS CHEFÕES ====================
   function drawBossGuide(ctx, boss, camX, camY) {
     if (!boss || boss.dead) return;
@@ -1939,7 +1724,7 @@
     // 1. BANNER SUPERIOR NO CANVAS
     if (boss.state === 'stunned') {
       const timeLeft = Math.max(0.1, (boss.timer / 60)).toFixed(1);
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
       ctx.fillRect(CANVAS_W / 2 - 280, bannerY - 22, 560, 44);
       ctx.strokeStyle = '#FFD43B';
       ctx.lineWidth = 3 + pulse * 1.5;
@@ -1953,7 +1738,7 @@
       ctx.shadowBlur = 10;
       ctx.fillText(`⬇️ PULE NO PONTO FRACO NAS COSTAS AGORA! (${timeLeft}s) ⬇️`, CANVAS_W / 2, bannerY);
     } else if (boss.state === 'charge' || boss.state === 'whirlwind' || boss.state === 'leap_smash' || boss.state === 'windup') {
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
       ctx.fillRect(CANVAS_W / 2 - 260, bannerY - 22, 520, 44);
       ctx.strokeStyle = '#FA5252';
       ctx.lineWidth = 3;
@@ -1967,7 +1752,7 @@
       ctx.shadowBlur = 10;
       ctx.fillText(`⚠️ DESVIE! ELE VAI BATER E FICAR ATORDOADO! ⚠️`, CANVAS_W / 2, bannerY);
     } else {
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
       ctx.fillRect(CANVAS_W / 2 - 220, bannerY - 18, 440, 36);
       ctx.strokeStyle = 'rgba(255, 212, 59, 0.6)';
       ctx.lineWidth = 1.5;
@@ -2045,7 +1830,6 @@
       if (this.collected) return;
       this.animTime++;
 
-      // Coin Magnet
       if (player) {
         const dx = (player.x + player.w / 2) - (this.x + this.w / 2);
         const dy = (player.y + player.h / 2) - (this.y + this.h / 2);
@@ -2062,6 +1846,10 @@
           this.collected = true;
           rapaduras++;
           score += 50;
+          if (currentState === GAME_STATE.CHALLENGE) {
+            challengeRapaduras++;
+            challengeScore += 100;
+          }
           if (AudioEngine) AudioEngine.playSFX('coin');
           spawnSparks(this.x + 9, this.y + 9, 8, '#FFD43B');
           spawnFloatingText('+50', this.x - 4, this.y - 12, '#FFD43B', 14);
@@ -2220,8 +2008,8 @@
       this.animTime++;
       if (!this.activated && player && checkAABB(this, player)) {
         this.activated = true;
-        currentLevel.respawnX = this.x;
-        currentLevel.respawnY = this.y - 10;
+        currentLevel.activeCheckpointX = this.x;
+        currentLevel.activeCheckpointY = this.y - 10;
         health = maxHealth;
         updateHUD();
         if (AudioEngine) AudioEngine.playSFX('checkpoint');
@@ -2252,13 +2040,11 @@
       const py = this.y - camY + this.h;
       ctx.translate(px, py);
 
-      // Lenha da fogueira
       ctx.fillStyle = '#5C3800';
       ctx.fillRect(-14, -8, 28, 6);
       ctx.fillRect(-10, -12, 20, 5);
 
       if (this.activated) {
-        // Fogo aceso
         ctx.shadowColor = '#FF922B';
         ctx.shadowBlur = 16;
         ctx.fillStyle = '#FFA94D';
@@ -2275,7 +2061,6 @@
         ctx.arc(0, -16 + flicker * 0.5, 6, 0, Math.PI * 2);
         ctx.fill();
       } else {
-        // Fogueira apagada
         ctx.fillStyle = '#495057';
         ctx.fillRect(-6, -14, 12, 4);
       }
@@ -2325,11 +2110,9 @@
       const px = this.x - camX;
       const py = this.y - camY;
 
-      // Mastro de madeira roliça
       ctx.fillStyle = '#8B4513';
       ctx.fillRect(px + 10, py, 6, this.h);
 
-      // Bandeira de São João
       ctx.fillStyle = this.reached ? '#51CF66' : '#FA5252';
       ctx.beginPath();
       ctx.moveTo(px + 16, py + this.flagY);
@@ -2342,151 +2125,233 @@
     }
   }
 
-  // ==================== GERADOR DAS 12 FASES ÉPICAS ====================
+  // ==================== DEFINIÇÕES AUTORAIS DE FASES (DATA-DRIVEN) ====================
   let currentLevel = null;
 
-  function createLevel(idx) {
+  // Constrói a Fase 1-1 "O Despertar do Mandacaru" totalmente reformulada (P1 Vertical Slice)
+  function buildLevel1_1() {
     const platforms = [];
     const enemies = [];
     const collectibles = [];
     const checkpoints = [];
     const updrafts = [];
-    let boss = null;
-    let flagpole = null;
-    let respawnX = 60;
-    let respawnY = 380;
+
+    // Segmento 0: A Vereda do Despertar (0 - 800px)
+    platforms.push({ x: 0, y: 460, w: 500, h: 80, theme: 'soil' });
+    platforms.push({ x: 580, y: 460, w: 420, h: 80, theme: 'soil' });
+    // Rapaduras iniciais guiando o pulo sobre a primeira vala
+    for (let i = 0; i < 5; i++) collectibles.push(new Rapadura(420 + i * 40, 380 - Math.sin((i / 4) * Math.PI) * 50));
+    enemies.push(new Enemy(340, 430, 'calango'));
+
+    // Segmento 1: O Lajedo dos Espinhos (1000 - 1800px)
+    platforms.push({ x: 1060, y: 460, w: 800, h: 80, theme: 'soil' });
+    platforms.push({ x: 1180, y: 370, w: 140, h: 22, theme: 'stone' });
+    platforms.push({ x: 1380, y: 290, w: 150, h: 22, theme: 'stone' });
+    platforms.push({ x: 1580, y: 370, w: 140, h: 22, theme: 'stone' });
+    // Cacto Atirador sentinela
+    enemies.push(new Enemy(1420, 240, 'cacto_atirador'));
+    // Caju 1 na rota alta
+    collectibles.push(new GoldenCaju(1450, 180, 0));
+    for (let i = 0; i < 4; i++) collectibles.push(new Rapadura(1200 + i * 35, 330));
+
+    // Segmento 2: O Pouso da Fogueira & O Bode Doido (1900 - 2800px)
+    platforms.push({ x: 1920, y: 460, w: 900, h: 80, theme: 'soil' });
+    checkpoints.push(new CampfireCheckpoint(2000, 418));
+    // Bode Doido pastando na clareira
+    enemies.push(new Enemy(2450, 430, 'bode_doido'));
+    platforms.push({ x: 2300, y: 350, w: 160, h: 22, theme: 'wood' });
+    platforms.push({ x: 2520, y: 280, w: 160, h: 22, theme: 'wood' });
+    for (let i = 0; i < 6; i++) collectibles.push(new Rapadura(2320 + i * 45, 230));
+
+    // Segmento 3: O Cânion da Asa Branca (2900 - 3900px)
+    platforms.push({ x: 2880, y: 460, w: 400, h: 80, theme: 'soil' });
+    // Abismo com corrente térmica
+    updrafts.push({ x: 3340, y: 140, w: 120, h: 320 });
+    // Caju 2 no ar aproveitando a planagem
+    collectibles.push(new GoldenCaju(3400, 190, 1));
+    platforms.push({ x: 3520, y: 460, w: 500, h: 80, theme: 'soil' });
+    collectibles.push(new AsaBrancaStar(3680, 380));
+
+    // Segmento 4: A Corrida Dourada (4000 - 4800px)
+    platforms.push({ x: 4080, y: 460, w: 850, h: 80, theme: 'soil' });
+    enemies.push(new Enemy(4220, 430, 'tatu'));
+    enemies.push(new Enemy(4400, 430, 'tatu'));
+    enemies.push(new Enemy(4600, 430, 'calango'));
+    for (let i = 0; i < 10; i++) collectibles.push(new Rapadura(4120 + i * 50, 410));
+
+    // Segmento 5: A Vereda Final e Mastro (4950 - 5600px)
+    platforms.push({ x: 4980, y: 460, w: 700, h: 80, theme: 'soil' });
+    checkpoints.push(new CampfireCheckpoint(5060, 418));
+    // Caju 3 em saliência
+    platforms.push({ x: 5180, y: 340, w: 140, h: 22, theme: 'stone' });
+    collectibles.push(new GoldenCaju(5240, 280, 2));
+
+    // Mastro garantidamente dentro dos limites! (P0.2)
+    const flagpole = new Flagpole(5460, 300);
+    const levelW = 5700;
+
+    return {
+      levelW,
+      levelH: 540,
+      platforms,
+      enemies,
+      collectibles,
+      checkpoints,
+      updrafts,
+      boss: null,
+      flagpole,
+      respawnX: 60,
+      respawnY: 380,
+      activeCheckpointX: 60,
+      activeCheckpointY: 380
+    };
+  }
+
+  // Constrói a Fase 1-4 Arena do Touro de Fogo Ancestral (P1 Vertical Slice)
+  function buildLevelBoss(worldIdx) {
+    const levelW = 1400;
+    const platforms = [];
+    platforms.push({ x: 0, y: 460, w: 1400, h: 80, theme: 'stone' });
+    platforms.push({ x: 0, y: 0, w: 40, h: 540, theme: 'stone' }); // Parede esquerda de colisão
+    platforms.push({ x: 1360, y: 0, w: 40, h: 540, theme: 'stone' }); // Parede direita de colisão
+
+    // Plataformas suspensas para esquiva estratégica
+    platforms.push({ x: 260, y: 340, w: 180, h: 22, theme: 'wood' });
+    platforms.push({ x: 600, y: 260, w: 200, h: 22, theme: 'stone' });
+    platforms.push({ x: 960, y: 340, w: 180, h: 22, theme: 'wood' });
+
+    const boss = new BossBull(980, 396);
+
+    const barContainer = document.getElementById('bossBarContainer');
+    const barFill = document.getElementById('bossHpFill');
+    const bossName = document.getElementById('bossName');
+    if (barContainer) barContainer.style.display = 'flex';
+    if (barFill) barFill.style.width = '100%';
+    if (bossName) bossName.textContent = boss.name;
+
+    return {
+      levelW,
+      levelH: 540,
+      platforms,
+      enemies: [],
+      collectibles: [],
+      checkpoints: [],
+      updrafts: [],
+      boss,
+      flagpole: null,
+      respawnX: 120,
+      respawnY: 380,
+      activeCheckpointX: 120,
+      activeCheckpointY: 380
+    };
+  }
+
+  // Constrói o percurso do Modo Desafio (30s)
+  function buildChallengeLevel() {
+    const platforms = [];
+    const enemies = [];
+    const collectibles = [];
+    const levelW = 4800;
+
+    // Pista contínua de corrida com saltos dinâmicos
+    let cx = 0;
+    while (cx < levelW - 200) {
+      platforms.push({ x: cx, y: 460, w: 500, h: 80, theme: 'soil' });
+      // Rapaduras em arco
+      for (let i = 0; i < 4; i++) {
+        collectibles.push(new Rapadura(cx + 60 + i * 45, 410));
+      }
+      if (cx > 400 && cx < levelW - 800) {
+        if (Math.random() < 0.5) {
+          enemies.push(new Enemy(cx + 300, 430, 'bode_doido'));
+        } else {
+          enemies.push(new Enemy(cx + 260, 410, 'cacto_atirador'));
+        }
+      }
+      cx += 560;
+    }
+
+    return {
+      levelW,
+      levelH: 540,
+      platforms,
+      enemies,
+      collectibles,
+      checkpoints: [],
+      updrafts: [],
+      boss: null,
+      flagpole: null,
+      respawnX: 80,
+      respawnY: 380,
+      activeCheckpointX: 80,
+      activeCheckpointY: 380
+    };
+  }
+
+  // Gerador genérico verificado para os demais estágios
+  function createLevel(idx) {
+    if (idx === 0) return buildLevel1_1();
+    if (idx === 3) return buildLevelBoss(0);
 
     const world = Math.floor(idx / 4) + 1;
     const stage = (idx % 4) + 1;
     const isBossStage = stage === 4;
 
     if (isBossStage) {
-      // ===== FASE DE CHEFÃO (ARENA ÉPICA) =====
-      const levelW = 1400;
-      platforms.push({ x: 0, y: 460, w: 1400, h: 80, theme: world === 2 ? 'wood' : 'stone' });
-      platforms.push({ x: 0, y: 0, w: 40, h: 540, theme: 'stone' });
-      platforms.push({ x: 1360, y: 0, w: 40, h: 540, theme: 'stone' });
-
-      // Plataformas elevadas para esquiva estratégica
-      platforms.push({ x: 260, y: 340, w: 180, h: 22, theme: 'wood' });
-      platforms.push({ x: 600, y: 260, w: 200, h: 22, theme: 'stone' });
-      platforms.push({ x: 960, y: 340, w: 180, h: 22, theme: 'wood' });
-
-      if (world === 1) {
-        boss = new BossBull(980, 396);
-      } else if (world === 2) {
-        boss = new BossFulozinha(980, 260);
-      } else {
-        boss = new BossPapaFigo(980, 370);
-      }
-
-      const barContainer = document.getElementById('bossBarContainer');
-      const barFill = document.getElementById('bossHpFill');
-      const bossName = document.getElementById('bossName');
-      if (barContainer) barContainer.style.display = 'flex';
-      if (barFill) barFill.style.width = '100%';
-      if (bossName) bossName.textContent = boss.name;
-
-      return {
-        levelW,
-        levelH: 540,
-        platforms,
-        enemies,
-        collectibles,
-        checkpoints,
-        updrafts,
-        boss,
-        flagpole,
-        respawnX,
-        respawnY
-      };
+      return buildLevelBoss(world - 1);
     }
 
-    // ===== FASES DE EXPLORAÇÃO (5.500px A 13.500px) =====
-    // Extensão aumentada substancialmente
-    const baseLength = 5500 + (world - 1) * 2500 + (stage - 1) * 1500;
-    const levelW = baseLength;
+    // Geração determinística com PRNG mulberry32 baseado no índice da fase
+    const rng = mulberry32(1000 + idx * 777);
+    const platforms = [];
+    const enemies = [];
+    const collectibles = [];
+    const checkpoints = [];
+    const updrafts = [];
 
+    const baseLength = 5000 + (world - 1) * 2000 + (stage - 1) * 1200;
     let cx = 0;
     let sectionIdx = 0;
 
-    // Segmentos procedurais conectados
-    while (cx < levelW - 500) {
-      const segmentWidth = 600 + Math.floor(Math.random() * 400);
+    while (cx < baseLength - 600) {
+      const segW = 600 + Math.floor(rng() * 350);
       const theme = world === 1 ? 'soil' : world === 2 ? 'wood' : 'stone';
-      const groundY = 460;
-
-      // Chão contínuo com valas ocasionais
-      platforms.push({ x: cx, y: groundY, w: segmentWidth, h: 80, theme });
+      platforms.push({ x: cx, y: 460, w: segW, h: 80, theme });
 
       // Plataformas elevadas
-      const numPlats = 2 + Math.floor(Math.random() * 3);
+      const numPlats = 2 + Math.floor(rng() * 2);
       for (let p = 0; p < numPlats; p++) {
         const px = cx + 80 + p * 180;
         const py = 360 - (p % 2) * 80;
-        platforms.push({ x: px, y: py, w: 140, h: 22, theme: (p % 2 === 0 ? 'stone' : 'wood') });
-
-        // Rapaduras sobre as plataformas
+        platforms.push({ x: px, y: py, w: 140, h: 22, theme: p % 2 === 0 ? 'stone' : 'wood' });
         for (let r = 0; r < 3; r++) {
           collectibles.push(new Rapadura(px + 20 + r * 35, py - 30));
         }
       }
 
-      // Distribuição de Inimigos variados e animados
+      // Inimigos
       const spawnX = cx + 240;
-      if (world === 1) {
-        if (sectionIdx % 3 === 0) {
-          enemies.push(new Enemy(spawnX, 430, 'calango'));
-        } else if (sectionIdx % 3 === 1) {
-          enemies.push(new Enemy(spawnX, 430, 'bode_doido'));
-        } else {
-          enemies.push(new Enemy(spawnX, 410, 'cacto_atirador'));
-        }
-        if (sectionIdx === 2) {
-          enemies.push(new Enemy(cx + 400, 180, 'carcara'));
-        }
-      } else if (world === 2) {
-        if (sectionIdx % 3 === 0) {
-          enemies.push(new Enemy(spawnX, 430, 'morcego'));
-        } else if (sectionIdx % 3 === 1) {
-          enemies.push(new Enemy(spawnX, 320, 'fulozinha'));
-        } else {
-          enemies.push(new Enemy(spawnX, 430, 'tatu'));
-        }
+      if (sectionIdx % 3 === 0) {
+        enemies.push(new Enemy(spawnX, 430, 'calango'));
+      } else if (sectionIdx % 3 === 1) {
+        enemies.push(new Enemy(spawnX, 430, 'bode_doido'));
       } else {
-        if (sectionIdx % 3 === 0) {
-          enemies.push(new Enemy(spawnX, 410, 'cacto_atirador'));
-        } else if (sectionIdx % 3 === 1) {
-          enemies.push(new Enemy(spawnX, 430, 'papa_figo'));
-        } else {
-          enemies.push(new Enemy(spawnX, 430, 'bode_doido'));
-        }
+        enemies.push(new Enemy(spawnX, 410, 'cacto_atirador'));
       }
 
-      // Checkpoints a cada ~3.000px
-      if (sectionIdx > 0 && sectionIdx % 3 === 0 && cx < levelW - 1200) {
+      if (sectionIdx > 0 && sectionIdx % 3 === 0 && cx < baseLength - 1200) {
         checkpoints.push(new CampfireCheckpoint(cx + 100, 418));
       }
 
-      // Estrela Asa Branca na metade da fase
-      if (sectionIdx === 2) {
-        collectibles.push(new AsaBrancaStar(cx + 250, 220));
-      }
-
-      // Corrente Térmica Ascendente
-      if (sectionIdx % 2 === 1) {
-        updrafts.push({ x: cx + 450, y: 150, w: 80, h: 310 });
-      }
-
-      cx += segmentWidth + 120; // Vala entre platôs
+      cx += segW + 120;
       sectionIdx++;
     }
 
-    // Plataforma final do Mastro
+    // Plataforma final do mastro garantidamente sólida e dentro dos limites
     platforms.push({ x: cx, y: 460, w: 600, h: 80, theme: 'soil' });
-    flagpole = new Flagpole(cx + 360, 300);
+    const flagpole = new Flagpole(cx + 360, 300);
+    const levelW = cx + 600; // Recalcula levelW com base no mastro real (P0.2)
 
-    // 3 Cajus Dourados distribuídos uniformemente
     collectibles.push(new GoldenCaju(levelW * 0.25, 240, 0));
     collectibles.push(new GoldenCaju(levelW * 0.55, 200, 1));
     collectibles.push(new GoldenCaju(levelW * 0.82, 260, 2));
@@ -2501,8 +2366,10 @@
       updrafts,
       boss: null,
       flagpole,
-      respawnX,
-      respawnY
+      respawnX: 60,
+      respawnY: 380,
+      activeCheckpointX: 60,
+      activeCheckpointY: 380
     };
   }
 
@@ -2515,12 +2382,12 @@
     );
   }
 
-  // ==================== RENDERIZADOR DE CENÁRIO (3 BIOMAS PARALLAX) ====================
+  // ==================== PARALLAX VISUAL ====================
   function drawParallax(ctx, camX, camY) {
     const worldId = Math.floor(currentLevelIdx / 4);
 
     if (worldId === 0) {
-      // BIOMA 1: O SERTÃO DOS MANDACARUS (Pôr do Sol Dourado)
+      // Mundo 1: Sertão do Mandacaru
       const skyGrad = ctx.createLinearGradient(0, 0, 0, CANVAS_H);
       skyGrad.addColorStop(0, '#2C1810');
       skyGrad.addColorStop(0.35, '#872B10');
@@ -2552,7 +2419,7 @@
       }
       ctx.restore();
 
-      // Serras da Chapada Diamantina
+      // Serras
       ctx.fillStyle = '#49180E';
       ctx.beginPath();
       ctx.moveTo(0, CANVAS_H);
@@ -2566,7 +2433,7 @@
       ctx.fill();
 
     } else if (worldId === 1) {
-      // BIOMA 2: AS CAVERNAS E PÂNTANOS DAS LENDAS (Noite Mística Esmeralda e Índigo)
+      // Mundo 2: Caverna Mística e Pântano
       const skyGrad = ctx.createLinearGradient(0, 0, 0, CANVAS_H);
       skyGrad.addColorStop(0, '#0B0F19');
       skyGrad.addColorStop(0.4, '#152538');
@@ -2575,7 +2442,6 @@
       ctx.fillStyle = skyGrad;
       ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
-      // Lua cheia prateada brilhante
       const moonX = CANVAS_W * 0.25 - camX * 0.02;
       const moonY = 110 - camY * 0.02;
       ctx.fillStyle = '#E6FCF5';
@@ -2586,7 +2452,6 @@
       ctx.fill();
       ctx.shadowBlur = 0;
 
-      // Serras escuras com estalactites
       ctx.fillStyle = '#09211D';
       ctx.beginPath();
       ctx.moveTo(0, CANVAS_H);
@@ -2600,7 +2465,7 @@
       ctx.fill();
 
     } else {
-      // BIOMA 3: O CÂNION DOS NOVE SÓIS (Brasas e Céu Carmesim Ardente)
+      // Mundo 3: Cânion dos Nove Sóis
       const skyGrad = ctx.createLinearGradient(0, 0, 0, CANVAS_H);
       skyGrad.addColorStop(0, '#3B0A06');
       skyGrad.addColorStop(0.4, '#87140A');
@@ -2609,7 +2474,6 @@
       ctx.fillStyle = skyGrad;
       ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
-      // 9 Pequenos Sóis brilhando no horizonte
       for (let s = 0; s < 9; s++) {
         const sx = 80 + s * 95 - (camX * 0.025) % (CANVAS_W + 100);
         const sy = 80 + Math.sin(performance.now() * 0.002 + s) * 12;
@@ -2622,7 +2486,6 @@
       }
       ctx.shadowBlur = 0;
 
-      // Penhascos de lava
       ctx.fillStyle = '#260604';
       ctx.beginPath();
       ctx.moveTo(0, CANVAS_H);
@@ -2637,7 +2500,6 @@
     }
   }
 
-  // ==================== DESENHO DAS PLATAFORMAS ====================
   function drawPlatforms(ctx, camX, camY) {
     currentLevel.platforms.forEach(p => {
       const px = p.x - camX;
@@ -2670,7 +2532,7 @@
     });
   }
 
-  // ==================== ATUALIZAÇÃO DA INTERFACE (HUD) ====================
+  // ==================== HUD ====================
   function updateHUD() {
     const rapaduraEl = document.getElementById('hudRapaduras') || document.getElementById('coinVal');
     if (rapaduraEl) rapaduraEl.textContent = rapaduras < 10 ? `0${rapaduras}` : rapaduras;
@@ -2678,7 +2540,13 @@
     const w = Math.floor(currentLevelIdx / 4) + 1;
     const st = (currentLevelIdx % 4) + 1;
     const stageEl = document.getElementById('hudStageName') || document.getElementById('stageVal');
-    if (stageEl) stageEl.textContent = `Fase ${w}-${st}`;
+    if (stageEl) {
+      if (currentState === GAME_STATE.CHALLENGE) {
+        stageEl.textContent = `⚡ 30s (${challengeTimeLeft.toFixed(1)}s)`;
+      } else {
+        stageEl.textContent = `Fase ${w}-${st}`;
+      }
+    }
 
     const heartsBox = document.getElementById('heartsBox');
     if (heartsBox && heartsBox.children) {
@@ -2697,7 +2565,7 @@
     });
   }
 
-  // ==================== CARREGAMENTO DE NÍVEL ====================
+  // ==================== CARREGAMENTO E PROGRESSÃO ====================
   let player = null;
 
   function loadLevel(idx) {
@@ -2708,6 +2576,8 @@
     camera.levelW = currentLevel.levelW;
     camera.levelH = currentLevel.levelH;
     collectedCajus = [false, false, false];
+    stageTimerSeconds = 0;
+    stageTimerFrames = 0;
 
     const bar = document.getElementById('bossBarContainer');
     if (bar && !currentLevel.boss) bar.style.display = 'none';
@@ -2729,8 +2599,125 @@
     loadLevel(idx);
   }
 
+  function startChallenge() {
+    document.querySelectorAll('.screen-overlay').forEach(el => el.style.display = 'none');
+    currentState = GAME_STATE.CHALLENGE;
+    challengeTimeLeft = 30.0;
+    challengeScore = 0;
+    challengeRapaduras = 0;
+    health = maxHealth;
+    lives = 1;
+    projectiles = [];
+
+    currentLevel = buildChallengeLevel();
+    player = new Tonho(currentLevel.respawnX, currentLevel.respawnY);
+    camera.levelW = currentLevel.levelW;
+    camera.levelH = currentLevel.levelH;
+
+    const bar = document.getElementById('bossBarContainer');
+    if (bar) bar.style.display = 'none';
+
+    updateHUD();
+    if (window.AudioEngine) AudioEngine.playMusic('asaBranca');
+  }
+
+  function finishChallenge() {
+    currentState = GAME_STATE.CHALLENGE_RESULT;
+    document.querySelectorAll('.screen-overlay').forEach(el => el.style.display = 'none');
+    const screen = document.getElementById('challengeResultScreen');
+    if (screen) screen.style.display = 'flex';
+
+    if (challengeScore > SaveManager.data.challengeHighScore) {
+      SaveManager.data.challengeHighScore = challengeScore;
+      SaveManager.save();
+    }
+
+    const statsEl = document.getElementById('challengeStats');
+    if (statsEl) {
+      statsEl.innerHTML = `
+        <div style="font-size:1.6rem; color:#FFD43B; margin-bottom:8px;">Pontuação: ${challengeScore} pts</div>
+        <div>🍬 Rapaduras Coletadas: ${challengeRapaduras}</div>
+        <div style="color:#FFA94D; margin-top:6px;">Recorde Pessoal: ${SaveManager.data.challengeHighScore} pts</div>
+      `;
+    }
+  }
+
+  // Gera o Cartão 9:16 (Stories / WhatsApp) do Desafio
+  function exportChallengeCard() {
+    const cardCanvas = document.createElement('canvas');
+    cardCanvas.width = 1080;
+    cardCanvas.height = 1920;
+    const cctx = cardCanvas.getContext('2d');
+
+    // Gradiente do Sertão
+    const grad = cctx.createLinearGradient(0, 0, 0, 1920);
+    grad.addColorStop(0, '#2C1810');
+    grad.addColorStop(0.3, '#872B10');
+    grad.addColorStop(0.7, '#D9531E');
+    grad.addColorStop(1, '#F6B819');
+    cctx.fillStyle = grad;
+    cctx.fillRect(0, 0, 1080, 1920);
+
+    // Sol e raios
+    cctx.fillStyle = 'rgba(255, 243, 191, 0.9)';
+    cctx.beginPath();
+    cctx.arc(540, 420, 140, 0, Math.PI * 2);
+    cctx.fill();
+
+    // Textos
+    cctx.fillStyle = '#FFF9DB';
+    cctx.font = '900 64px Cinzel, serif';
+    cctx.textAlign = 'center';
+    cctx.fillText('OXE! O JOGO DO SERTÃO', 540, 220);
+
+    cctx.font = '700 38px Outfit, sans-serif';
+    cctx.fillStyle = '#FFE066';
+    cctx.fillText('⚡ DESAFIO SERTANEJO 30 SEGUNDOS ⚡', 540, 290);
+
+    // Placa de Pontuação
+    cctx.fillStyle = 'rgba(26, 18, 11, 0.85)';
+    cctx.strokeStyle = '#FFD43B';
+    cctx.lineWidth = 8;
+    cctx.beginPath();
+    cctx.roundRect(140, 680, 800, 520, 32);
+    cctx.fill();
+    cctx.stroke();
+
+    cctx.fillStyle = '#FFF';
+    cctx.font = '900 48px Outfit, sans-serif';
+    cctx.fillText('RESULTADO ARRETADO', 540, 770);
+
+    cctx.fillStyle = '#FFD43B';
+    cctx.font = '900 96px Cinzel, serif';
+    cctx.fillText(`${challengeScore} PTS`, 540, 890);
+
+    cctx.fillStyle = '#E9ECEF';
+    cctx.font = '700 42px Outfit, sans-serif';
+    cctx.fillText(`🍬 ${challengeRapaduras} Rapaduras Coletadas`, 540, 990);
+    cctx.fillText(`👑 Recorde: ${SaveManager.data.challengeHighScore} pts`, 540, 1070);
+
+    // Cordel
+    cctx.fillStyle = '#FFF9DB';
+    cctx.font = 'italic 34px Georgia, serif';
+    cctx.fillText('“No sertão dos nove sóis, esse cabra correu ligeiro!', 540, 1340);
+    cctx.fillText('Bateu recorde arretado e honrou o chão brasileiro!”', 540, 1390);
+
+    // Rodapé
+    cctx.fillStyle = '#FFA94D';
+    cctx.font = '900 36px Outfit, sans-serif';
+    cctx.fillText('Jogue grátis em: oxeeraassim.github.io/jogo-do-oxe', 540, 1680);
+    cctx.fillText('Siga no Instagram: @oxe_eraassim', 540, 1740);
+
+    // Download / Compartilhamento
+    const link = document.createElement('a');
+    link.download = `oxe-desafio-${challengeScore}pts.png`;
+    link.href = cardCanvas.toDataURL('image/png');
+    link.click();
+    spawnFloatingText('📲 CARTÃO GERADO!', player ? player.x : CANVAS_W / 2, 200, '#51CF66', 24);
+  }
+
   function togglePause() {
-    if (currentState === GAME_STATE.PLAYING) {
+    if (currentState === GAME_STATE.PLAYING || currentState === GAME_STATE.CHALLENGE) {
       currentState = GAME_STATE.PAUSED;
       document.getElementById('pauseScreen').style.display = 'flex';
       if (window.AudioEngine) window.AudioEngine.pauseMusic();
@@ -2759,29 +2746,34 @@
   function showVictoryScreen() {
     currentState = GAME_STATE.VICTORY;
     document.getElementById('victoryScreen').style.display = 'flex';
+
+    // Cálculo real de estrelas (P0.5)
+    let starsEarned = 1; // 1 por concluir
+    const cajusCount = collectedCajus.filter(Boolean).length;
+    if (cajusCount === 3) starsEarned++; // 1 por todos os cajus
+    if (health === maxHealth) starsEarned++; // 1 por não sofrer dano fatal
+    SaveManager.recordClear(currentLevelIdx, starsEarned, collectedCajus, stageTimerSeconds);
+
     const msg = document.getElementById('victoryMsg');
     if (currentLevelIdx === 3) {
       msg.textContent = '👑 PARABÉNS! Você derrotou o Touro de Fogo e conquistou o Fragmento Solar do Mundo 1!';
-    } else if (currentLevelIdx === 7) {
-      msg.textContent = '👑 GLORIOSO! A Comadre Fulozinha abençoou Tonho e entregou o Fragmento Secreto do Mundo 2!';
-    } else if (currentLevelIdx === 11) {
-      msg.textContent = '☀️ VITÓRIA SUPREMA! O Papa-Figo foi derrotado, a Seca se dissipou e os Nove Sóis brilham em harmonia sobre o Sertão!';
     } else {
       const w = Math.floor(currentLevelIdx / 4) + 1;
       const st = (currentLevelIdx % 4) + 1;
-      msg.textContent = `Fase ${w}-${st} concluída com sucesso! Os mandacarus florescem e o sertão canta!`;
+      msg.textContent = `Fase ${w}-${st} concluída com ${starsEarned} estrela(s)! Tempo: ${stageTimerSeconds}s`;
     }
   }
 
+  // Tela de Game Over estilizada no Canvas sem alert() bloqueante (P0.7)
   function showGameOver() {
     currentState = GAME_STATE.GAMEOVER;
-    alert('OXE! As vidas acabaram! Mas o sertanejo não desiste nunca!');
-    lives = 3;
-    health = maxHealth;
-    showTitleScreen();
+    document.querySelectorAll('.screen-overlay').forEach(el => el.style.display = 'none');
+    const screen = document.getElementById('gameOverScreen');
+    if (screen) screen.style.display = 'flex';
+    if (window.AudioEngine) AudioEngine.playSFX('death');
   }
 
-  // ==================== SELETOR DE MUNDOS NO MAPA ====================
+  // ==================== MAPA DOS MUNDOS COM BLOQUEIO REAL ====================
   window.switchWorldMap = (worldIdx) => {
     currentWorldTab = worldIdx;
     const worldNames = [
@@ -2812,23 +2804,32 @@
     for (let s = 0; s < 4; s++) {
       const levelNum = worldIdx * 4 + s;
       const isBoss = s === 3;
+      const unlocked = SaveManager.isUnlocked(levelNum);
+      const rec = SaveManager.data.levelData[levelNum] || { stars: 0, cleared: false };
+
       const card = document.createElement('div');
-      card.className = 'level-card';
-      if (isBoss) card.style.borderColor = '#FA5252';
+      card.className = `level-card ${unlocked ? '' : 'locked'}`;
+      if (isBoss && unlocked) card.style.borderColor = '#FA5252';
+
+      // Estrelas reais baseadas no desempenho persistente
+      const starStr = unlocked && rec.cleared ? '★'.repeat(rec.stars) + '☆'.repeat(3 - rec.stars) : '☆☆☆';
 
       card.innerHTML = `
-        <div class="level-num" style="${isBoss ? 'color:#FA5252;' : ''}">${isBoss ? '👑 ' : ''}${worldIdx + 1}-${s + 1}</div>
-        <div class="level-stars">★★★</div>
-        <span style="font-size:0.75rem; color:${isBoss ? '#FA5252' : '#ADB5BD'}; font-weight:${isBoss ? '800' : '400'};">${stageNames[worldIdx][s]}</span>
+        <div class="level-num" style="${isBoss ? 'color:#FA5252;' : ''}">${unlocked ? (isBoss ? '👑 ' : '') + `${worldIdx + 1}-${s + 1}` : '🔒'}</div>
+        <div class="level-stars">${starStr}</div>
+        <span style="font-size:0.75rem; color:${unlocked ? (isBoss ? '#FA5252' : '#ADB5BD') : '#868E96'}; font-weight:${isBoss ? '800' : '400'};">${stageNames[worldIdx][s]}</span>
       `;
-      card.onclick = () => {
-        selectLevel(levelNum);
-      };
+
+      if (unlocked) {
+        card.onclick = () => {
+          selectLevel(levelNum);
+        };
+      }
       levelGrid.appendChild(card);
     }
   };
 
-  // Botões Universais
+  // Botões de Interface Universais
   function attachButton(id, callback) {
     const el = document.getElementById(id);
     if (!el) return;
@@ -2850,45 +2851,58 @@
     el.addEventListener('touchend', trigger);
   }
 
-  attachButton('btnStartGame', () => {
-    startGame(0);
-  });
-
-  attachButton('btnOpenMap', () => {
-    showWorldMap();
-  });
-
-  attachButton('btnCloseMap', () => {
-    showTitleScreen();
-  });
-
-  attachButton('btnResume', () => {
-    togglePause();
-  });
-
+  attachButton('btnStartGame', () => startGame(0));
+  attachButton('btnStartChallenge', () => startChallenge());
+  attachButton('btnOpenMap', () => showWorldMap());
+  attachButton('btnCloseMap', () => showTitleScreen());
+  attachButton('btnResume', () => togglePause());
   attachButton('btnRestart', () => {
     document.getElementById('pauseScreen').style.display = 'none';
     currentState = GAME_STATE.PLAYING;
     loadLevel(currentLevelIdx);
   });
-
-  attachButton('btnQuitMap', () => {
-    showWorldMap();
-  });
-
+  attachButton('btnQuitMap', () => showWorldMap());
   attachButton('btnNextStage', () => {
     document.getElementById('victoryScreen').style.display = 'none';
-    if (currentLevelIdx < 11) {
-      startGame(currentLevelIdx + 1);
-    } else {
-      showWorldMap();
-    }
+    if (currentLevelIdx < 11) startGame(currentLevelIdx + 1);
+    else showWorldMap();
   });
-
   attachButton('btnVictoryMap', () => {
     document.getElementById('victoryScreen').style.display = 'none';
     showWorldMap();
   });
+
+  // Botões da Tela de Game Over (P0.7)
+  attachButton('btnRestartFromCheckpoint', () => {
+    document.getElementById('gameOverScreen').style.display = 'none';
+    currentState = GAME_STATE.PLAYING;
+    lives = 3;
+    health = maxHealth;
+    player.x = currentLevel.activeCheckpointX;
+    player.y = currentLevel.activeCheckpointY;
+    player.vx = 0;
+    player.vy = 0;
+    updateHUD();
+  });
+
+  attachButton('btnRestartFullLevel', () => {
+    document.getElementById('gameOverScreen').style.display = 'none';
+    lives = 3;
+    health = maxHealth;
+    startGame(currentLevelIdx);
+  });
+
+  attachButton('btnGameOverMap', () => {
+    document.getElementById('gameOverScreen').style.display = 'none';
+    lives = 3;
+    health = maxHealth;
+    showWorldMap();
+  });
+
+  // Botões do Desafio 30s
+  attachButton('btnShareChallenge', () => exportChallengeCard());
+  attachButton('btnRetryChallenge', () => startChallenge());
+  attachButton('btnCloseChallenge', () => showTitleScreen());
 
   window.selectLevel = (idx) => {
     try {
@@ -2897,17 +2911,23 @@
     startGame(idx);
   };
 
-  // ==================== LOOP PRINCIPAL DO JOGO (60 FPS) ====================
-  function gameLoop(now) {
-    requestAnimationFrame(gameLoop);
+  // ==================== LOOP PRINCIPAL COM FIXED TIMESTEP (P0.6) ====================
+  let lastFrameTime = performance.now();
+  let accumulator = 0;
 
+  function fixedUpdate() {
     if (hitstopFrames > 0) {
       hitstopFrames--;
       return;
     }
 
     if (currentState === GAME_STATE.PLAYING) {
-      // 1. UPDATE
+      stageTimerFrames++;
+      if (stageTimerFrames >= 60) {
+        stageTimerFrames = 0;
+        stageTimerSeconds++;
+      }
+
       if (player) player.update();
 
       if (currentLevel.checkpoints) currentLevel.checkpoints.forEach(cp => cp.update());
@@ -2916,7 +2936,6 @@
       if (currentLevel.boss) currentLevel.boss.update();
       if (currentLevel.flagpole) currentLevel.flagpole.update();
 
-      // Atualiza Projéteis
       for (let i = projectiles.length - 1; i >= 0; i--) {
         projectiles[i].update(currentLevel.platforms, player);
         if (projectiles[i].dead) projectiles.splice(i, 1);
@@ -2924,20 +2943,52 @@
 
       camera.update(player);
 
-      // Partículas
       for (let i = particles.length - 1; i >= 0; i--) {
         particles[i].update();
         if (particles[i].life <= 0) particles.splice(i, 1);
       }
 
-      // Textos flutuantes
+      for (let i = floatTexts.length - 1; i >= 0; i--) {
+        floatTexts[i].y += floatTexts[i].vy;
+        floatTexts[i].life--;
+        if (floatTexts[i].life <= 0) floatTexts.splice(i, 1);
+      }
+    } else if (currentState === GAME_STATE.CHALLENGE) {
+      challengeTimeLeft -= 1 / 60;
+      if (challengeTimeLeft <= 0) {
+        challengeTimeLeft = 0;
+        finishChallenge();
+        return;
+      }
+
+      if (player) player.update();
+      currentLevel.enemies.forEach(en => en.update());
+      currentLevel.collectibles.forEach(col => col.update());
+
+      for (let i = projectiles.length - 1; i >= 0; i--) {
+        projectiles[i].update(currentLevel.platforms, player);
+        if (projectiles[i].dead) projectiles.splice(i, 1);
+      }
+
+      camera.update(player);
+
+      for (let i = particles.length - 1; i >= 0; i--) {
+        particles[i].update();
+        if (particles[i].life <= 0) particles.splice(i, 1);
+      }
+
       for (let i = floatTexts.length - 1; i >= 0; i--) {
         floatTexts[i].y += floatTexts[i].vy;
         floatTexts[i].life--;
         if (floatTexts[i].life <= 0) floatTexts.splice(i, 1);
       }
 
-      // 2. DRAW
+      updateHUD();
+    }
+  }
+
+  function render() {
+    if (currentState === GAME_STATE.PLAYING || currentState === GAME_STATE.CHALLENGE) {
       ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
 
       drawParallax(ctx, camera.x, camera.y);
@@ -2948,12 +2999,10 @@
       currentLevel.collectibles.forEach(col => col.draw(ctx, camera.x, camera.y));
       currentLevel.enemies.forEach(en => en.draw(ctx, camera.x, camera.y));
 
-      // Projéteis
       projectiles.forEach(p => p.draw(ctx, camera.x, camera.y));
 
       if (currentLevel.boss) {
         currentLevel.boss.draw(ctx, camera.x, camera.y);
-        // Guia Didático dos Chefões (Arcade HUD Overlay)
         drawBossGuide(ctx, currentLevel.boss, camera.x, camera.y);
       }
 
@@ -2974,7 +3023,6 @@
         ctx.restore();
       });
 
-      // Vinheta cinematográfica
       const vignette = ctx.createRadialGradient(CANVAS_W / 2, CANVAS_H / 2, CANVAS_W * 0.4, CANVAS_W / 2, CANVAS_H / 2, CANVAS_W * 0.7);
       vignette.addColorStop(0, 'rgba(0,0,0,0)');
       vignette.addColorStop(1, 'rgba(0,0,0,0.45)');
@@ -2985,6 +3033,22 @@
       ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
       drawParallax(ctx, 0, 0);
     }
+  }
+
+  function gameLoop(now) {
+    requestAnimationFrame(gameLoop);
+
+    let frameDelta = now - lastFrameTime;
+    lastFrameTime = now;
+    if (frameDelta > 100) frameDelta = 100; // Proteção contra espiral da morte se aba pausar
+
+    accumulator += frameDelta;
+    while (accumulator >= FIXED_DELTA) {
+      fixedUpdate();
+      accumulator -= FIXED_DELTA;
+    }
+
+    render();
   }
 
   // Inicialização
