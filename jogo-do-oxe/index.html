@@ -130,6 +130,17 @@
       flex-wrap: wrap;
     }
     .hud-left { justify-content: flex-start; flex: 1 1 0; }
+    /* v2.5: barra de armas (toque para escolher) */
+    .weapon-bar { display: flex; gap: 6px; pointer-events: auto; }
+    .weapon-bar:empty { display: none; }
+    .wslot { position: relative; width: 44px; height: 44px; border-radius: 12px; border: 2px solid rgba(245,159,0,0.5); background: rgba(26,18,11,0.8);
+      display: flex; align-items: center; justify-content: center; font-size: 22px; cursor: pointer; padding: 0; color: #fff; touch-action: manipulation; }
+    .wslot.on { border-color: #FFD43B; background: rgba(232,89,12,0.75); box-shadow: 0 0 12px rgba(255,212,59,0.6); transform: translateY(-1px); }
+    .wslot .wa { position: absolute; right: -4px; bottom: -5px; background: #1A120B; border: 1.5px solid #FFD43B; color: #FFE066; font: 800 10px/1 var(--font-ui); padding: 2px 4px; border-radius: 8px; }
+    .wslot.armor { cursor: default; font-size: 20px; border-style: dashed; }
+    @media (max-height: 420px) { .wslot { width: 38px; height: 38px; font-size: 19px; } }
+    /* celular deitado: a barra de armas tem prioridade sobre o nome da fase */
+    @media (max-width: 1000px) and (max-height: 460px) { #hud .stage-card { display: none; } .hud-right { padding-right: 56px; } }
     .hud-center { justify-content: center; flex: 0 0 auto; }
     .hud-right { justify-content: flex-end; flex: 1 1 0; }
 
@@ -1039,7 +1050,6 @@
           <span aria-hidden="true">🍬</span>
           <span class="hud-val" id="hudRapaduras">00</span>
         </div>
-        <div class="hud-card" title="Arma atual" id="hudWeapon"><span aria-hidden="true">⚡</span><span class="hud-val"></span></div>
         <div class="hud-card" title="Pontuação">
           <span aria-hidden="true">⭐</span>
           <span class="hud-val score" id="hudScore">00000</span>
@@ -1047,6 +1057,7 @@
       </div>
 
       <div class="hud-center">
+        <div id="weaponBar" class="weapon-bar" aria-label="Escolha a arma"></div>
         <div class="hud-card" title="Joias de Caju">
           <div class="caju-gems">
             <svg class="caju-gem" id="caju1" viewBox="0 0 24 24" fill="#F59F00" aria-hidden="true"><path d="M12 2C8.5 2 5.5 4.5 5 8c-.6 4 2 9 7 14 5-5 7.6-10 7-14-.5-3.5-3.5-6-7-6z"/></svg>
@@ -1057,7 +1068,7 @@
       </div>
 
       <div class="hud-right">
-        <div class="hud-card">
+        <div class="hud-card stage-card">
           <span class="hud-label" id="hudStageName">Fase 1-1</span>
         </div>
         <button class="hud-icon-btn" id="btnSettingsHud" type="button" title="Configurações" aria-label="Configurações">⚙️</button>

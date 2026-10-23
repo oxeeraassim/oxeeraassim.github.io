@@ -1,5 +1,18 @@
 # CHANGELOG — OXE! 2.0: A Grande Jornada dos Nove Sóis
 
+## [v2.5.0 — Começo mais fácil, escolha de armas e pisão que vale pontos] — 2026-10-23
+### Dificuldade
+- Mundo 1 bem mais leve: 9 inimigos na 1-1 (eram 13), de 10 a 12 nas outras fases do mundo 1, bichos com vida normal, um pouco mais lentos, perseguem só de perto e não se esquivam. A dificuldade sobe aos poucos a cada mundo.
+- Mais tempo piscando depois de levar dano nos mundos 1 e 2, inimigos atordoados não machucam, área do pisão mais generosa e cuscuz extra no mundo 1.
+- A Caipora da fase 1-3 tem menos vida.
+### Pisão
+- Pular em cima de um inimigo tira 2 de vida e dá pontos na hora. Emendar pisões sem tocar o chão faz **combo** (×2, ×3…). Qualquer golpe que não derrota rende +10.
+### Armas: escolha tocando no ícone
+- Barra de armas no topo da tela: toque ou clique na arma que quiser (no teclado, Q / E ou 1 a 5). Só aparecem as armas já pegas; o chicote está sempre lá. O botão de ataque mostra a arma escolhida e a munição.
+- Armas novas que vão aparecendo aos poucos: **Pandeiro** (vai e volta como bumerangue e acerta vários) e **Rojão de São João** (explode e acerta tudo em volta), além da Baleadeira e da Sanfona.
+- No celular deitado, o nome da fase dá lugar à barra de armas.
+- Service Worker `oxe-jogo-v10`.
+
 ## [v2.4.0 — Lendas, armas, inimigos mais espertos e música mais macia] — 2026-10-23
 ### Lendas do Nordeste (chefes no fim de algumas fases)
 - **Caipora** (matas do Nordeste): corre atrás do Tonho, some numa nuvem de folhas e reaparece atrás dele, joga espinhos. Fases 1-3 e 6-2.

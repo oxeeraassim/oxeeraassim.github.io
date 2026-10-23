@@ -47,8 +47,9 @@
   var MAX_ENEMIES = 28;
   function enemyBudget(worldIdx, stageIdx) {
     var w = Math.max(0, worldIdx | 0), s = Math.max(0, stageIdx | 0);
-    var min = 11 + w * 2 + s;         // v2.4: um pouco mais difícil desde o começo
-    return { min: min, max: min + 5 };
+    // v2.5: começo bem mais leve e subida progressiva (1-2: 7 · 2-1: 10 · 4-1: 15 · 6-4: 22)
+    var min = w === 0 ? 6 + s : 8 + w * 2 + s;
+    return { min: min, max: min + (w === 0 ? 3 : 4 + (w >> 1)) };
   }
   // Espécies mais brabas só aparecem a partir de certo mundo
   var TOUGH_FROM_WORLD = { cangaceiro_sombra: 2, mula_sem_cabeca: 3, boitata_fogo: 2, lobisomem: 4 };
@@ -375,17 +376,17 @@
       { type: 'tatu', x: 1360, y: 428, dir: -1, armored: true, patrol: { minX: 1200, maxX: 1520 } },
       // 1º Cacto Atirador: saliência OPCIONAL elevada, nunca bloqueia a rota principal
       { type: 'cacto_atirador', x: 1474, y: 280, dir: -1, fireRate: 150, onLedge: true },
-      { type: 'jararaca', x: 1720, y: 428, dir: -1, patrol: { minX: 1600, maxX: 1800 } },
+
       // Bode Doido: corre ~244 px até bater na rocha (2236 → 2480)
       { type: 'bode_doido', x: 2480, y: 428, dir: -1, chargeSpeed: 4.5, stunFrames: 150,
         platformX: 1920, platformW: 900, rockX: 2200 },
-      { type: 'carcara', x: 2680, y: 230, dir: -1, amp: 30, patrol: { minX: 2560, maxX: 2800 } },
+
       { type: 'sapo_cururu', x: 3260, y: 388, dir: -1, hopPower: 9, patrol: { minX: 3160, maxX: 3420 } },
-      { type: 'jararaca', x: 3940, y: 328, dir: -1, patrol: { minX: 3820, maxX: 4040 } },
+
       { type: 'marimbondo', x: 4460, y: 320, dir: -1, amp: 26, patrol: { minX: 4380, maxX: 4560 } },
       { type: 'tatu', x: 4520, y: 428, dir: -1, armored: true, patrol: { minX: 4400, maxX: 4880 } },
       { type: 'calango', x: 4820, y: 428, dir: -1, patrol: { minX: 4720, maxX: 4900 } },
-      { type: 'cacto_atirador', x: 5260, y: 258, dir: -1, fireRate: 170, onLedge: true },
+
       { type: 'calango', x: 5260, y: 428, dir: -1, patrol: { minX: 5140, maxX: 5400 } }
     ];
 
@@ -424,6 +425,9 @@
       { x: 1110, y: 460, title: 'Cuidado: Cacto Atirador!', icon: '🌵',
         textTouch: 'Ele cospe espinhos lá de cima. Siga pelo chão ou suba pelos degraus atrás do Caju Dourado.',
         textKey: 'Ele cospe espinhos lá de cima. Siga pelo chão ou suba pelos degraus atrás do Caju Dourado.' },
+      { x: 1560, y: 460, title: 'Armas', icon: '🪨',
+        textTouch: 'Pegou a baleadeira? Toque nos ícones lá em cima para escolher a arma e use o botão de ataque.',
+        textKey: 'Pegou a baleadeira? Clique nos ícones lá em cima (ou Q / E, 1 a 5) para escolher a arma e ataque com J / X.' },
       { x: 2040, y: 460, title: 'Espere o Bode Doido!', icon: '🐐',
         textTouch: 'Fique atrás da rocha. O bode investe, bate a cabeça e fica tonto: aí é a sua vez!',
         textKey: 'Fique atrás da rocha. O bode investe, bate a cabeça e fica tonto: aí é a sua vez!' },
@@ -525,7 +529,7 @@
     function spawnGround(p, count) {
       if (!ground.length || p.w < 260 || p.falling) return;
       var n = count || (p.w >= 560 ? 3 : (p.w >= 340 ? 2 : 1));
-      if (wIdx < 2) n = Math.min(n, 2);
+      if (wIdx < 2) n = Math.min(n, wIdx === 0 ? 1 : 2);
       var x0 = p.x + 20, span = p.w - 40, slot = span / n;
       for (var i = 0; i < n; i++) {
         var t = R.pick(ground);
@@ -748,12 +752,15 @@
     // v2.4: itens nas fases (arma + proteção/cura)
     var itemPlats = mains.filter(function (m, k) { return k > 0 && m !== fin && !m.falling && m.w >= 140; });
     if (itemPlats.length) {
-      var weaponPool = wIdx === 0 ? ['baleadeira'] : ['baleadeira', 'sanfona'];
+      // armas novas vão aparecendo aos poucos
+      var weaponPool = wIdx === 0 ? (cfg.stageIdx >= 2 ? ['baleadeira', 'pandeiro'] : ['baleadeira']) : wIdx === 1 ? ['baleadeira', 'pandeiro', 'sanfona'] : ['baleadeira', 'pandeiro', 'rojao', 'sanfona'];
       var wp = itemPlats[clamp(Math.floor(itemPlats.length * 0.2), 0, itemPlats.length - 1)];
       S.items.push({ type: weaponPool[R.int(0, weaponPool.length - 1)], x: Math.round(wp.x + wp.w / 2 - 15), y: wp.y - 70 });
       var hp = itemPlats[clamp(Math.floor(itemPlats.length * 0.62), 0, itemPlats.length - 1)];
       S.items.push({ type: R.chance(0.5) ? 'gibao' : 'cuscuz', x: Math.round(hp.x + hp.w / 2 + 20), y: hp.y - 70 });
-      if (lg) { var lp = itemPlats[itemPlats.length - 1]; S.items.push({ type: R.chance(0.5) ? 'sanfona' : 'baleadeira', x: Math.round(lp.x + lp.w / 2 - 15), y: lp.y - 70 }); }
+      if (lg) { var lp = itemPlats[itemPlats.length - 1]; S.items.push({ type: wIdx >= 2 ? (R.chance(0.5) ? 'rojao' : 'sanfona') : 'pandeiro', x: Math.round(lp.x + lp.w / 2 - 15), y: lp.y - 70 });
+        S.items.push({ type: 'cuscuz', x: Math.round(lp.x + lp.w / 2 + 25), y: lp.y - 70 }); }
+      if (wIdx === 0) { var ep = itemPlats[clamp(Math.floor(itemPlats.length * 0.4), 0, itemPlats.length - 1)]; S.items.push({ type: 'cuscuz', x: Math.round(ep.x + ep.w / 2), y: ep.y - 70 }); }
     }
     // Começo da fase livre de inimigos (o jogador precisa de alguns segundos para se situar)
     S.enemies = S.enemies.filter(function (e) { return e.x > 560; });

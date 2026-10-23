@@ -99,7 +99,18 @@ let hitstopFrames = 0; let screenShake = 0; let bossIntroTimer = 0; let renderAl
 let challengeTimeLeft = 30.0; let challengeScore = 0; let challengeRapaduras = 0; let currentChallengeSeed = '';
 let currentLevel = null; let player = null;
 // v2.4: armas e itens que se pegam nas fases
-let heldWeapon = null; // { type: 'baleadeira' | 'sanfona', ammo }
+// v2.5: inventário de armas; o jogador escolhe qual usar tocando na barra de armas (ou Q/E, 1-5)
+const WEAPON_ORDER = ['chicote', 'baleadeira', 'pandeiro', 'rojao', 'sanfona'];
+const WEAPON_INFO = {
+  chicote:    { ico: '⚡', name: 'Chicote' },
+  baleadeira: { ico: '🪨', name: 'Baleadeira', ammo: 15 },
+  pandeiro:   { ico: '🥁', name: 'Pandeiro', ammo: 10 },
+  rojao:      { ico: '🎆', name: 'Rojão', ammo: 6 },
+  sanfona:    { ico: '🪗', name: 'Sanfona', ammo: 4 }
+};
+let inventory = {}; let selectedWeapon = 'chicote';
+let heldWeapon = null; // compatibilidade (não usado)
+let stompCombo = 0;
 let heldArmor = 0;     // gibão de couro: aguenta 1 golpe
 const sanfonaRings = [];
 
@@ -208,7 +219,7 @@ function spawnFloatingText(text, x, y, color = '#FFF') { floatTexts.push({ text,
 
 // ==================== PROJÉTEIS ====================
 const projectiles = [];
-const PROJ_STYLE = { spine: ['#E9D8A6', 6, 6], leaf: ['#51CF66', 12, 8], miasma: ['#9C36B5', 16, 16], fire: ['#FF6B1A', 14, 14], water: ['#4DABF7', 14, 10], ember: ['#FFA94D', 10, 10], shockwave: ['#FFD8A8', 28, 18], pedra: ['#8D8173', 10, 10], bone: ['#F1F3F5', 14, 7], slash: ['rgba(255,255,255,0.9)', 40, 30] };
+const PROJ_STYLE = { spine: ['#E9D8A6', 6, 6], leaf: ['#51CF66', 12, 8], miasma: ['#9C36B5', 16, 16], fire: ['#FF6B1A', 14, 14], water: ['#4DABF7', 14, 10], ember: ['#FFA94D', 10, 10], shockwave: ['#FFD8A8', 28, 18], pedra: ['#8D8173', 10, 10], bone: ['#F1F3F5', 14, 7], slash: ['rgba(255,255,255,0.9)', 40, 30], pandeiro: ['#F8E1A8', 22, 22], rojao: ['#E03131', 22, 10] };
 class Projectile {
   constructor(x, y, vx, vy, type = 'spine', opts = {}) {
     const st = PROJ_STYLE[type] || PROJ_STYLE.spine;
@@ -220,6 +231,12 @@ class Projectile {
   update() {
     this.prevX = this.x; this.prevY = this.y; this.t++;
     if (this.type === 'leaf') this.vy += Math.sin(this.t * 0.2) * 0.08;
+    if (this.type === 'pandeiro' && player) { // vai e volta como bumerangue
+      if (this.t > 16) { const dx = player.x + player.w / 2 - (this.x + this.w / 2), dy = player.y + 16 - (this.y + this.h / 2), d = Math.hypot(dx, dy) || 1; this.vx += (dx / d) * 0.9; this.vy += (dy / d) * 0.9; const sp = Math.hypot(this.vx, this.vy); if (sp > 9.5) { this.vx *= 9.5 / sp; this.vy *= 9.5 / sp; } if (d < 24) this.dead = true; }
+      else this.vx -= this.dir * 0.25;
+    }
+    if (this.type === 'rojao') { this.vx = clamp(this.vx * 1.06, -11, 11); if (this.t % 2 === 0) particles.push(new Particle(this.x + this.w / 2 - Math.sign(this.vx) * 10, this.y + this.h / 2, -this.vx * 0.1, -0.3, this.t % 4 ? '#ADB5BD' : '#FFA94D', 20, 4, -0.02));
+      for (const pl of getPlatforms()) if (!pl.oneWay && checkAABB(this, pl)) { this.dead = true; break; } }
     if (this.type === 'miasma') { this.vx *= 0.995; this.vy += Math.sin(this.t * 0.1) * 0.05; }
     this.vy += this.gravity; this.x += this.vx; this.y += this.vy;
     if (this.type === 'shockwave') { this.y = this.groundY - this.h; if (this.t % 4 === 0) spawnDust(this.x + this.w / 2, this.groundY, 1); }
@@ -239,6 +256,8 @@ class Projectile {
       case 'miasma': ctx.globalAlpha = 0.85; ctx.beginPath(); ctx.arc(0, 0, this.w / 2 + Math.sin(this.t * 0.3) * 1.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#E599F7'; ctx.beginPath(); ctx.arc(-2, -2, 3, 0, Math.PI * 2); ctx.fill(); break;
       case 'shockwave': ctx.globalAlpha = 0.85; ctx.beginPath(); ctx.moveTo(-this.w / 2, this.h / 2); ctx.quadraticCurveTo(0, -this.h, this.w / 2, this.h / 2); ctx.closePath(); ctx.fill(); ctx.stroke(); break;
       case 'water': ctx.beginPath(); ctx.ellipse(0, 0, this.w / 2, this.h / 2, Math.atan2(this.vy, this.vx), 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#D0EBFF'; ctx.fillRect(-2, -3, 4, 2); break;
+      case 'pandeiro': { ctx.rotate(this.t * 0.5); ctx.beginPath(); ctx.arc(0, 0, 11, 0, 7); ctx.fillStyle = '#C68B59'; ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.arc(0, 0, 8, 0, 7); ctx.fillStyle = '#F8E1A8'; ctx.fill(); ctx.fillStyle = '#FFD43B'; for (let k = 0; k < 5; k++) { const a = k * 1.2566; ctx.beginPath(); ctx.arc(Math.cos(a) * 10, Math.sin(a) * 10, 2.4, 0, 7); ctx.fill(); } break; }
+      case 'rojao': { ctx.rotate(Math.atan2(this.vy, this.vx)); ctx.fillStyle = '#E03131'; ctx.fillRect(-9, -4, 16, 8); ctx.strokeRect(-9, -4, 16, 8); ctx.fillStyle = '#FFD43B'; ctx.beginPath(); ctx.moveTo(7, -5); ctx.lineTo(13, 0); ctx.lineTo(7, 5); ctx.fill(); ctx.stroke(); ctx.strokeStyle = '#8B5A2B'; ctx.beginPath(); ctx.moveTo(-9, 0); ctx.lineTo(-20, 0); ctx.stroke(); ctx.fillStyle = '#FFA94D'; ctx.beginPath(); ctx.arc(-11 - Math.random() * 4, (Math.random() - 0.5) * 4, 3 + Math.random() * 2, 0, 7); ctx.fill(); break; }
       case 'pedra': ctx.rotate(this.t * 0.4); ctx.beginPath(); ctx.ellipse(0, 0, this.w / 2, this.h / 2 - 1, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#BDB2A5'; ctx.fillRect(-2, -3, 3, 2); break;
       case 'bone': ctx.rotate(this.t * 0.25); ctx.fillRect(-this.w / 2 + 2, -2, this.w - 4, 4); ctx.strokeRect(-this.w / 2 + 2, -2, this.w - 4, 4); [-1, 1].forEach((k) => { ctx.beginPath(); ctx.arc(k * this.w / 2, -2, 2.6, 0, 7); ctx.arc(k * this.w / 2, 2, 2.6, 0, 7); ctx.fill(); }); break;
       case 'slash': { const a = 1 - this.life / 12; ctx.globalAlpha = 0.85; ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(0, 0, this.w / 2, -1.2 + a, 1.2 + a); ctx.stroke(); ctx.strokeStyle = '#FFA94D'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, this.w / 2 - 6, -1 + a, 1 + a); ctx.stroke(); break; }
@@ -368,15 +387,24 @@ class Tonho {
     if (this.landSquash > 0) this.landSquash--;
   }
   performAttack() {
-    const w = heldWeapon;
-    if (w && w.ammo > 0 && w.type === 'baleadeira') {
-      this.whipCooldown = 15; this.shotAnim = 10; sfx('whip');
-      projectiles.push(new Projectile(this.x + this.w / 2 + this.facing * 18, this.y + 16, this.facing * 8.8, -1.8, 'pedra', { hostile: false, gravity: 0.13, life: 95, damage: 1 }));
-      w.ammo--;
-    } else if (w && w.ammo > 0 && w.type === 'sanfona') {
-      this.whipCooldown = 40; this.shotAnim = 16; w.ammo--; sanfonaBlast(this);
-    } else { this.performWhipAttack(); }
-    if (w && w.ammo <= 0) { heldWeapon = null; spawnFloatingText('Acabou a munição!', this.x + this.w / 2, this.y - 10, '#FFF'); }
+    const sel = selectedWeapon, has = sel !== 'chicote' && (inventory[sel] | 0) > 0;
+    const ox = this.x + this.w / 2 + this.facing * 18, oy = this.y + 16;
+    if (!has) { this.performWhipAttack(); return; }
+    if (sel === 'baleadeira') {
+      this.whipCooldown = 14; sfx('whip');
+      projectiles.push(new Projectile(ox, oy, this.facing * 8.8, -1.8, 'pedra', { hostile: false, gravity: 0.13, life: 95, damage: 1 }));
+    } else if (sel === 'pandeiro') {
+      if (projectiles.some((q) => q.type === 'pandeiro')) return; // um pandeiro por vez
+      this.whipCooldown = 12; sfx('bee');
+      const pr = new Projectile(ox, oy, this.facing * 9, 0, 'pandeiro', { hostile: false, life: 150, damage: 1 }); pr.hitSet = new Set(); pr.dir = this.facing; projectiles.push(pr);
+    } else if (sel === 'rojao') {
+      this.whipCooldown = 30; sfx('fire');
+      projectiles.push(new Projectile(ox, oy - 4, this.facing * 4, -0.4, 'rojao', { hostile: false, life: 80, damage: 3 }));
+    } else if (sel === 'sanfona') {
+      this.whipCooldown = 40; sanfonaBlast(this);
+    }
+    inventory[sel]--;
+    if (inventory[sel] <= 0) { delete inventory[sel]; selectedWeapon = 'chicote'; spawnFloatingText('Acabou! Voltou o chicote', this.x + this.w / 2, this.y - 10, '#FFF'); }
     updateWeaponUI();
   }
   performWhipAttack() {
@@ -388,7 +416,7 @@ class Tonho {
     if (currentState === GAME_STATE.LEVEL_COMPLETE) return;
     if (this.invuln > 0 || this.dead || this.asaBrancaTimer > 0) return;
     if (heldArmor > 0) { heldArmor = 0; this.invuln = 90; sfx('clank'); addScreenShake(3); spawnSparks(this.x + this.w / 2, this.y + this.h / 2, 14, '#C68B59'); spawnFloatingText('O GIBÃO AGUENTOU!', this.x + this.w / 2, this.y - 12, '#FFD8A8'); updateWeaponUI(); return; }
-    tookDamageThisRun = true; health -= amount; this.invuln = 100; hitstopFrames = 5; addScreenShake(6); triggerHaptic(60); sfx('hurt');
+    tookDamageThisRun = true; health -= amount; this.invuln = (currentLevel && currentLevel.worldIdx < 2) ? 125 : 100; hitstopFrames = 5; addScreenShake(6); triggerHaptic(60); sfx('hurt');
     const away = srcX != null ? (this.x + this.w / 2 < srcX ? -1 : 1) : -this.facing;
     this.vy = -6; this.vx = away * 4; this.onVine = null;
     spawnSparks(this.x + this.w / 2, this.y + this.h / 2, 10, '#FA5252');
@@ -512,14 +540,16 @@ class Enemy {
     // v2.4: inimigos mais resistentes e mais rápidos conforme o mundo
     const wIdx = opts.worldIdx | 0;
     this.legend = !!d.legend; this.worldIdx = wIdx;
-    if (!this.legend) { this.hp = d.hp + 1 + (wIdx >= 3 ? 1 : 0) + (opts.elite ? 1 : 0); this.speed = d.spd * (1 + wIdx * 0.07); }
-    else { this.hp = d.hp + wIdx; this.name = d.name; this.sub = d.sub; this.st = 'intro'; this.alpha = 1; this.homeX = x; this.homeY = y; }
+    // v2.5: curva mais suave — mundo 1 com vida normal, depois +1 e +2
+    if (!this.legend) { this.hp = d.hp + (wIdx >= 1 ? 1 : 0) + (wIdx >= 3 ? 1 : 0) + (opts.elite ? 1 : 0); this.speed = d.spd * (wIdx === 0 ? 0.9 : 1 + wIdx * 0.07); }
+    else { this.hp = Math.max(5, d.hp - 2 + wIdx * 1.5 | 0); this.name = d.name; this.sub = d.sub; this.st = 'intro'; this.alpha = 1; this.homeX = x; this.homeY = y; }
     this.maxHp = this.hp; this.hitCd = 0; this.stagger = 0; this.kbx = 0; this.dodged = false;
     this.scoreValue = d.score || ENEMY_SCORE[type] || 100;
     if (this.vx) this.vx = -this.speed;
   }
   // persegue o jogador quando ele chega perto, sem se jogar de penhascos
   chase(dx, dy, spd, range = 240) {
+    if (!this.legend && this.worldIdx === 0) range *= 0.6; // no sertão os bichos são mais distraídos
     if (Math.abs(dx) < range && Math.abs(dy) < 70) {
       const dir = Math.sign(dx) || this.facing;
       if (this.onGround && !this.groundAhead(dir)) { this.facing = dir; this.vx = 0; return; }
@@ -569,7 +599,7 @@ class Enemy {
     // esquiva: alguns pulam quando o chicote vem
     if (!this.fly && this.onGround && p && p.whipTimer > 9 && !this.dodged && this.type !== 'cacto_atirador' && this.type !== 'bode_doido' &&
         Math.abs(dx) < 120 && Math.abs(dy) < 50) {
-      this.dodged = true; if (Math.random() < 0.18 + this.worldIdx * 0.07) { this.vy = -7.5; this.onGround = false; }
+      this.dodged = true; if (this.worldIdx > 0 && Math.random() < 0.1 + this.worldIdx * 0.06) { this.vy = -7.5; this.onGround = false; }
     }
     if (p && p.whipTimer === 0) this.dodged = false;
     switch (this.type) {
@@ -725,6 +755,7 @@ class Enemy {
     this.kbx = kdir * (this.legend ? 2.5 : 4); this.stagger = this.legend ? 10 : 18;
     if (!this.fly && this.onGround && !this.legend) this.vy = -3.5;
     spawnSparks(this.x + this.w / 2, this.y + this.h / 2, 6, '#FFF');
+    if (this.hp > 0) addScore(10);
     if (this.hp <= 0) {
       this.dead = true; this.deathTimer = this.legend ? 70 : 40; this.deathVy = -6.5; addScore(this.scoreValue);
       spawnSparks(this.x + this.w / 2, this.y + this.h / 2, this.legend ? 30 : 14, this.color);
@@ -1440,26 +1471,52 @@ function drawBossGuide(ctx, boss, camX, camY) {
 
   // ===================== ITENS: BALEADEIRA, SANFONA, GIBÃO, CUSCUZ (v2.4) =====================
   const ITEM_INFO = {
-    baleadeira: { label: 'BALEADEIRA! Atire pedras com ⚡', ammo: 15 },
-    sanfona: { label: 'SANFONA! Onda de forró com ⚡', ammo: 4 },
+    baleadeira: { label: 'BALEADEIRA! Atira pedras', ammo: 15 },
+    pandeiro: { label: 'PANDEIRO! Vai e volta', ammo: 10 },
+    rojao: { label: 'ROJÃO! Explode tudo perto', ammo: 6 },
+    sanfona: { label: 'SANFONA! Onda de forró', ammo: 4 },
     gibao: { label: 'GIBÃO DE COURO! Aguenta 1 golpe' },
     cuscuz: { label: 'CUSCUZ! +1 coração' }
   };
   function giveItem(type) {
     const info = ITEM_INFO[type] || {};
-    if (type === 'baleadeira' || type === 'sanfona') {
-      if (heldWeapon && heldWeapon.type === type) heldWeapon.ammo = Math.min(heldWeapon.ammo + info.ammo, info.ammo * 2);
-      else heldWeapon = { type, ammo: info.ammo };
+    if (WEAPON_INFO[type] && type !== 'chicote') {
+      inventory[type] = Math.min((inventory[type] | 0) + info.ammo, info.ammo * 2);
+      selectedWeapon = type;
     } else if (type === 'gibao') heldArmor = 1;
     else if (type === 'cuscuz') health = Math.min(maxHealth, health + 1);
     updateWeaponUI(); updateHUD();
   }
-  function updateWeaponUI() {
-    const w = heldWeapon, el = $('hudWeapon'), btn = $('btnWhip');
-    const ico = w ? (w.type === 'baleadeira' ? '🪨' : '🪗') : '⚡', name = w ? (w.type === 'baleadeira' ? 'BALEADEIRA' : 'SANFONA') : 'CHICOTE';
-    if (el) el.innerHTML = `<span aria-hidden="true">${ico}</span><span class="hud-val">${w ? '×' + w.ammo : ''}</span>${heldArmor ? '<span title="Gibão de couro">🦺</span>' : ''}`;
-    if (btn) { const html = `${ico}<span class="lbl">${w ? '×' + w.ammo : name}</span>`; if (btn._h !== html) { btn._h = html; btn.innerHTML = html; } }
+  // Barra de armas: toque/clique para escolher. Só aparecem as armas já pegas.
+  function selectWeapon(type) {
+    if (type === 'chicote' || (inventory[type] | 0) > 0) { selectedWeapon = type; sfx('select'); updateWeaponUI(); }
   }
+  function cycleWeapon(dir) {
+    const owned = WEAPON_ORDER.filter((k) => k === 'chicote' || (inventory[k] | 0) > 0);
+    const i = owned.indexOf(selectedWeapon); selectWeapon(owned[(i + dir + owned.length) % owned.length]);
+  }
+  window.oxeSelectWeapon = selectWeapon;
+  function updateWeaponUI() {
+    if (!(selectedWeapon === 'chicote' || (inventory[selectedWeapon] | 0) > 0)) selectedWeapon = 'chicote';
+    const bar = $('weaponBar'), btn = $('btnWhip'), info = WEAPON_INFO[selectedWeapon];
+    if (bar) {
+      const html = WEAPON_ORDER.filter((k) => k === 'chicote' || (inventory[k] | 0) > 0).map((k) =>
+        `<button type="button" class="wslot${k === selectedWeapon ? ' on' : ''}" data-w="${k}" title="${WEAPON_INFO[k].name}" aria-label="${WEAPON_INFO[k].name}"><span class="wi">${WEAPON_INFO[k].ico}</span>${k === 'chicote' ? '' : `<span class="wa">${inventory[k]}</span>`}</button>`).join('') +
+        (heldArmor ? '<span class="wslot armor" title="Gibão de couro: aguenta 1 golpe">🦺</span>' : '');
+      if (bar._h !== html) { bar._h = html; bar.innerHTML = html; }
+    }
+    if (btn) { const h = `${info.ico}<span class="lbl">${selectedWeapon === 'chicote' ? 'CHICOTE' : '×' + inventory[selectedWeapon]}</span>`; if (btn._h !== h) { btn._h = h; btn.innerHTML = h; } }
+  }
+  (function bindWeaponBar() {
+    const bar = $('weaponBar'); if (!bar) return;
+    const pick = (e) => { const b = e.target.closest && e.target.closest('.wslot[data-w]'); if (!b) return; e.preventDefault(); e.stopPropagation(); selectWeapon(b.dataset.w); };
+    bar.addEventListener('pointerdown', pick);
+    window.addEventListener('keydown', (e) => {
+      if (currentState !== GAME_STATE.PLAYING && currentState !== GAME_STATE.CHALLENGE) return;
+      if (e.code === 'KeyQ') cycleWeapon(-1); else if (e.code === 'KeyE') cycleWeapon(1);
+      else if (/^Digit[1-5]$/.test(e.code)) selectWeapon(WEAPON_ORDER[+e.code.slice(5) - 1]);
+    });
+  })();
   function sanfonaBlast(p) {
     const cx = p.x + p.w / 2, cy = p.y + p.h / 2, R = 190;
     sanfonaRings.push({ x: cx, y: cy, r: 12, life: 34 });
@@ -1468,6 +1525,14 @@ function drawBossGuide(ctx, boss, camX, camY) {
     L.enemies.forEach((e) => { if (!e.dead && Math.hypot(e.x + e.w / 2 - cx, e.y + e.h / 2 - cy) < R) e.hit(2, cx); });
     if (L.boss && !L.boss.dead && Math.hypot(L.boss.x + L.boss.w / 2 - cx, L.boss.y + L.boss.h / 2 - cy) < R + 40) L.boss.takeHit(1);
     for (const pr of projectiles) if (pr.hostile && pr.type !== 'shockwave' && Math.hypot(pr.x - cx, pr.y - cy) < R) { pr.dead = true; spawnSparks(pr.x, pr.y, 3, '#FFE066'); }
+  }
+  function explodeRojao(pr) {
+    const cx = pr.x + pr.w / 2, cy = pr.y + pr.h / 2, R = 95, L = currentLevel;
+    sfx('quake'); addScreenShake(5); spawnSparks(cx, cy, 26, '#FFD43B'); spawnSparks(cx, cy, 16, '#FF6B6B'); spawnBurst(cx, cy, '#74C0FC', 12);
+    sanfonaRings.push({ x: cx, y: cy, r: 8, life: 18, boom: true });
+    if (!L) return;
+    L.enemies.forEach((e) => { if (!e.dead && Math.hypot(e.x + e.w / 2 - cx, e.y + e.h / 2 - cy) < R) e.hit(3, cx); });
+    if (L.boss && !L.boss.dead && Math.hypot(L.boss.x + L.boss.w / 2 - cx, L.boss.y + L.boss.h / 2 - cy) < R + 40) L.boss.takeHit(1);
   }
   class PowerItem {
     constructor(x, y, type) { this.x = x; this.y = y; this.w = 30; this.h = 30; this.type = type; this.t = Math.random() * 6; this.collected = false; }
@@ -1492,6 +1557,12 @@ function drawBossGuide(ctx, boss, camX, camY) {
         ctx.fillStyle = '#C92A2A'; ctx.fillRect(x - 13, y - 9, 8, 18); ctx.strokeRect(x - 13, y - 9, 8, 18); ctx.fillStyle = '#1C4E80'; ctx.fillRect(x + 5, y - 9, 8, 18); ctx.strokeRect(x + 5, y - 9, 8, 18);
         ctx.fillStyle = '#F8F0E3'; const sq = Math.sin(this.t * 3) * 2; for (let i = 0; i < 4; i++) { ctx.fillRect(x - 5 + i * 2.5, y - 8 + sq * 0.3, 2, 16 - sq * 0.6); }
         ctx.fillStyle = '#FFF'; for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.arc(x + 9, y - 5 + i * 5, 1.4, 0, 7); ctx.fill(); }
+      } else if (this.type === 'pandeiro') {
+        ctx.save(); ctx.translate(x, y); ctx.rotate(Math.sin(this.t) * 0.3); ctx.beginPath(); ctx.arc(0, 0, 12, 0, 7); ctx.fillStyle = '#C68B59'; ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.arc(0, 0, 9, 0, 7); ctx.fillStyle = '#F8E1A8'; ctx.fill();
+        ctx.fillStyle = '#FFD43B'; for (let k = 0; k < 5; k++) { const a = k * 1.2566; ctx.beginPath(); ctx.arc(Math.cos(a) * 11, Math.sin(a) * 11, 2.6, 0, 7); ctx.fill(); ctx.stroke(); } ctx.restore();
+      } else if (this.type === 'rojao') {
+        ctx.save(); ctx.translate(x, y); ctx.rotate(-0.6); ctx.fillStyle = '#E03131'; ctx.fillRect(-5, -10, 10, 20); ctx.strokeRect(-5, -10, 10, 20); ctx.fillStyle = '#FFD43B'; ctx.beginPath(); ctx.moveTo(-6, -10); ctx.lineTo(0, -18); ctx.lineTo(6, -10); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#FFF'; ctx.fillRect(-5, -2, 10, 3); ctx.strokeStyle = '#8B5A2B'; ctx.beginPath(); ctx.moveTo(0, 10); ctx.lineTo(0, 16); ctx.stroke(); ctx.fillStyle = Math.floor(this.t * 4) % 2 ? '#FFA94D' : '#FFE066'; ctx.beginPath(); ctx.arc(0, 17, 2.5, 0, 7); ctx.fill(); ctx.restore();
       } else if (this.type === 'gibao') {
         ctx.fillStyle = '#A0522D'; ctx.beginPath(); ctx.moveTo(x - 12, y - 10); ctx.lineTo(x - 4, y - 13); ctx.lineTo(x, y - 6); ctx.lineTo(x + 4, y - 13); ctx.lineTo(x + 12, y - 10); ctx.lineTo(x + 10, y + 12); ctx.lineTo(x - 10, y + 12); ctx.closePath(); ctx.fill(); ctx.stroke();
         ctx.fillStyle = '#FFD43B'; for (let i = -1; i <= 1; i++) { ctx.beginPath(); ctx.arc(x + i * 5, y + 3, 1.6, 0, 7); ctx.fill(); }
@@ -1616,7 +1687,8 @@ function drawBossGuide(ctx, boss, camX, camY) {
   function resetRunState(fresh) {
     maxHealth = (getSettings().assistMode || getSettings().assist) ? 5 : 3; health = maxHealth; tookDamageThisRun = false;
     collectedCajus = [false, false, false];
-    if (fresh) { score = 0; rapaduras = 0; lives = 3; heldWeapon = null; heldArmor = 0; }
+    if (fresh) { score = 0; rapaduras = 0; lives = 3; inventory = {}; selectedWeapon = 'chicote'; heldArmor = 0; }
+    stompCombo = 0;
     sanfonaRings.length = 0; legendIntro = null; setTimeout(updateWeaponUI, 0);
     if (Array.isArray(projectiles)) projectiles.length = 0;
     fxParts.length = 0; fxTexts.length = 0; celebrateTimer = 0; lightBoost = 0;
@@ -2000,8 +2072,11 @@ function drawBossGuide(ctx, boss, camX, camY) {
       if (wb && !player.whipHitSet.has(e) && checkAABB(wb, e)) { player.whipHitSet.add(e); e.hit(1, player.x); }
       if (!e.dead && !player.dead && checkAABB(player, e)) {
         if (player.asaBrancaTimer > 0) { e.hit(3, player.x); }
-        else if (player.vy > 0 && player.prevY + player.h <= e.y + 20 && e.canBeStomped()) { player.bounce(-9.5); e.hit(1, player.x); sfx("stomp"); }
-        else if (e.state !== "stunned") { player.takeDamage(1, e.x + e.w / 2); }
+        else if (player.vy > 0 && player.prevY + player.h <= e.y + 24 && e.canBeStomped()) {
+          // v2.5: pisão tira 2 de vida, dá pontos na hora e faz combo se emendar pisões sem tocar o chão
+          player.bounce(-9.5); if (e.hit(2, player.x)) { stompCombo++; const pts = 50 * stompCombo; addScore(pts); spawnFloatingText(stompCombo > 1 ? `COMBO ×${stompCombo} +${pts}` : `+${pts}`, e.x + e.w / 2, e.y - 14, stompCombo > 1 ? '#FFE066' : '#FFFFFF'); } sfx("stomp");
+        }
+        else if (e.state !== "stunned" && !(e.stagger > 0)) { player.takeDamage(1, e.x + e.w / 2); }
       }
     });
     for (let i = L.enemies.length - 1; i >= 0; i--) if (L.enemies[i].remove) L.enemies.splice(i, 1);
@@ -2027,15 +2102,20 @@ function drawBossGuide(ctx, boss, camX, camY) {
       if (!pr.dead && pr.hostile) {
         if (wb && pr.type !== 'shockwave' && pr.type !== 'slash' && checkAABB(wb, pr)) { pr.dead = true; spawnSparks(pr.x + pr.w / 2, pr.y + pr.h / 2, 6, '#FFE066'); addScore(10); sfx('metal'); }
         else if (!player.dead && checkAABB(pr, player)) { player.takeDamage(pr.damage || 1, pr.x + pr.w / 2); if (pr.type !== 'shockwave' && pr.type !== 'slash') pr.dead = true; }
+      } else if (!pr.dead && !pr.hostile && pr.type === 'pandeiro') {
+        for (const e of L.enemies) { if (!e.dead && !pr.hitSet.has(e) && checkAABB(pr, e)) { pr.hitSet.add(e); e.hit(1, pr.x); spawnSparks(pr.x + 11, pr.y + 11, 5, '#FFD43B'); } }
+        if (L.boss && !L.boss.dead && !pr.hitSet.has(L.boss) && checkAABB(pr, L.boss)) { pr.hitSet.add(L.boss); L.boss.takeHit(1); }
       } else if (!pr.dead && !pr.hostile) {
-        for (const e of L.enemies) { if (!e.dead && checkAABB(pr, e)) { e.hit(pr.damage || 1, pr.x); pr.dead = true; spawnSparks(pr.x, pr.y, 5, '#D9C9A3'); break; } }
-        if (!pr.dead && L.boss && !L.boss.dead && checkAABB(pr, L.boss)) { L.boss.takeHit(1); pr.dead = true; }
+        for (const e of L.enemies) { if (!e.dead && checkAABB(pr, e)) { if (pr.type !== 'rojao') e.hit(pr.damage || 1, pr.x); pr.dead = true; spawnSparks(pr.x, pr.y, 5, '#D9C9A3'); break; } }
+        if (!pr.dead && L.boss && !L.boss.dead && checkAABB(pr, L.boss)) { if (pr.type !== 'rojao') L.boss.takeHit(1); pr.dead = true; }
       }
+      if (pr.type === 'rojao' && pr.dead && !pr.exploded) { pr.exploded = true; explodeRojao(pr); }
       if (pr.dead || pr.remove) projectiles.splice(i, 1);
     } }
     L.items.forEach((it) => it.update());
     for (let i = sanfonaRings.length - 1; i >= 0; i--) { const r = sanfonaRings[i]; r.r += 9; if (--r.life <= 0) sanfonaRings.splice(i, 1); }
     if (legendIntro && --legendIntro.timer <= 0) legendIntro = null;
+    if (player.onGround) stompCombo = 0;
     if (player.onGround && Math.abs(player.vx) > 3.5 && frameCount % 9 === 0) spawnDust(player.x + player.w / 2 - player.facing * 8, player.y + player.h, 1);
     L.rapaduras.forEach((r) => r.update()); L.cajus.forEach((c) => c.update()); L.stars.forEach((s) => s.update()); L.checkpoints.forEach((c) => c.update());
     const legendAlive = L.enemies.find((e) => e.legend && !e.dead);
@@ -2128,7 +2208,8 @@ function drawBossGuide(ctx, boss, camX, camY) {
     if (Array.isArray(projectiles)) projectiles.forEach(draw);
     if (heldArmor && !player.dead) { const ax = lerp(player.prevX, player.x, alpha) - camX + player.w / 2, ay = lerp(player.prevY, player.y, alpha) - camY + player.h / 2; ctx.save(); ctx.strokeStyle = 'rgba(214,150,90,' + (0.45 + Math.sin(frameCount * 0.12) * 0.2) + ')'; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(ax, ay, 26, 34, 0, 0, 7); ctx.stroke(); ctx.restore(); }
     draw(player);
-    sanfonaRings.forEach((r) => { ctx.save(); ctx.globalAlpha = r.life / 34; ctx.strokeStyle = '#FFE066'; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(r.x - camX, r.y - camY, r.r, 0, 7); ctx.stroke(); ctx.fillStyle = '#FFF3BF'; ctx.font = 'bold 20px sans-serif'; for (let k = 0; k < 6; k++) { const a = k * 1.047 + r.r * 0.01; ctx.fillText(k % 2 ? '♪' : '♫', r.x - camX + Math.cos(a) * r.r - 6, r.y - camY + Math.sin(a) * r.r + 6); } ctx.restore(); });
+    sanfonaRings.forEach((r) => { if (r.boom) { ctx.save(); ctx.globalAlpha = r.life / 18; const g = ctx.createRadialGradient(r.x - camX, r.y - camY, 2, r.x - camX, r.y - camY, r.r * 0.6 + 10); g.addColorStop(0, '#FFF3BF'); g.addColorStop(0.5, 'rgba(255,146,43,0.8)'); g.addColorStop(1, 'rgba(255,80,40,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(r.x - camX, r.y - camY, r.r * 0.6 + 10, 0, 7); ctx.fill(); ctx.restore(); return; }
+      ctx.save(); ctx.globalAlpha = r.life / 34; ctx.strokeStyle = '#FFE066'; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(r.x - camX, r.y - camY, r.r, 0, 7); ctx.stroke(); ctx.fillStyle = '#FFF3BF'; ctx.font = 'bold 20px sans-serif'; for (let k = 0; k < 6; k++) { const a = k * 1.047 + r.r * 0.01; ctx.fillText(k % 2 ? '♪' : '♫', r.x - camX + Math.cos(a) * r.r - 6, r.y - camY + Math.sin(a) * r.r + 6); } ctx.restore(); });
     if (typeof particles !== 'undefined' && Array.isArray(particles)) particles.forEach(draw);
     if (typeof drawFx === 'function') drawFx(ctx, camX, camY);
     if (typeof drawDarkness === 'function') drawDarkness(ctx, camX, camY, L);
@@ -2216,7 +2297,7 @@ function drawBossGuide(ctx, boss, camX, camY) {
     getEnemies: () => currentLevel ? currentLevel.enemies : [],
     getBoss: () => currentLevel ? currentLevel.boss : null,
     getProjectiles: () => projectiles,
-    getParticles: () => particles, getFx: () => fxParts,
+    getParticles: () => particles, getFx: () => fxParts, giveItem: (t) => giveItem(t), getInventory: () => ({ inventory, selectedWeapon }),
     getShake: () => screenShake, getView: () => ({ x: view.x, y: view.y }), isUnlocked, starsOf, openMap,
     SaveManager, GAME_STATE,
     loadLevel: (idx) => startGame(idx),

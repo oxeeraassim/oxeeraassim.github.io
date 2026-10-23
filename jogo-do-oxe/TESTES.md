@@ -1,7 +1,7 @@
 # TESTES — Oxe, era assim? 2
 
-> Gerado automaticamente por `test_oxe2_real.js` em 2026-10-23T19:06:51.420Z (Node v22.22.0).
-> Arquivos REAIS carregados de `/tmp/claude-0/-home-claude/f0d99e40-5a8c-505a-9a5e-dfa00bcbece7/scratchpad/jogo` via `vm.runInContext`. Duração: 13787 ms.
+> Gerado automaticamente por `test_oxe2_real.js` em 2026-10-23T19:59:42.565Z (Node v22.22.0).
+> Arquivos REAIS carregados de `/tmp/claude-0/-home-claude/f0d99e40-5a8c-505a-9a5e-dfa00bcbece7/scratchpad/jogo` via `vm.runInContext`. Duração: 11635 ms.
 
 **Resultado: 12/12 aprovados.**
 
@@ -34,9 +34,9 @@
   ],
   "loaded": {
     "audio.js": "37043 bytes",
-    "levels.js": "44441 bytes",
+    "levels.js": "44958 bytes",
     "graphics_hd.js": "74532 bytes",
-    "game.js": "170401 bytes"
+    "game.js": "178545 bytes"
   },
   "swListeners": [
     "install",
@@ -113,10 +113,10 @@
 {
   "stunAntes": false,
   "stunFrame1": false,
-  "distanciaAteAtordoar": 241,
+  "distanciaAteAtordoar": 242,
   "frameDoAtordoamento": 58,
-  "deslocamentoMax60f": 241,
-  "medidoPx": 241
+  "deslocamentoMax60f": 242,
+  "medidoPx": 242
 }
 ```
 
@@ -285,26 +285,26 @@
     },
     {
       "fase": "1-2",
-      "levelW": 5829,
-      "mastro": 5569,
-      "maiorVao": 265,
-      "maiorSubida": 31,
+      "levelW": 6154,
+      "mastro": 5894,
+      "maiorVao": 293,
+      "maiorSubida": 57,
       "problemas": []
     },
     {
       "fase": "1-3",
-      "levelW": 5510,
-      "mastro": 5250,
-      "maiorVao": 254,
-      "maiorSubida": 0,
+      "levelW": 5583,
+      "mastro": 5323,
+      "maiorVao": 264,
+      "maiorSubida": 20,
       "problemas": []
     },
     {
       "fase": "1-4",
-      "levelW": 6196,
-      "mastro": 5936,
-      "maiorVao": 222,
-      "maiorSubida": 0,
+      "levelW": 6409,
+      "mastro": 6149,
+      "maiorVao": 265,
+      "maiorSubida": 19,
       "problemas": []
     },
     {
@@ -572,10 +572,10 @@
 {
   "oxeHdAtivo": true,
   "especiesRenderizadas": 18,
-  "inimigosFase1_1": 13,
-  "minInimigosPorFase": 13,
-  "maxInimigosPorFase": 24,
-  "mediaInimigosPorFase": 19.5,
+  "inimigosFase1_1": 9,
+  "minInimigosPorFase": 9,
+  "maxInimigosPorFase": 23,
+  "mediaInimigosPorFase": 16.8,
   "totalZabumbas30Fases": 37,
   "totalPlataformasMoveis": 28,
   "totalRodasMandacaru": 49,
