@@ -2,53 +2,48 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <title>Arena do Oxe — Jornada pelo Nordeste</title>
 <link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@600;700&family=Literata:opsz,wght@7..72,400;7..72,600;7..72,700&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#e9e3d6;--card:#fbf8f1;--ink:#1f2a44;--rule:#c8433a;--accent:#a8521f;--gold:#d49b35;--dark:#1a120b;--ok:#2f7d4f}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-html, body {
+html {
+  min-height: 100%;
+  -webkit-text-size-adjust: 100%;
+}
+body {
   margin: 0;
   padding: 0;
   min-height: 100%;
-  touch-action: manipulation;
-  -webkit-text-size-adjust: 100%;
-  overflow-x: hidden;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-}
-body {
   background: var(--dark);
   font-family: 'Literata', Georgia, serif;
   color: var(--ink);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 100%;
-  min-height: 100vh;
-  min-height: 100dvh;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
 }
 #app {
   width: 100%;
   max-width: 480px;
+  margin: 0 auto;
   min-height: 100vh;
   min-height: 100dvh;
   background: var(--bg);
   position: relative;
   display: flex;
   flex-direction: column;
-  overflow: visible;
-  padding: 0 0 calc(30px + env(safe-area-inset-bottom));
+  padding-bottom: calc(70px + env(safe-area-inset-bottom));
 }
 .screen {
   display: none;
-  flex-direction: column;
-  flex: 1 0 auto;
   width: 100%;
-  padding-bottom: 40px;
 }
-.screen.on { display: flex; }
+.screen.on {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
 button { font-family: inherit; cursor: pointer; border: none; }
 .mono { font-family: 'Courier Prime', monospace; }
 .slab { font-family: 'Zilla Slab', serif; }
