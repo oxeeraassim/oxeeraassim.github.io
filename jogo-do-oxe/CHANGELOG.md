@@ -1,5 +1,37 @@
 # CHANGELOG — OXE! 2.0: A Grande Jornada dos Nove Sóis
 
+## [v2.2.0 — Jogabilidade e tela sem tremer] — 2026-10-23
+
+### Tela tremendo (corrigido)
+- O tremor da tela (`screenShake`) nunca diminuía: depois do primeiro dano a tela tremia até o fim da fase. Agora ele é curto, mais fraco e some em menos de 1 segundo.
+- O loop principal tinha uma variável `renderAlpha` local que escondia a global. Resultado: a câmera era suavizada, mas o Tonho e os inimigos não, e o personagem parecia tremer (pior em telas de 90/120 Hz). Corrigido.
+- Plataformas móveis agora andam antes do Tonho, levam ele junto e são desenhadas com suavização. Antes o Tonho tremia em cima delas.
+- Câmera com olhar à frente suave e arredondamento por pixel real da tela.
+
+### Bugs de jogabilidade
+- O mapa nunca destravava fases (lia o progresso do lugar errado). Agora destrava ao vencer cada fase.
+- Corrente térmica e vento eram aplicados duas vezes. O vento empurrava sempre para a direita com força 1,5 (ignorava a força da fase).
+- Dois sistemas de cipó brigavam entre si. Agora há um só: agarrar é mais fácil e o salto vai na direção do balanço (ou para onde você aponta).
+- Gêiser: o jato era desenhado no céu, fora de onde empurrava. Agora aparece no lugar certo, com aviso antes de jorrar, e o empurrão ficou menos exagerado.
+- Maré (mundo 4) usava amplitude errada (90 em vez de 36) e cobria o chão. Agora sobe e desce certo; cair na água tira 1 coração e joga você para cima.
+- A Estrela Asa Branca não dava poder nenhum. Agora dá 10 s de invencibilidade com brilho.
+- O dano empurra o Tonho para longe do inimigo (antes, sempre para trás de onde ele olhava).
+- Morte com animação curta antes de reaparecer (antes era instantâneo e confuso), com proteção ao reaparecer.
+- O Modo "Cabra Tranquilo" (5 corações), reduzir tremor e vibração não funcionavam, porque havia dois sistemas de configuração. Agora há um só.
+- Depois de jogar uma fase, a janela de configurações não abria mais pela tela inicial. Corrigido.
+- O link de desafio `?desafio=AAAAMMDD` gerava uma pista diferente da do dia. Corrigido.
+- O balão de ajuda dos chefes ficava fora de escala em celulares com tela 3x. Corrigido.
+
+### Equilíbrio e celular
+- Densidade de inimigos progressiva: de 13 a 15 no mundo 1 até cerca de 22 no mundo 6 (antes eram 18 a 28 já no início). Espécies brabas (cangaceiro, mula, boitatá, lobisomem) só aparecem a partir de mundos mais avançados. O começo de cada fase fica livre de inimigos.
+- A fase 1-1 ficou mais amigável (menos inimigos, sem espécies brabas).
+- Em celular deitado, o jogo ocupa a tela inteira, sem faixas pretas.
+- Qualidade automática: se o celular não aguenta 60 fps, o jogo desliga efeitos caros e reduz a resolução extra.
+- Os botões de toque somem nos menus e voltam no jogo.
+- A tela inicial não corta mais o topo em telas baixas.
+- Cada mundo agora tem a própria paleta de cores (antes todos usavam a do sertão).
+- Service Worker `oxe-jogo-v7`, para os celulares baixarem a versão nova.
+
 ## [v2.1.0 — Revisão Completa Opus 5.5 High (Sprints A a H + 26 Correções B1–B26)] — 2026-10-23
 
 ### 🛠️ Correções Críticas e Estruturais (B1 a B26)

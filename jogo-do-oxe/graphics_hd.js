@@ -236,11 +236,14 @@
     { name: 'canion',  sky: ['#3b1a2e', '#a33a2e', '#f07a3a', '#ffcf6b'], hills: ['#b2502e', '#8f3a22', '#6e2a1a', '#4a1a10'], fog: '#ff9a5a', ground: '#6e2f1e', top: '#ff922b', topD: '#d9480f', particle: 'embers' },
     { name: 'sombra',  sky: ['#0b0b18', '#1e1a33', '#3a2a4a', '#6a3a4a'], hills: ['#2d2a40', '#24213a', '#1a182c', '#100f1e'], fog: '#5a4a6a', ground: '#2a2638', top: '#9775fa', topD: '#6741d9', particle: 'embers' }
   ];
-  var THEME_ALIAS = { desert: 0, sertao: 0, caatinga: 0, forest: 1, mata: 1, jungle: 1, swamp: 2, mangue: 2, pantano: 2, cave: 3, caverna: 3, canyon: 4, canion: 4, lava: 4, volcano: 4, shadow: 5, sombra: 5, castle: 5 };
+  var THEME_ALIAS = { desert: 0, sertao: 0, caatinga: 0, forest: 1, mata: 1, jungle: 1, pantano: 1, swamp: 2, mangue: 2, cave: 3, caverna: 3, canyon: 4, canion: 4, lava: 4, volcano: 4, shadow: 5, sombra: 5, castle: 5, trono: 5 };
+  var WORLD_IDX_TO_PAL = [0, 3, 1, 2, 4, 5]; // ordem dos mundos do jogo -> paletas
 
+  // v2.2: antes todos os mundos caíam na paleta do sertão (o bioma fica em L.spec.biome)
   function worldOf(L) {
     if (!L) return WORLDS[0];
-    var t = L.theme || L.biome || L.worldName;
+    var t = (L.spec && L.spec.biome) || L.theme || L.biome;
+    if (typeof t !== 'string' && typeof L.worldIdx === 'number') return WORLDS[WORLD_IDX_TO_PAL[clamp(L.worldIdx, 0, 5)]];
     if (typeof t === 'string' && THEME_ALIAS.hasOwnProperty(t.toLowerCase())) return WORLDS[THEME_ALIAS[t.toLowerCase()]];
     var w = num(L.world, num(L.worldIndex, 0));
     if (w >= 1 && w <= 6 && L.world !== 0) w = w - 1;
@@ -273,8 +276,9 @@
     ellPath(ctx, sunX, sunY, 34, 34);
     ctx.fillStyle = dark ? '#e8e0ff' : '#fff6c8'; ctx.fill();
 
+    var LQ = !!(G.OxeHD && G.OxeHD.lowQuality);
     // God rays
-    if (P.name !== 'caverna') {
+    if (P.name !== 'caverna' && !LQ) {
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
       for (var r = 0; r < 6; r++) {
@@ -328,6 +332,7 @@
       if (l === 1) drawFarProps(ctx, P, off, baseY, W, t);
       if (l === 3) drawNearProps(ctx, P, off, baseY, W, H, t);
 
+      if (LQ) continue;
       // neblina atmosférica entre camadas
       var fogG = ctx.createLinearGradient(0, baseY - 20, 0, baseY + 90);
       fogG.addColorStop(0, rgba(P.fog, 0));
@@ -356,6 +361,7 @@
       }
     }
 
+    if (LQ) { ctx.restore(); return; }
     // Partículas ambientais
     drawAmbient(ctx, P, camX, camY, t, W, H);
 
@@ -528,7 +534,11 @@
     for (var i = 0; i < plats.length; i++) {
       var p = plats[i];
       if (!p) continue;
-      var x = p.x - camX, y = p.y - camY, w = num(p.w, 32), h = num(p.h, 32);
+      if (p.state === 'fallen') continue;
+      var a = num(L._alpha, 1);
+      var px = (p.isMoving && typeof p.prevX === 'number') ? p.prevX + (p.x - p.prevX) * a : p.x;
+      var py = (p.isMoving && typeof p.prevY === 'number') ? p.prevY + (p.y - p.prevY) * a : p.y;
+      var x = px - camX, y = py - camY, w = num(p.w, 32), h = num(p.h, 32);
       if (x + w < -40 || x > W + 40 || y + h < -40 || y > H + 60) continue;
       if (p.isMoving || p.type === 'wood' || p.oneWay || p.type === 'oneway') drawWoodPlat(ctx, x, y, w, h, t, p.isMoving);
       else drawGroundBlock(ctx, x, y, w, h, P, t, i);
@@ -537,6 +547,7 @@
 
   function drawGroundBlock(ctx, x, y, w, h, P, t, seed) {
     var r = Math.min(14, w / 2, h / 2);
+    var LQp = !!(G.OxeHD && G.OxeHD.lowQuality);
     // sombra projetada
     ctx.save(); ctx.globalAlpha = 0.25; ctx.fillStyle = '#000';
     rrPath(ctx, x + 5, y + 8, w, h, r); ctx.fill(); ctx.restore();
@@ -551,7 +562,7 @@
     ctx.strokeStyle = 'rgba(255,240,210,0.25)'; ctx.lineWidth = 3;
     rrPath(ctx, x + 3, y + 3, w - 6, h - 6, Math.max(2, r - 3)); ctx.stroke();
     // pedras redondas incrustadas
-    var cnt = Math.floor(w * h / 1800);
+    var cnt = LQp ? 0 : Math.floor(w * h / 1800);
     for (var k = 0; k < Math.min(cnt, 40); k++) {
       var sx = x + 8 + hash(seed * 13 + k) * (w - 16), sy = y + 22 + hash(seed * 7 + k * 3) * Math.max(1, h - 28);
       var sr = 3 + hash(seed + k * 11) * 5;
@@ -604,7 +615,7 @@
     ctx.save(); ctx.globalAlpha = 0.45; ctx.strokeStyle = '#fffbe0'; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.moveTo(x + 10, y - 1); ctx.lineTo(x + w - 10, y - 1); ctx.stroke(); ctx.restore();
     // tufos e flores
-    for (var f = 12; f < w - 8; f += 26) {
+    for (var f = 12; f < w - 8; f += (LQp ? 52 : 26)) {
       var hh = hash(seed * 5 + f);
       var sway = Math.sin(t * 0.05 + f * 0.1) * 2;
       ctx.strokeStyle = P.topD; ctx.lineWidth = 2; ctx.lineCap = 'round';
@@ -1328,7 +1339,7 @@
     var mps = L.movingPlatforms || [];
     for (var j = 0; j < mps.length; j++) {
       var mp = mps[j];
-      if (!mp) continue;
+      if (!mp || mp.managedByGame) continue; // v2.2: o game.js move as plataformas antes do Tonho
       mp.t = (mp.t || 0) + (mp.speed || 0.025);
       var prevX = mp.x, prevY = mp.y;
       var off = Math.sin(mp.t + (mp.phase || 0)) * (mp.range || 90);

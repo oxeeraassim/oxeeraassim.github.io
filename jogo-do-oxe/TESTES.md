@@ -1,7 +1,7 @@
 # TESTES — Oxe, era assim? 2
 
-> Gerado automaticamente por `test_oxe2_real.js` em 2026-10-23T17:46:02.508Z (Node v23.3.0).
-> Arquivos REAIS carregados de `/Users/joaobatistaramalhodelima/Documents/GitHub/oxeeraassim.github.io/jogo-do-oxe` via `vm.runInContext`. Duração: 12681 ms.
+> Gerado automaticamente por `test_oxe2_real.js` em 2026-10-23T18:14:46.060Z (Node v22.22.0).
+> Arquivos REAIS carregados de `/tmp/claude-0/-home-claude/f0d99e40-5a8c-505a-9a5e-dfa00bcbece7/scratchpad/jogo` via `vm.runInContext`. Duração: 11078 ms.
 
 **Resultado: 12/12 aprovados.**
 
@@ -18,7 +18,7 @@
 | 8 | tookDamageThisRun, faíscas em coord. de mundo, LEVEL_COMPLETE (B11, B13, B15) | ✅ PASSOU |
 | 9 | Alcançabilidade física das 30 fases (C2, F1) | ✅ PASSOU |
 | 10 | SaveManager v3: migração v2 e teto 29 (B24) | ✅ PASSOU |
-| 11 | Ultra-HD 3D-to-2D (graphics_hd.js), 18 espécies de inimigos, 20+ inimigos/fase e Zabumba Trampolim | ✅ PASSOU |
+| 11 | Ultra-HD 3D-to-2D (graphics_hd.js), 18 espécies de inimigos, densidade progressiva de inimigos (v2.2: 9+ no mundo 1, 15+ no mundo 6) e Zabumba Trampolim | ✅ PASSOU |
 
 ## Medições detalhadas
 
@@ -34,9 +34,9 @@
   ],
   "loaded": {
     "audio.js": "36251 bytes",
-    "levels.js": "42064 bytes",
-    "graphics_hd.js": "73680 bytes",
-    "game.js": "131219 bytes"
+    "levels.js": "42509 bytes",
+    "graphics_hd.js": "74532 bytes",
+    "game.js": "135531 bytes"
   },
   "swListeners": [
     "install",
@@ -103,7 +103,7 @@
 {
   "measured": true,
   "rise": 249,
-  "dx": 1255
+  "dx": 974
 }
 ```
 
@@ -230,6 +230,7 @@
   "stateBeforePause": 6,
   "retomado": 6,
   "sequenciaAposMorte": [
+    6,
     7
   ],
   "final": 7
@@ -268,7 +269,7 @@
 ```json
 {
   "limites": {
-    "maxGap": 1192,
+    "maxGap": 925,
     "maxRise": 237,
     "fonte": "medido na simulação"
   },
@@ -324,8 +325,8 @@
     },
     {
       "fase": "2-2",
-      "levelW": 6204,
-      "mastro": 5944,
+      "levelW": 6186,
+      "mastro": 5926,
       "maiorVao": 254,
       "maiorSubida": 61,
       "problemas": []
@@ -525,8 +526,9 @@
   "chavesEncontradas": [
     "oxe_save_v3",
     "oxe_save_v2",
-    "oxe2_settings",
-    "oxe-desafio.png"
+    "oxe:settings-changed",
+    "oxe-desafio.png",
+    "OXE-"
   ],
   "v2Key": "oxe_save_v2",
   "v3Key": "oxe_save_v3",
@@ -564,16 +566,16 @@
 }
 ```
 
-### [11] Ultra-HD 3D-to-2D (graphics_hd.js), 18 espécies de inimigos, 20+ inimigos/fase e Zabumba Trampolim — ✅
+### [11] Ultra-HD 3D-to-2D (graphics_hd.js), 18 espécies de inimigos, densidade progressiva de inimigos (v2.2: 9+ no mundo 1, 15+ no mundo 6) e Zabumba Trampolim — ✅
 
 ```json
 {
   "oxeHdAtivo": true,
   "especiesRenderizadas": 18,
-  "inimigosFase1_1": 20,
-  "minInimigosPorFase": 18,
-  "maxInimigosPorFase": 28,
-  "mediaInimigosPorFase": 20,
+  "inimigosFase1_1": 13,
+  "minInimigosPorFase": 13,
+  "maxInimigosPorFase": 23,
+  "mediaInimigosPorFase": 17.3,
   "totalZabumbas30Fases": 37,
   "totalPlataformasMoveis": 28,
   "totalRodasMandacaru": 49,

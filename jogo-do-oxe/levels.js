@@ -42,8 +42,16 @@
     TRAMP_POWER: 15.5
   };
 
+  // v2.2: densidade progressiva. Antes eram 18 a 28 inimigos já no 1º mundo (difícil demais).
   var MIN_ENEMIES = 18;
   var MAX_ENEMIES = 28;
+  function enemyBudget(worldIdx, stageIdx) {
+    var w = Math.max(0, worldIdx | 0), s = Math.max(0, stageIdx | 0);
+    var min = 8 + w * 2 + s;          // 1-2: 9 · 3-2: 13 · 6-4: 21
+    return { min: min, max: min + (w < 2 ? 4 : 5) };
+  }
+  // Espécies mais brabas só aparecem a partir de certo mundo
+  var TOUGH_FROM_WORLD = { cangaceiro_sombra: 2, mula_sem_cabeca: 3, boitata_fogo: 2, lobisomem: 4 };
 
   /* ------------------------------------------------------------------------
    * RNG determinístico (B17: NUNCA Math.random)
@@ -363,8 +371,7 @@
 
     S.enemies = [
       { type: 'calango', x: 620, y: 428, dir: -1, patrol: { minX: 460, maxX: 700 } },
-      { type: 'sapo_cururu', x: 820, y: 428, dir: -1, hopPower: 9, patrol: { minX: 720, maxX: 880 } },
-      { type: 'marimbondo', x: 980, y: 330, dir: -1, amp: 30, patrol: { minX: 900, maxX: 1060 } },
+      // v2.2: 1-1 mais amigável (menos inimigos e nenhuma espécie "braba")
       { type: 'tatu', x: 1360, y: 428, dir: -1, armored: true, patrol: { minX: 1200, maxX: 1520 } },
       // 1º Cacto Atirador: saliência OPCIONAL elevada, nunca bloqueia a rota principal
       { type: 'cacto_atirador', x: 1474, y: 280, dir: -1, fireRate: 150, onLedge: true },
@@ -373,16 +380,11 @@
       { type: 'bode_doido', x: 2480, y: 428, dir: -1, chargeSpeed: 4.5, stunFrames: 150,
         platformX: 1920, platformW: 900, rockX: 2200 },
       { type: 'carcara', x: 2680, y: 230, dir: -1, amp: 30, patrol: { minX: 2560, maxX: 2800 } },
-      { type: 'marimbondo', x: 3080, y: 380, dir: -1, amp: 24, patrol: { minX: 3040, maxX: 3130 } },
-      { type: 'carcara', x: 3400, y: 240, dir: -1, amp: 30, patrol: { minX: 3200, maxX: 3620 } },
       { type: 'sapo_cururu', x: 3260, y: 388, dir: -1, hopPower: 9, patrol: { minX: 3160, maxX: 3420 } },
-      { type: 'cangaceiro_sombra', x: 3570, y: 388, dir: -1, patrol: { minX: 3460, maxX: 3630 } },
       { type: 'jararaca', x: 3940, y: 328, dir: -1, patrol: { minX: 3820, maxX: 4040 } },
-      { type: 'mula_sem_cabeca', x: 4330, y: 428, dir: -1, patrol: { minX: 4220, maxX: 4440 } },
       { type: 'marimbondo', x: 4460, y: 320, dir: -1, amp: 26, patrol: { minX: 4380, maxX: 4560 } },
       { type: 'tatu', x: 4520, y: 428, dir: -1, armored: true, patrol: { minX: 4400, maxX: 4880 } },
       { type: 'calango', x: 4820, y: 428, dir: -1, patrol: { minX: 4720, maxX: 4900 } },
-      { type: 'carcara', x: 5000, y: 300, dir: -1, amp: 30, patrol: { minX: 4930, maxX: 5080 } },
       { type: 'cacto_atirador', x: 5260, y: 258, dir: -1, fireRate: 170, onLedge: true },
       { type: 'calango', x: 5260, y: 428, dir: -1, patrol: { minX: 5140, maxX: 5400 } }
     ];
@@ -471,8 +473,14 @@
     var R = cfg.rand, G = cfg.gen;
     var allowed = ALLOWED_ENEMIES[S.biome] || [];
     function okE(t) { return allowed.indexOf(t) >= 0; }
-    var ground = (G.ground || []).filter(okE);
-    var flyer = (G.flyer || []).filter(okE);
+    var wIdx = cfg.worldIdx | 0;
+    function okTier(t) { return !(TOUGH_FROM_WORLD[t] > wIdx); }
+    var ground = (G.ground || []).filter(okE).filter(okTier);
+    var flyer = (G.flyer || []).filter(okE).filter(okTier);
+    if (!ground.length) ground = (G.ground || []).filter(okE).slice(0, 2);
+    if (!flyer.length) flyer = (G.flyer || []).filter(okE).slice(0, 1);
+    var BUD = enemyBudget(wIdx, cfg.stageIdx);
+    if (S.isChallenge) BUD = { min: 10, max: 16 };
     var shooter = (G.shooter && okE(G.shooter)) ? G.shooter : null;
     var useBode = !!G.bode && okE('bode_doido');
     var themeA = G.themes[0], themeB = G.themes[1] || G.themes[0];
@@ -516,6 +524,7 @@
     function spawnGround(p, count) {
       if (!ground.length || p.w < 260 || p.falling) return;
       var n = count || (p.w >= 560 ? 3 : (p.w >= 340 ? 2 : 1));
+      if (wIdx < 2) n = Math.min(n, 2);
       var x0 = p.x + 20, span = p.w - 40, slot = span / n;
       for (var i = 0; i < n; i++) {
         var t = R.pick(ground);
@@ -709,24 +718,26 @@
     // Controle de densidade: 18 a 28 inimigos por fase
     var padCandidates = mains.filter(function (m, k) { return k > 0 && !m.falling; });
     var pi = 0, guard = 0;
-    while (S.enemies.length < MIN_ENEMIES && padCandidates.length && flyer.length && guard++ < 200) {
+    while (S.enemies.length < BUD.min && padCandidates.length && flyer.length && guard++ < 200) {
       var pm = padCandidates[(pi * 3) % padCandidates.length]; pi++;
       var pt = R.pick(flyer);
       S.enemies.push(decorate({ type: pt, x: Math.round(pm.x + pm.w / 2), y: Math.max(70, pm.y - 170),
         dir: -1, amp: 30, patrol: { minX: pm.x, maxX: pm.x + pm.w } }, pt));
     }
     guard = 0;
-    while (S.enemies.length > MAX_ENEMIES && guard++ < 200) {
+    while (S.enemies.length > BUD.max && guard++ < 200) {
       var removed = false;
       for (var ri = S.enemies.length - 1; ri >= 0; ri -= 2) {
         var re = S.enemies[ri];
         if (re.type !== 'bode_doido' && !re.onLedge) {
           S.enemies.splice(ri, 1); removed = true;
-          if (S.enemies.length <= MAX_ENEMIES) break;
+          if (S.enemies.length <= BUD.max) break;
         }
       }
       if (!removed) break;
     }
+    // Começo da fase livre de inimigos (o jogador precisa de alguns segundos para se situar)
+    S.enemies = S.enemies.filter(function (e) { return e.x > 560; });
     S.enemies.sort(function (a, b) { return a.x - b.x; });
 
     // Rapaduras: arcos sobre cada vão + trilhas em plataformas largas

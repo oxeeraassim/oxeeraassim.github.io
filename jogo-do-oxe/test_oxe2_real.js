@@ -332,7 +332,7 @@ const sleepFrames = (T, n) => T.step(n);
   });
 
   /* 11. Motor Gráfico Ultra-HD (graphics_hd.js) + 18 Espécies + Obstáculos Interativos */
-  await test('11', 'Ultra-HD 3D-to-2D (graphics_hd.js), 18 espécies de inimigos, 20+ inimigos/fase e Zabumba Trampolim', async () => {
+  await test('11', 'Ultra-HD 3D-to-2D (graphics_hd.js), 18 espécies de inimigos, densidade progressiva de inimigos (v2.2: 9+ no mundo 1, 15+ no mundo 6) e Zabumba Trampolim', async () => {
     const HD = sandbox.OxeHD;
     const OL = sandbox.OxeLevels;
     const all18 = ['calango', 'tatu', 'carcara', 'morcego', 'cacto_atirador', 'bode_doido', 'fulozinha', 'papa_figo', 'caranguejo', 'baiacu', 'salamandra', 'sapo_cururu', 'marimbondo', 'jararaca', 'cangaceiro_sombra', 'mula_sem_cabeca', 'boitata_fogo', 'lobisomem'];
@@ -379,7 +379,7 @@ const sleepFrames = (T, n) => T.step(n);
       totalRodasMandacaru: totalWheels,
       zabumbaImpulsionouTonho: bounced
     };
-    return { pass: d.oxeHdAtivo && d.especiesRenderizadas === 18 && minEnemies >= 18 && totalTramps >= 24 && totalMoving >= 24 && totalWheels >= 24 && bounced, details: d };
+    return { pass: d.oxeHdAtivo && d.especiesRenderizadas === 18 && minEnemies >= 9 && totalTramps >= 24 && totalMoving >= 24 && totalWheels >= 24 && bounced, details: d };
   });
 
   writeReport(t0);

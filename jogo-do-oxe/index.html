@@ -546,8 +546,13 @@
       overflow-y: auto;
       touch-action: pan-y;
     }
+    /* v2.2: centraliza quando cabe e rola quando não cabe (antes cortava o topo da tela inicial) */
+    .screen-overlay { justify-content: flex-start; }
+    .screen-overlay > :first-child { margin-top: auto; }
+    .screen-overlay > :last-child { margin-bottom: auto; }
     @media (max-height: 520px) {
-      .screen-overlay { justify-content: flex-start; }
+      .screen-overlay .hero-badge { display: none; }
+      .screen-overlay .menu-btn { padding-top: 10px; padding-bottom: 10px; margin-top: 6px; margin-bottom: 6px; }
     }
 
     .game-logo {

@@ -12,12 +12,16 @@ if (typeof CanvasRenderingContext2D !== 'undefined' && !CanvasRenderingContext2D
   };
 }
 
+// v2.2: em celular deitado (tela larga) a área de jogo se alarga em vez de deixar faixas pretas
+let VIEW_W = CANVAS_W;
 function resizeCanvas() {
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  canvas.width = Math.round(CANVAS_W * dpr); canvas.height = Math.round(CANVAS_H * dpr);
+  const dpr = Math.min(window.devicePixelRatio || 1, window.OXE_LOW_QUALITY ? 1.25 : 2);
+  const iw = window.innerWidth || CANVAS_W, ih = window.innerHeight || CANVAS_H;
+  VIEW_W = Math.round(Math.max(CANVAS_W, Math.min(1280, CANVAS_H * (iw / ih))));
+  canvas.width = Math.round(VIEW_W * dpr); canvas.height = Math.round(CANVAS_H * dpr);
   if (canvas.dataset) canvas.dataset.dpr = String(dpr);
-  const s = Math.min(window.innerWidth / CANVAS_W, window.innerHeight / CANVAS_H);
-  canvas.style.width = Math.floor(CANVAS_W * s) + 'px'; canvas.style.height = Math.floor(CANVAS_H * s) + 'px';
+  const s = Math.min(iw / VIEW_W, ih / CANVAS_H);
+  canvas.style.width = Math.floor(VIEW_W * s) + 'px'; canvas.style.height = Math.floor(CANVAS_H * s) + 'px';
   if (ctx.setTransform) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
@@ -95,8 +99,10 @@ let hitstopFrames = 0; let screenShake = 0; let bossIntroTimer = 0; let renderAl
 let challengeTimeLeft = 30.0; let challengeScore = 0; let challengeRapaduras = 0; let currentChallengeSeed = '';
 let currentLevel = null; let player = null;
 
-function triggerHaptic(ms = 20) { if (SaveManager.data.settings.vibration && navigator.vibrate) { try { navigator.vibrate(ms); } catch (e) {} } }
-function addScreenShake(amount) { const a = SaveManager.data.settings.reduceShake ? amount * 0.25 : amount; screenShake = Math.max(screenShake, a); }
+function liveSettings() { try { if (window.OxeSettings && window.OxeSettings.get) return window.OxeSettings.get(); } catch (e) {} return SaveManager.data.settings || {}; }
+function triggerHaptic(ms = 20) { if (liveSettings().vibration !== false && navigator.vibrate) { try { navigator.vibrate(ms); } catch (e) {} } }
+// v2.2: tremor curto e com decaimento (antes nunca zerava e a tela tremia para sempre)
+function addScreenShake(amount) { const a = Math.min(9, liveSettings().reduceShake ? amount * 0.25 : amount * 0.6); screenShake = Math.max(screenShake, a); }
 
 // ==================== INPUT ====================
 const keys = { left: false, right: false, up: false, down: false, jump: false, jumpJustPressed: false, whip: false, whipJustPressed: false, glide: false };
@@ -254,15 +260,17 @@ class Tonho {
   }
   getWhipBox() { const reach = 56; return { x: this.facing > 0 ? this.x + this.w : this.x - reach, y: this.y + 8, w: reach, h: 22 }; }
   update() {
-    this.prevX = this.x; this.prevY = this.y;
-    if (this.dead) return;
+    // v2.2: desconta o arrasto da plataforma móvel para a interpolação não tremer
+    this.prevX = this.x - (this._carryDX || 0); this.prevY = this.y - (this._carryDY || 0); this._carryDX = 0; this._carryDY = 0;
+    if (this.dead) { this.updateDeath(); return; }
+    if (this.asaBrancaTimer > 0) this.asaBrancaTimer--;
     if (keys.jumpJustPressed) { this.jumpBuffer = 10; } else if (this.jumpBuffer > 0) { this.jumpBuffer--; }
     if (this.invuln > 0) this.invuln--; if (this.whipCooldown > 0) this.whipCooldown--; if (this.vineCooldown > 0) this.vineCooldown--;
     if (keys.whipJustPressed && this.whipCooldown <= 0) this.performWhipAttack();
     if (this.whipTimer > 0) this.whipTimer--;
 
     // ----- Cipó -----
-    if (this.onVine) { this.updateVine(); this.updateAnim(); return; }
+    if (this.onVine) { this.vx = 0; this.vy = 0; this.coyote = 0; this.updateAnim(); return; } // posição controlada em updateBiome
 
     const accel = this.onGround ? 0.8 : 0.55, maxSpd = 4.6, fric = this.onGround ? 0.78 : 0.92;
     if (keys.left && !keys.right) { this.vx -= accel; this.facing = -1; }
@@ -293,16 +301,11 @@ class Tonho {
     for (const u of (L.updrafts || [])) if (checkAABB(this, u)) { this.vy -= this.gliding ? 1.05 : 0.35; if (this.vy < -7) this.vy = -7; if (Math.random() < 0.2) particles.push(new Particle(this.x + Math.random() * this.w, this.y + this.h, 0, -2, 'rgba(255,255,255,0.6)', 20, 2, 0)); }
     for (const g of (L.geysers || [])) {
       const active = g.active !== undefined ? g.active : ((Math.floor(((g.timer || 0) + stageTimerFrames) / (g.period || 120)) % 2) === 0);
-      if (active && checkAABB(this, g)) { if (!this._inGeyser) sfx('geyser'); this._inGeyser = true; this.vy = Math.min(this.vy, -(g.power || 11)); this.onGround = false; spawnSparks(this.x + this.w / 2, this.y + this.h, 2, '#D0EBFF'); }
+      if (active && checkAABB(this, g)) { if (!this._inGeyser) sfx('geyser'); this._inGeyser = true; this.vy = Math.min(this.vy, -(g.power || 11) * 0.72); this.onGround = false; spawnSparks(this.x + this.w / 2, this.y + this.h, 2, '#D0EBFF'); }
     }
     this._inGeyser = (L.geysers || []).some(g => checkAABB(this, g)) && this._inGeyser;
-    for (const wz of (L.windZones || [])) if (checkAABB(this, wz)) { this.x += (wz.force || 1.5) * (wz.dir || 1) * (this.onGround ? 0.5 : 1); }
-    if (this.vineCooldown <= 0) for (const v of (L.vines || [])) {
-      const tipX = v.x + Math.sin(v.angle || 0) * v.length, tipY = v.y + Math.cos(v.angle || 0) * v.length;
-      if (!this.onGround && Math.abs(this.x + this.w / 2 - tipX) < 22 && Math.abs(this.y + 10 - tipY) < 30) {
-        this.onVine = v; v.angVel = (v.angVel || 0) + this.vx * 0.006; this.vx = 0; this.vy = 0; sfx('vine'); spawnLeaves(tipX, tipY, 4); break;
-      }
-    }
+    // v2.2: vento usa a força real da fase (fx) e é aplicado uma vez só
+    for (const wz of (L.windZones || [])) if (checkAABB(this, wz)) { const f = wz.fx != null ? wz.fx * 3 : (wz.force || 1.5) * (wz.dir || 1); this.x += f * (this.onGround ? 0.5 : 1); }
     for (const t of (L.tideWater || [])) {
       const surfY = t.getY ? t.getY(stageTimerFrames) : t.y;
       if (this.x + this.w > t.x && this.x < t.x + t.w && this.y + this.h > surfY) {
@@ -330,8 +333,8 @@ class Tonho {
     const wasGround = this.onGround; this.onGround = false; this.y += this.vy;
     for (const p of plats) {
       if (!checkAABB(this, p)) continue;
-      if (p.oneWay) { if (this.vy >= 0 && this.prevY + this.h <= p.y + 2 && !keys.down) { this.y = p.y - this.h; this.vy = 0; this.onGround = true; } continue; }
-      if (this.vy > 0) { this.y = p.y - this.h; this.vy = 0; this.onGround = true; if (p.vx) this.x += p.vx; }
+      if (p.oneWay) { if (this.vy >= 0 && this.prevY + this.h <= p.y + 4 + Math.abs(p.vy || 0) && !keys.down) { this.y = p.y - this.h; this.vy = 0; this.onGround = true; } continue; }
+      if (this.vy > 0) { this.y = p.y - this.h; this.vy = 0; this.onGround = true; }
       else if (this.vy < 0) { this.y = p.y + p.h; this.vy = 0; }
     }
     if (this.onGround && !wasGround) { this.landSquash = 6; spawnDust(this.x + this.w / 2, this.y + this.h, 4); }
@@ -354,27 +357,45 @@ class Tonho {
     spawnSparks(this.x + this.w / 2 + this.facing * 52, this.y + 18, 8, '#FFD43B');
   }
   bounce(power = -8.5) { this.vy = keys.jump ? power * 1.3 : power; this.onGround = false; this.coyote = 0; }
-  takeDamage(amount = 1) {
+  takeDamage(amount = 1, srcX) {
     if (currentState === GAME_STATE.LEVEL_COMPLETE) return;
-    if (this.invuln > 0 || this.dead) return;
-    tookDamageThisRun = true; health -= amount; this.invuln = 90; hitstopFrames = 5; addScreenShake(8); triggerHaptic(60); sfx('hurt');
-    this.vy = -6; this.vx = -this.facing * 4; this.onVine = null;
+    if (this.invuln > 0 || this.dead || this.asaBrancaTimer > 0) return;
+    tookDamageThisRun = true; health -= amount; this.invuln = 100; hitstopFrames = 5; addScreenShake(6); triggerHaptic(60); sfx('hurt');
+    const away = srcX != null ? (this.x + this.w / 2 < srcX ? -1 : 1) : -this.facing;
+    this.vy = -6; this.vx = away * 4; this.onVine = null;
     spawnSparks(this.x + this.w / 2, this.y + this.h / 2, 10, '#FA5252');
     if (health <= 0) this.die();
   }
   die() {
-    if (this.dead) return; this.dead = true; health = 0; sfx('death'); triggerHaptic(150); addScreenShake(12);
+    if (this.dead) return; this.dead = true; health = 0; sfx('death'); triggerHaptic(150); addScreenShake(8);
     spawnSparks(this.x + this.w / 2, this.y + this.h / 2, 20, '#FFF');
+    // v2.2: pequena animação de queda antes de reaparecer (antes era instantâneo e confuso)
+    this.deathTimer = 55; this.vx = 0; this.vy = this.y > (currentLevel ? currentLevel.levelH : CANVAS_H) ? 0 : -9; this.onVine = null; this.invuln = 0;
+  }
+  updateDeath() {
+    this.vy = Math.min(this.vy + GRAVITY, MAX_FALL_SPEED); this.y += this.vy;
+    if (--this.deathTimer > 0) return;
+    this.deathTimer = 1e9;
     if (currentState === GAME_STATE.CHALLENGE) { callHook('finishChallenge'); return; }
     callHook('handlePlayerDeath');
   }
   draw(ctx, camX, camY) {
-    if (this.dead) return;
-    if (this.invuln > 0 && Math.floor(this.invuln / 4) % 2 === 0) return;
+    if (this.invuln > 0 && !this.dead && Math.floor(this.invuln / 5) % 2 === 0) return;
+    if (this.asaBrancaTimer > 0) {
+      const gx = lerp(this.prevX, this.x, renderAlpha) - camX + this.w / 2, gy = lerp(this.prevY, this.y, renderAlpha) - camY + this.h / 2;
+      const rg = ctx.createRadialGradient(gx, gy, 6, gx, gy, 46); rg.addColorStop(0, 'rgba(255,255,255,0.55)'); rg.addColorStop(1, 'rgba(191,233,255,0)');
+      ctx.fillStyle = rg; ctx.fillRect(gx - 46, gy - 46, 92, 92);
+    }
     if (typeof window !== 'undefined' && window.OxeHD && window.OxeHD.drawTonhoHD) {
+      if (this.dead) {
+        const cx = lerp(this.prevX, this.x, renderAlpha) - camX + this.w / 2, cy = lerp(this.prevY, this.y, renderAlpha) - camY + this.h / 2;
+        ctx.save(); ctx.translate(cx, cy); ctx.rotate(Math.PI); ctx.translate(-cx, -cy);
+        window.OxeHD.drawTonhoHD(ctx, camX, camY, this, renderAlpha, frameCount); ctx.restore(); return;
+      }
       window.OxeHD.drawTonhoHD(ctx, camX, camY, this, renderAlpha, frameCount);
       return;
     }
+    if (this.dead) return;
     const rx = lerp(this.prevX, this.x, renderAlpha) - camX, ry = lerp(this.prevY, this.y, renderAlpha) - camY;
     const cx = rx + this.w / 2, feet = ry + this.h;
     // sombra
@@ -540,7 +561,7 @@ class Enemy {
       return;
     }
     const x = lerp(this.prevX, this.x, renderAlpha) - camX, y = lerp(this.prevY, this.y, renderAlpha) - camY, w = this.w, h = this.h;
-    if (x + w < -50 || x > CANVAS_W + 50) return;
+    if (x + w < -50 || x > VIEW_W + 50) return;
     ctx.fillStyle = 'rgba(0,0,0,0.2)'; ctx.beginPath(); ctx.ellipse(x + w / 2, this.fly ? y + h + 22 : y + h, w * 0.45, 4, 0, 0, Math.PI * 2); ctx.fill();
     ctx.save(); ctx.translate(x + w / 2, y + h / 2); ctx.scale(this.facing >= 0 ? 1 : -1, 1);
     if (this.state === 'stunned') ctx.rotate(Math.sin(this.t * 0.6) * 0.06);
@@ -963,10 +984,9 @@ function createBoss(bossType, x, y) {
 
 function drawBossGuide(ctx, boss, camX, camY) {
   if (!boss || boss.dead || boss.hp <= 0) return;
-  const W = ctx.canvas.width / (window.devicePixelRatio || 1), t = boss.t || 0;
+  const dprG = +(ctx.canvas.dataset && ctx.canvas.dataset.dpr) || 1, W = ctx.canvas.width / dprG, t = boss.t || 0;
   const text = boss.guideText || 'Desvie dos ataques e chicoteie o chefe quando ele ficar tonto!';
-  ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
-  if (window.devicePixelRatio) ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+  ctx.save(); ctx.setTransform(dprG, 0, 0, dprG, 0, 0);
   ctx.font = 'bold 15px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   const tw = Math.min(W - 20, ctx.measureText(text).width + 30), bx = W / 2 - tw / 2, by = 52;
   ctx.fillStyle = 'rgba(0,0,0,0.65)'; ctx.beginPath(); ctx.roundRect(bx, by, tw, 30, 10); ctx.fill();
@@ -1013,8 +1033,9 @@ function drawBossGuide(ctx, boss, camX, camY) {
     el.style.display = on ? 'flex' : 'none';
   }
   function hideAllScreens() {
-    ['titleScreen', 'pauseScreen', 'victoryScreen', 'gameOverScreen', 'worldMapScreen', 'challengeResultScreen', 'settingsModal']
+    ['titleScreen', 'pauseScreen', 'victoryScreen', 'gameOverScreen', 'worldMapScreen', 'challengeResultScreen']
       .forEach((s) => showScreen(s, false));
+    if (window.closeSettings && $('settingsModal') && $('settingsModal').classList.contains('open')) window.closeSettings();
   }
   function spawnBurst(x, y, color, n) {
     for (let i = 0; i < (n || 10); i++) {
@@ -1086,7 +1107,7 @@ function drawBossGuide(ctx, boss, camX, camY) {
       if (this.collected) return; this.t += 0.06;
       if (player && checkAABB(this, playerBox())) {
         this.collected = true; addScore(1000); sfx('powerup');
-        player.starTimer = 600; player.invulnTimer = Math.max(player.invulnTimer || 0, 600);
+        player.starTimer = 600; player.asaBrancaTimer = 600; // v2.2: o poder da estrela agora funciona de verdade
         floatText(this.x, this.y, 'ASA BRANCA!', '#bfe9ff'); spawnBurst(this.x + 15, this.y + 13, '#ffffff', 20);
       }
     }
@@ -1166,17 +1187,12 @@ function drawBossGuide(ctx, boss, camX, camY) {
         if (p.y > L.levelH + 200) { p.state = 'fallen'; p.respawn = 180; p.y = -99999; }
       }
     });
-    // Correntes térmicas
-    L.updrafts.forEach((u) => { if (checkAABB(u, pb)) { player.vy = Math.max((player.vy || 0) - (u.force || 0.9), -(u.max || 9)); } });
-    // Vento
-    L.windZones.forEach((wz) => { if (checkAABB(wz, pb)) player.x += (wz.force || 1.5) * (wz.dir || 1); });
-    // Gêiseres
+    // v2.2: correntes térmicas e vento ficam só na física do Tonho (antes eram aplicados 2x)
+    // Gêiseres: aqui só o relógio; o empurrão acontece em Tonho.applyEnvironment
     L.geysers.forEach((g) => {
-      g.t = (g.t || 0) + 1; const per = g.period || 180, on = g.onTime || 70;
-      g.active = (g.t + (g.offset || 0)) % per < on;
-      g.warn = !g.active && (g.t + (g.offset || 0)) % per > per - 40;
-      const col = { x: g.x, y: g.y - (g.height || 220), w: g.w || 40, h: g.height || 220 };
-      if (g.active && checkAABB(col, pb)) player.vy = -(g.power || 13);
+      g.t = (g.t || 0) + 1; const per = g.period || 180, on = g.onTime || 70, off = g.offset != null ? g.offset : (g.phase || 0);
+      g.active = (g.t + off) % per < on;
+      g.warn = !g.active && (g.t + off) % per > per - 45;
     });
     // Cipós pendulares
     L.vines.forEach((v) => {
@@ -1184,9 +1200,15 @@ function drawBossGuide(ctx, boss, camX, camY) {
       const len = v.length || 160; v.tipX = v.x + Math.sin(v.angle) * len; v.tipY = v.y + Math.cos(v.angle) * len;
       if (player.onVine === v) {
         player.x = v.tipX - pb.w / 2; player.y = v.tipY - 10; player.vx = 0; player.vy = 0;
-        if (keys.jumpJustPressed) { player.onVine = null; player.vineCooldown = 20; player.vy = -10; player.vx = Math.cos(v.angle) * 8 * Math.sign(Math.cos(v.t + (v.phase || 0))) || 6; sfx('jump'); }
-      } else if (!player.onVine && !(player.vineCooldown > 0) && checkAABB({ x: v.tipX - 14, y: v.tipY - 14, w: 28, h: 28 }, pb)) {
-        player.onVine = v; sfx('vine');
+        if (keys.jumpJustPressed) {
+          // v2.2: lança na direção do balanço (ou para onde o jogador aponta)
+          const swing = Math.cos(v.t + (v.phase || 0)) * (v.amp || 0.8) * 0.035 * len;
+          let dir = keys.right ? 1 : keys.left ? -1 : (Math.sign(swing) || player.facing || 1);
+          player.onVine = null; player.vineCooldown = 24; player.vy = -10.5; player.vx = dir * clamp(4 + Math.abs(swing) * 1.2, 4, 7.5); player.facing = dir;
+          player.jumpBuffer = 0; sfx('jump'); spawnLeaves(v.tipX, v.tipY, 6);
+        }
+      } else if (!player.onVine && !player.dead && !player.onGround && !(player.vineCooldown > 0) && checkAABB({ x: v.tipX - 18, y: v.tipY - 22, w: 36, h: 44 }, pb)) {
+        player.onVine = v; sfx('vine'); spawnLeaves(v.tipX, v.tipY, 4);
       }
     });
     if (player.vineCooldown > 0) player.vineCooldown--;
@@ -1197,10 +1219,12 @@ function drawBossGuide(ctx, boss, camX, camY) {
     // Maré
     if (L.tideConfig) {
       const tc = L.tideConfig, per = tc.period || 600;
-      L.currentTideY = (tc.baseY != null ? tc.baseY : L.levelH - 60) - Math.sin(frameCount / per * Math.PI * 2) * (tc.amplitude || 90);
-      if (pb.y + pb.h > L.currentTideY + 30 && !(player.invulnTimer > 0)) {
-        player.vy = Math.min(player.vy || 0, -4);
-        if (typeof damagePlayer === 'function') damagePlayer(1); else { health--; tookDamageThisRun = true; player.invulnTimer = 60; }
+      // v2.2: usa a amplitude real da fase (antes o padrão 90 deixava a maré acima do chão)
+      L.currentTideY = (tc.baseY != null ? tc.baseY : L.levelH - 60) - Math.sin(frameCount / per * Math.PI * 2) * (tc.amp || tc.amplitude || 36);
+      if (!player.dead && pb.y + pb.h > L.currentTideY + 26) {
+        player.vy = -11.5; player.onGround = false; sfx('splash');
+        for (let i = 0; i < 8; i++) spawnBurst(pb.x + pb.w / 2, L.currentTideY + 20, '#74C0FC', 1);
+        player.takeDamage(1);
       }
     }
     if (typeof window !== 'undefined' && window.OxeHD && window.OxeHD.updateObstacles) {
@@ -1222,9 +1246,9 @@ function drawBossGuide(ctx, boss, camX, camY) {
       enemies: [], boss: null,
       signs: arr(spec.signs).map((s) => Object.assign({}, s)), vines: arr(spec.vines).map((s) => Object.assign({}, s)),
       geysers: arr(spec.geysers).map((s) => Object.assign({}, s)), lightCrystals: arr(spec.lightCrystals).map((s) => Object.assign({}, s)),
-      updrafts: arr(spec.updrafts), windZones: arr(spec.windZones),
+      updrafts: arr(spec.updrafts), windZones: arr(spec.windZones).map((w) => Object.assign({}, w, { dir: w.dir || (w.fx != null ? Math.sign(w.fx) || 1 : 1) })),
       trampolines: arr(spec.trampolines).map((t) => Object.assign({}, t)),
-      movingPlatforms: arr(spec.movingPlatforms).map((m) => Object.assign({}, m, { origX: m.x, origY: m.y, isMoving: true, oneWay: true })),
+      movingPlatforms: arr(spec.movingPlatforms).map((m) => Object.assign({}, m, { origX: m.x, origY: m.y, prevX: m.x, prevY: m.y, vx: 0, vy: 0, isMoving: true, oneWay: true, managedByGame: true })),
       hazardWheels: arr(spec.hazardWheels).map((w) => Object.assign({}, w, { baseX: w.baseX != null ? w.baseX : w.x, baseY: w.baseY != null ? w.baseY : w.y })),
       tideConfig: spec.tideConfig || null, currentTideY: 99999, darkness: !!spec.darkness || spec.worldIdx === 1,
       checkpoint: null, flagpole: null
@@ -1248,11 +1272,12 @@ function drawBossGuide(ctx, boss, camX, camY) {
 
   function spawnPlayerAt(pt) {
     player = new Tonho(pt.x, pt.y);
-    player.invulnTimer = 60;
+    player.invuln = 70; // v2.2: proteção real ao reaparecer
+    screenShake = 0;
     view.x = view.px = Math.max(0, pt.x - VW() * 0.4); view.y = view.py = Math.max(0, Math.min(currentLevel.levelH - VH(), pt.y - VH() * 0.55));
   }
   function resetRunState(fresh) {
-    maxHealth = getSettings().assist ? 5 : 3; health = maxHealth; tookDamageThisRun = false;
+    maxHealth = (getSettings().assistMode || getSettings().assist) ? 5 : 3; health = maxHealth; tookDamageThisRun = false;
     collectedCajus = [false, false, false];
     if (fresh) { score = 0; rapaduras = 0; lives = 3; }
     if (Array.isArray(projectiles)) projectiles.length = 0;
@@ -1389,14 +1414,18 @@ function drawBossGuide(ctx, boss, camX, camY) {
       ctx.strokeStyle = 'rgba(255,255,255,0.35)'; const d = wz.dir || 1;
       for (let k = 0; k < 6; k++) { const lx = wz.x + ((t * 4 * d + k * 97) % wz.w + wz.w) % wz.w, ly = wz.y + (k * 41) % wz.h; ctx.beginPath(); ctx.moveTo(lx - camX, ly - camY); ctx.lineTo(lx - camX - 30 * d, ly - camY); ctx.stroke(); }
     });
+    // v2.2: o jato é desenhado exatamente onde ele empurra (antes aparecia no céu)
     L.geysers.forEach((g) => {
-      const gx = g.x - camX, gy = g.y - camY, gw = g.w || 40, gh = g.height || 220;
-      ctx.fillStyle = '#3a2a22'; ctx.fillRect(gx - 4, gy - 8, gw + 8, 10);
+      const gw = g.w || 40, gh = g.h || g.height || 220, gx = g.x - camX, top = g.y - camY, base = Math.min(H - 6, g.y + gh - camY);
+      ctx.fillStyle = '#3a2a22'; ctx.fillRect(gx - 6, base - 6, gw + 12, 12);
       if (g.active) {
-        const gr = ctx.createLinearGradient(0, gy - gh, 0, gy); gr.addColorStop(0, 'rgba(255,255,255,0)'); gr.addColorStop(1, 'rgba(255,140,60,0.7)');
-        ctx.fillStyle = gr; ctx.fillRect(gx + Math.sin(t * 0.3) * 2, gy - gh, gw, gh);
-        ctx.fillStyle = 'rgba(255,200,120,0.8)'; for (let k = 0; k < 6; k++) ctx.fillRect(gx + ((k * 13 + t) % gw), gy - ((t * 6 + k * 40) % gh), 3, 3);
-      } else if (g.warn) { ctx.fillStyle = 'rgba(255,120,40,' + (0.3 + Math.sin(t * 0.5) * 0.3) + ')'; ctx.fillRect(gx, gy - 14, gw, 6); }
+        const gr = ctx.createLinearGradient(0, top, 0, base); gr.addColorStop(0, 'rgba(255,255,255,0)'); gr.addColorStop(0.35, 'rgba(255,230,200,0.45)'); gr.addColorStop(1, 'rgba(255,140,60,0.75)');
+        ctx.fillStyle = gr; ctx.fillRect(gx + Math.sin(t * 0.3) * 2, top, gw, base - top);
+        ctx.fillStyle = 'rgba(255,240,220,0.85)'; for (let k = 0; k < 8; k++) ctx.fillRect(gx + ((k * 13 + t) % gw), base - ((t * 7 + k * 47) % (base - top)), 4, 4);
+      } else if (g.warn) {
+        ctx.fillStyle = 'rgba(255,120,40,' + (0.35 + Math.sin(t * 0.5) * 0.3) + ')'; ctx.fillRect(gx, base - 26, gw, 20);
+        ctx.fillStyle = 'rgba(255,255,255,0.7)'; for (let k = 0; k < 3; k++) ctx.fillRect(gx + 8 + k * (gw / 3), base - 30 - ((t * 2 + k * 9) % 18), 4, 4);
+      }
     });
     L.vines.forEach((v) => {
       if (v.tipX == null) return; const ax = v.x - camX, ay = v.y - camY, tx = v.tipX - camX, ty = v.tipY - camY;
@@ -1486,41 +1515,25 @@ function drawBossGuide(ctx, boss, camX, camY) {
     } else if (currentState === GAME_STATE.PAUSED) {
       currentState = stateBeforePause || GAME_STATE.PLAYING;
       try { AudioEngine.resumeMusic(); } catch (e) {}
-      showScreen('pauseScreen', false); showScreen('settingsModal', false); p2Last = performance.now(); p2Acc = 0;
+      showScreen('pauseScreen', false); if (window.closeSettings && $('settingsModal') && $('settingsModal').classList.contains('open')) window.closeSettings();
+      p2Last = performance.now(); p2Acc = 0; consumeEdgeInputs();
     }
   }
 
   // ===================== SAVE HELPERS =====================
+  // v2.2: lê o progresso do lugar certo (levelData/unlockedLevels). Antes as fases nunca destravavam no mapa.
   function starsOf(idx) {
-    try {
-      if (SaveManager.getStars) return SaveManager.getStars(idx) || 0;
-      const d = SaveManager.data || (SaveManager.load && SaveManager.load()) || {};
-      const lv = (d.levels || d.stars || {})[idx]; return typeof lv === 'number' ? lv : (lv && lv.stars) || 0;
-    } catch (e) { return 0; }
+    try { const lv = (SaveManager.data.levelData || {})[idx]; return lv ? (lv.stars | 0) : 0; } catch (e) { return 0; }
   }
   function isUnlocked(idx) {
-    try { if (SaveManager.isUnlocked) return SaveManager.isUnlocked(idx); } catch (e) {}
-    return idx === 0 || starsOf(idx - 1) > 0;
+    try { return idx === 0 || idx <= (SaveManager.data.unlockedLevels | 0) || starsOf(idx - 1) > 0; } catch (e) { return idx === 0; }
   }
-  function getSettings() {
-    try { if (SaveManager.getSettings) return SaveManager.getSettings() || {}; } catch (e) {}
-    try { return JSON.parse(localStorage.getItem('oxe2_settings') || '{}'); } catch (e) { return {}; }
-  }
-  function setSetting(k, v) {
-    try { if (SaveManager.setSetting) { SaveManager.setSetting(k, v); applySettings(); return; } } catch (e) {}
-    const s = getSettings(); s[k] = v; try { localStorage.setItem('oxe2_settings', JSON.stringify(s)); } catch (e) {} applySettings();
-  }
-  function applySettings() {
-    const s = getSettings(), tc = $('touchControls');
-    if (tc) { tc.style.opacity = s.touchOpacity != null ? s.touchOpacity / 100 : 0.8; tc.classList.toggle('left-handed', !!s.leftHanded); tc.dataset.size = s.touchSize || 'md'; }
-    document.body.classList.toggle('reduce-shake', !!s.reduceShake);
-    if ($('optAssistMode')) $('optAssistMode').checked = !!s.assist;
-    if ($('optLeftHanded')) $('optLeftHanded').checked = !!s.leftHanded;
-    if ($('optReduceShake')) $('optReduceShake').checked = !!s.reduceShake;
-    if ($('optVibration')) $('optVibration').checked = s.vibration !== false;
-    if ($('optTouchOpacity')) $('optTouchOpacity').value = s.touchOpacity != null ? s.touchOpacity : 80;
-    if ($('optTouchOpacityVal')) $('optTouchOpacityVal').textContent = (s.touchOpacity != null ? s.touchOpacity : 80) + '%';
-  }
+  function getSettings() { return liveSettings(); }
+  // v2.2: configurações têm uma fonte só (window.OxeSettings, no index.html)
+  window.addEventListener('oxe:settings-changed', (e) => {
+    const s = (e && e.detail) || getSettings(); const mh = s.assistMode ? 5 : 3;
+    if (mh !== maxHealth) { maxHealth = mh; health = Math.min(Math.max(health, 1), maxHealth); if (mh === 5 && currentLevel) health = Math.max(health, 3); updateHUD(); }
+  });
 
   // ===================== VITÓRIA / GAME OVER =====================
   function showVictoryScreen() {
@@ -1611,7 +1624,7 @@ function drawBossGuide(ctx, boss, camX, camY) {
 
   // ===================== LIGAÇÃO DE BOTÕES =====================
   function on(id, fn) { const el = $(id); if (el) el.addEventListener('click', (e) => { e.preventDefault(); sfx('select'); fn(e); }); }
-  on('btnStartGame', () => { let next = 0; for (let i = 0; i < 30; i++) if (isUnlocked(i)) next = i; startGame(starsOf(next) > 0 && next < 29 ? next + 1 > 29 ? 29 : next : next); });
+  on('btnStartGame', () => { let next = 0; for (let i = 0; i < 30; i++) if (isUnlocked(i)) next = i; startGame(next); });
   on('btnOpenMap', openMap); on('btnCloseMap', () => { hideAllScreens(); showScreen('titleScreen', true); currentState = GAME_STATE.TITLE; });
   on('btnPauseHud', togglePause); on('btnResume', togglePause);
   on('btnRestart', () => { showScreen('pauseScreen', false); currentLevel.isChallenge ? startChallenge(currentChallengeSeed) : startGame(currentLevelIdx); });
@@ -1625,13 +1638,9 @@ function drawBossGuide(ctx, boss, camX, camY) {
   on('btnShareChallenge', exportChallengeCard);
   on('btnCopyChallengeLink', () => shareOrCopy(challengeLink(), 'OXE! 2.0 · Desafio', `Encara o Desafio ${currentChallengeSeed}!`));
   on('btnShareStage', () => { const i = Math.max(0, currentLevelIdx); shareOrCopy(`${baseUrl()}?fase=${Math.floor(i / 5) + 1}-${(i % 5) + 1}`, 'OXE! 2.0', `Joga a fase ${currentLevel ? currentLevel.code : ''} comigo!`); });
-  const openSettings = () => { applySettings(); showScreen('settingsModal', true); };
-  on('btnTitleSettings', openSettings); on('btnSettingsHud', () => { if (currentState !== GAME_STATE.PAUSED) togglePause(); openSettings(); }); on('btnPauseSettings', openSettings);
-  on('btnCloseSettings', () => showScreen('settingsModal', false));
-  [['optAssistMode', 'assist'], ['optLeftHanded', 'leftHanded'], ['optReduceShake', 'reduceShake'], ['optVibration', 'vibration']].forEach(([id, k]) => { const el = $(id); if (el) el.addEventListener('change', () => setSetting(k, el.checked)); });
-  if ($('optTouchOpacity')) $('optTouchOpacity').addEventListener('input', (e) => setSetting('touchOpacity', +e.target.value));
-  [['optTouchSizeSm', 'sm'], ['optTouchSizeMd', 'md'], ['optTouchSizeLg', 'lg']].forEach(([id, v]) => on(id, () => setSetting('touchSize', v)));
-  window.addEventListener('keydown', (e) => { if (e.key === 'Escape' || e.key === 'p' || e.key === 'P') togglePause(); });
+  // Título e pausa abrem as configurações pelo index.html; a engrenagem do HUD pausa antes
+  on('btnSettingsHud', () => { if (currentState === GAME_STATE.PLAYING || currentState === GAME_STATE.CHALLENGE) togglePause(); if (window.openSettings) window.openSettings('hud'); });
+  window.addEventListener('keydown', (e) => { if (e.repeat) return; if (e.key === 'Escape' || e.key === 'p' || e.key === 'P') togglePause(); });
   document.addEventListener('visibilitychange', () => { if (document.hidden && (currentState === GAME_STATE.PLAYING || currentState === GAME_STATE.CHALLENGE)) togglePause(); });
 
   // ===================== LOOP 60Hz =====================
@@ -1640,17 +1649,19 @@ function drawBossGuide(ctx, boss, camX, camY) {
   function updatePlayingCommon() {
     const L = currentLevel;
     stageTimerFrames++; if (stageTimerFrames % 60 === 0) stageTimerSeconds++;
+    updateMovingPlatforms(L);
     if (player.update) player.update(L);
+    if (player.dead) return; // animação de queda; o mundo congela
     updateBiome();
     const wb = player.whipTimer > 0 && player.getWhipBox ? player.getWhipBox() : null;
     L.enemies.forEach((e) => {
       if (e.dead) return;
       if (e.update) e.update(player, L);
       if (wb && !player.whipHitSet.has(e) && checkAABB(wb, e)) { player.whipHitSet.add(e); e.hit(1, player.x); }
-      if (!e.dead && checkAABB(player, e)) {
+      if (!e.dead && !player.dead && checkAABB(player, e)) {
         if (player.asaBrancaTimer > 0) { e.hit(3, player.x); }
-        else if (player.vy > 0 && player.prevY + player.h <= e.y + 18 && e.canBeStomped()) { player.bounce(-9.5); e.hit(1, player.x); sfx("stomp"); }
-        else if (e.state !== "stunned") { player.takeDamage(1); }
+        else if (player.vy > 0 && player.prevY + player.h <= e.y + 20 && e.canBeStomped()) { player.bounce(-9.5); e.hit(1, player.x); sfx("stomp"); }
+        else if (e.state !== "stunned") { player.takeDamage(1, e.x + e.w / 2); }
       }
     });
     for (let i = L.enemies.length - 1; i >= 0; i--) if (L.enemies[i].remove) L.enemies.splice(i, 1);
@@ -1659,7 +1670,7 @@ function drawBossGuide(ctx, boss, camX, camY) {
       if (!L.boss.dead && wb && !player.whipHitSet.has(L.boss) && checkAABB(wb, L.boss)) { player.whipHitSet.add(L.boss); L.boss.takeHit(1); }
       if (!L.boss.dead && checkAABB(player, L.boss)) {
         if (player.vy > 0 && player.prevY + player.h <= L.boss.y + 24 && L.boss.isVulnerable()) { player.bounce(-10.2); L.boss.takeHit(1); sfx("stomp"); }
-        else if (L.boss.state !== "stunned") { player.takeDamage(1); }
+        else if (L.boss.state !== "stunned") { player.takeDamage(1, L.boss.x + L.boss.w / 2); }
       }
       const bar = $("bossBarContainer"), fill = $("bossHpFill"), bname = $("bossName");
       if (bar) bar.style.display = L.boss.dead ? "none" : "flex";
@@ -1675,16 +1686,40 @@ function drawBossGuide(ctx, boss, camX, camY) {
     if (L.flagpole && (!L.boss || L.boss.dead || L.boss.hp <= 0)) L.flagpole.update();
     if (bossIntroTimer > 0) bossIntroTimer--;
     if (player.invulnTimer > 0 && !player.invulnerable) player.invulnTimer--;
-    if (player.y > L.levelH + 150 || health <= 0) loseLife();
+    if (!player.dead && (player.y > L.levelH + 150 || health <= 0)) player.die();
   }
+  // v2.2: plataformas móveis andam ANTES do Tonho e o levam junto (sem tremedeira)
+  function updateMovingPlatforms(L) {
+    const mps = L.movingPlatforms || [];
+    for (const mp of mps) {
+      mp.prevX = mp.x; mp.prevY = mp.y;
+      mp.t = (mp.t || 0) + (mp.speed || 0.025);
+      const off = Math.sin(mp.t + (mp.phase || 0)) * (mp.range || 90);
+      if (mp.axis === 'y') mp.y = mp.origY + off; else mp.x = mp.origX + off;
+      mp.vx = mp.x - mp.prevX; mp.vy = mp.y - mp.prevY;
+      if (player && !player.dead && !player.onVine && player.onGround && player.vy >= 0 &&
+          Math.abs(player.y + player.h - mp.prevY) <= 3 && player.x + player.w > mp.prevX + 2 && player.x < mp.prevX + mp.w - 2) {
+        const ny = mp.y - player.h;
+        player._carryDX = (player._carryDX || 0) + mp.vx; player._carryDY = (player._carryDY || 0) + (ny - player.y);
+        player.x += mp.vx; player.y = ny;
+      }
+    }
+  }
+  let camLook = 0;
   function updateCamera() {
     if (!player || !currentLevel) return;
     view.px = view.x; view.py = view.y;
-    const W = VW(), H = VH(), tx = Math.max(0, Math.min(currentLevel.levelW - W, player.x - W * 0.4)), ty = Math.max(0, Math.min(currentLevel.levelH - H, player.y - H * 0.55));
-    view.x += (tx - view.x) * 0.15; view.y += (ty - view.y) * 0.1;
+    const W = VW(), H = VH();
+    // olhar um pouco à frente na direção do movimento, com suavidade
+    const lookT = player.onVine ? 0 : clamp((player.facing || 1) * 50 + (player.vx || 0) * 8, -90, 90);
+    camLook += (lookT - camLook) * 0.035;
+    const tx = Math.max(0, Math.min(currentLevel.levelW - W, player.x + player.w / 2 - W * 0.42 + camLook)), ty = Math.max(0, Math.min(currentLevel.levelH - H, player.y - H * 0.55));
+    const dx = tx - view.x;
+    view.x += dx * (Math.abs(dx) > 220 ? 0.25 : 0.12); view.y += (ty - view.y) * 0.08;
   }
   function fixedUpdate() {
     frameCount++;
+    if (screenShake > 0) { screenShake *= 0.86; if (screenShake < 0.35) screenShake = 0; } // v2.2: o tremor agora acaba
     if (currentState === GAME_STATE.PLAYING) { updatePlayingCommon(); updateCamera(); updateFx(); }
     else if (currentState === GAME_STATE.CHALLENGE) {
       updatePlayingCommon(); updateCamera(); updateFx();
@@ -1708,8 +1743,10 @@ function drawBossGuide(ctx, boss, camX, camY) {
     if (!currentLevel || !player) return;
     const L = currentLevel;
     let camX = view.px + (view.x - view.px) * alpha, camY = view.py + (view.y - view.py) * alpha;
-    if (typeof screenShake !== 'undefined' && screenShake > 0) { camX += (Math.random() - 0.5) * screenShake; camY += (Math.random() - 0.5) * screenShake; }
-    camX = Math.round(camX); camY = Math.round(camY);
+    if (screenShake > 0.35 && currentState !== GAME_STATE.PAUSED) { const a = frameCount * 1.7; camX += Math.sin(a) * screenShake * 0.5; camY += Math.cos(a * 1.3) * screenShake * 0.5; }
+    const dprR = +(P2C.dataset.dpr || 1) || 1;
+    camX = Math.round(camX * dprR) / dprR; camY = Math.round(camY * dprR) / dprR;
+    L._alpha = alpha;
     const draw = (e) => { if (e && e.draw && !e.removed) e.draw(ctx, camX, camY); };
     const HD = typeof window !== 'undefined' && window.OxeHD;
     if (HD && HD.drawParallaxHD) HD.drawParallaxHD(ctx, camX, camY, L, frameCount, W, H);
@@ -1745,19 +1782,35 @@ function drawBossGuide(ctx, boss, camX, camY) {
     }
   }
 
+  // v2.2: o renderAlpha local escondia o global, então o Tonho e os inimigos eram desenhados
+  // sem interpolação enquanto a câmera era interpolada -> personagem "tremendo" na tela.
+  let perfSamples = 0, perfSum = 0, lowQuality = false;
+  function syncTouchVisibility() {
+    const tc = $('touchControls'); if (!tc) return;
+    const playing = currentState === GAME_STATE.PLAYING || currentState === GAME_STATE.CHALLENGE || currentState === GAME_STATE.LEVEL_COMPLETE;
+    if (tc._playing !== playing) { tc._playing = playing; tc.classList.toggle('hidden-by-game', !playing); if (!playing) { keys.left = keys.right = keys.down = false; setJump(false); setWhip(false); } }
+  }
   function startMainLoop() {
-    const FIXED_DELTA = (typeof STEP_MS !== 'undefined') ? STEP_MS : 1000 / 60;
-    let lastTime = performance.now(), accumulator = 0, renderAlpha = 1;
+    const STEP = (typeof STEP_MS !== 'undefined') ? STEP_MS : 1000 / 60;
+    let lastTime = performance.now(), accumulator = 0;
     function loop(now) {
       let dt = now - lastTime; lastTime = now;
-      if (dt > 250) dt = 250;
+      if (dt > 100) dt = 100; // evita "espiral" de atualizações depois de travadas
       const active = currentState !== GAME_STATE.PAUSED;
       if (active) {
         accumulator += dt;
-        while (accumulator >= FIXED_DELTA) { fixedUpdate(); accumulator -= FIXED_DELTA; }
+        let steps = 0;
+        while (accumulator >= STEP && steps < 5) { fixedUpdate(); accumulator -= STEP; steps++; }
+        if (steps >= 5) accumulator = 0;
       } else accumulator = 0;
-      renderAlpha = accumulator / FIXED_DELTA;
+      renderAlpha = clamp(accumulator / STEP, 0, 1);
       render(renderAlpha);
+      syncTouchVisibility();
+      // Qualidade automática: celulares lentos perdem efeitos caros e resolução extra
+      if (!lowQuality && (currentState === GAME_STATE.PLAYING || currentState === GAME_STATE.CHALLENGE) && dt < 100) {
+        perfSum += dt; perfSamples++;
+        if (perfSamples >= 150) { if (perfSum / perfSamples > 24) { lowQuality = true; window.OXE_LOW_QUALITY = true; if (window.OxeHD) window.OxeHD.lowQuality = true; resizeCanvas(); } perfSum = 0; perfSamples = 0; }
+      }
       requestAnimationFrame(loop);
     }
     requestAnimationFrame(loop);
@@ -1779,7 +1832,7 @@ function drawBossGuide(ctx, boss, camX, camY) {
   function boot() {
     const params = new URLSearchParams(window.location.search);
     const fase = params.get('fase'), desafio = params.get('desafio');
-    if (desafio && /^\d{8}$/.test(desafio)) startChallenge(parseInt(desafio, 10));
+    if (desafio && /^\d{8}$/.test(desafio)) startChallenge('OXE-' + desafio);
     else if (fase && levelIndexFromParam(fase) >= 0) startGame(levelIndexFromParam(fase));
     else if (typeof showTitleScreen === 'function') showTitleScreen();
     else currentState = GAME_STATE.TITLE;
@@ -1793,6 +1846,7 @@ function drawBossGuide(ctx, boss, camX, camY) {
     getEnemies: () => currentLevel ? currentLevel.enemies : [],
     getBoss: () => currentLevel ? currentLevel.boss : null,
     getProjectiles: () => projectiles,
+    getShake: () => screenShake, getView: () => ({ x: view.x, y: view.y }), isUnlocked, starsOf, openMap,
     SaveManager, GAME_STATE,
     loadLevel: (idx) => startGame(idx),
     startChallenge: (seed) => startChallenge(seed),
