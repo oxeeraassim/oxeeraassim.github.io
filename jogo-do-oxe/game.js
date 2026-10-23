@@ -117,7 +117,7 @@ const sanfonaRings = [];
 function liveSettings() { try { if (window.OxeSettings && window.OxeSettings.get) return window.OxeSettings.get(); } catch (e) {} return SaveManager.data.settings || {}; }
 function triggerHaptic(ms = 20) { if (liveSettings().vibration !== false && navigator.vibrate) { try { navigator.vibrate(ms); } catch (e) {} } }
 // v2.2: tremor curto e com decaimento (antes nunca zerava e a tela tremia para sempre)
-function addScreenShake(amount) { const a = Math.min(9, liveSettings().reduceShake ? amount * 0.25 : amount * 0.6); screenShake = Math.max(screenShake, a); }
+function addScreenShake(amount) { const a = Math.min(5, liveSettings().reduceShake ? amount * 0.2 : amount * 0.42); screenShake = Math.max(screenShake, a); }
 
 // ==================== INPUT ====================
 const keys = { left: false, right: false, up: false, down: false, jump: false, jumpJustPressed: false, whip: false, whipJustPressed: false, glide: false };
@@ -1284,16 +1284,10 @@ function createBoss(bossType, x, y) {
 
 function drawBossGuide(ctx, boss, camX, camY) {
   if (!boss || boss.dead || boss.hp <= 0) return;
-  const dprG = +(ctx.canvas.dataset && ctx.canvas.dataset.dpr) || 1, W = ctx.canvas.width / dprG, t = boss.t || 0;
-  const text = boss.guideText || 'Desvie dos ataques e chicoteie o chefe quando ele ficar tonto!';
-  ctx.save(); ctx.setTransform(dprG, 0, 0, dprG, 0, 0);
-  ctx.font = 'bold 15px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  const tw = Math.min(W - 20, ctx.measureText(text).width + 30), bx = W / 2 - tw / 2, by = 52;
-  ctx.fillStyle = 'rgba(0,0,0,0.65)'; ctx.beginPath(); ctx.roundRect(bx, by, tw, 30, 10); ctx.fill();
-  ctx.strokeStyle = '#FFD700'; ctx.lineWidth = 2; ctx.stroke();
-  ctx.fillStyle = boss.state === 'stunned' ? '#FFD700' : '#FFF';
-  ctx.fillText(boss.state === 'stunned' ? 'AGORA! Chicoteie o chefe!' : text, W / 2, by + 15, W - 40);
-  ctx.restore();
+  // v2.5.1: a dica agora fica num texto fixo embaixo da barra do chefe (antes era desenhada por cima do HUD e parecia tremer)
+  const t = boss.t || 0;
+  const hint = document.getElementById('bossHint');
+  if (hint) { const txt = boss.state === 'stunned' ? 'AGORA! Bata no chefe!' : (boss.guideText || boss.hint || 'Desvie dos ataques e bata quando ele ficar tonto!'); if (hint._t !== txt) { hint._t = txt; hint.textContent = txt; hint.classList.toggle('now', boss.state === 'stunned'); } }
   if (boss.state === 'stunned' && Math.floor(t / 8) % 2 === 0) {
     const ax = boss.x + boss.w / 2 - camX, ay = boss.y - camY - 30 + Math.sin(t * 0.3) * 6;
     ctx.save(); ctx.fillStyle = '#FFD700'; ctx.strokeStyle = '#7A5C00'; ctx.lineWidth = 3;
@@ -1913,8 +1907,14 @@ function drawBossGuide(ctx, boss, camX, camY) {
       let b = currentLevel && currentLevel.boss;
       if (!b && currentLevel && player) b = currentLevel.enemies.find((e) => e.legend && !e.dead && e.st !== 'intro' && Math.abs(e.x - player.x) < 800);
       const on = !!(b && !b.dead && b.hp > 0 && currentState !== GAME_STATE.LEVEL_COMPLETE);
-      bb.style.display = on ? 'block' : 'none';
-      if (on) { $('bossHpFill').style.width = Math.max(0, b.hp / (b.maxHp || b.hp) * 100) + '%'; $('bossName').textContent = b.name || 'Chefão'; }
+      const disp = on ? 'flex' : 'none'; if (bb._d !== disp) { bb._d = disp; bb.style.display = disp; }
+      if (on) {
+        const wv = Math.max(0, b.hp / (b.maxHp || b.hp) * 100).toFixed(1) + '%', fill = $('bossHpFill'), nm = $('bossName');
+        if (fill && fill._w !== wv) { fill._w = wv; fill.style.width = wv; }
+        if (nm && nm._n !== b.name) { nm._n = b.name; nm.textContent = b.name || 'Chefão'; }
+        let hint = $('bossHint'); if (!hint) { hint = document.createElement('div'); hint.id = 'bossHint'; bb.appendChild(hint); }
+        if (b.legend) { const ht = b.sub || ''; if (hint._t !== ht) { hint._t = ht; hint.textContent = ht; hint.classList.remove('now'); } }
+      }
     }
   }
 
@@ -2087,10 +2087,7 @@ function drawBossGuide(ctx, boss, camX, camY) {
         if (player.vy > 0 && player.prevY + player.h <= L.boss.y + 24 && L.boss.isVulnerable()) { player.bounce(-10.2); L.boss.takeHit(1); sfx("stomp"); }
         else if (L.boss.state !== "stunned") { player.takeDamage(1, L.boss.x + L.boss.w / 2); }
       }
-      const bar = $("bossBarContainer"), fill = $("bossHpFill"), bname = $("bossName");
-      if (bar) bar.style.display = L.boss.dead ? "none" : "flex";
-      if (fill) fill.style.width = Math.max(0, (L.boss.hp / L.boss.maxHp) * 100) + "%";
-      if (bname) bname.textContent = L.boss.name;
+      // (a barra do chefe é atualizada só em updateHUD, sem alternar estilos a cada quadro)
       if (L.boss.dead && L.boss.deathTimer <= 1 && currentState === GAME_STATE.PLAYING) {
         currentState = GAME_STATE.LEVEL_COMPLETE; celebrateTimer = 84;
         try { AudioEngine.playMusic("victory"); } catch (e) {}
@@ -2158,7 +2155,7 @@ function drawBossGuide(ctx, boss, camX, camY) {
   }
   function fixedUpdate() {
     frameCount++;
-    if (screenShake > 0) { screenShake *= 0.86; if (screenShake < 0.35) screenShake = 0; } // v2.2: o tremor agora acaba
+    if (screenShake > 0) { screenShake *= 0.8; if (screenShake < 0.4) screenShake = 0; } // v2.2: o tremor agora acaba
     if (currentState === GAME_STATE.PLAYING) { updatePlayingCommon(); updateCamera(); updateFx(); }
     else if (currentState === GAME_STATE.CHALLENGE) {
       updatePlayingCommon(); updateCamera(); updateFx();

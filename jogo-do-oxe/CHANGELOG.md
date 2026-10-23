@@ -1,5 +1,11 @@
 # CHANGELOG — OXE! 2.0: A Grande Jornada dos Nove Sóis
 
+## [v2.5.1 — Luta de chefe sem tremor] — 2026-10-23
+- A barra do chefe alternava entre dois estilos de exibição a cada fração de segundo; o nome e a barra "pulavam". Agora o estilo é fixo e a barra só é atualizada quando muda.
+- A dica do chefe era desenhada por cima do HUD. Agora aparece num texto fixo logo abaixo da barra de vida (e mostra a lenda e o estado de cada lenda).
+- Tremor de tela mais fraco e mais curto (máximo menor e decaimento mais rápido).
+- Service Worker `oxe-jogo-v11`.
+
 ## [v2.5.0 — Começo mais fácil, escolha de armas e pisão que vale pontos] — 2026-10-23
 ### Dificuldade
 - Mundo 1 bem mais leve: 9 inimigos na 1-1 (eram 13), de 10 a 12 nas outras fases do mundo 1, bichos com vida normal, um pouco mais lentos, perseguem só de perto e não se esquivam. A dificuldade sobe aos poucos a cada mundo.
