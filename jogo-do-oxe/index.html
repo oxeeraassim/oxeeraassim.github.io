@@ -3,19 +3,43 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Oxe! A Odisseia dos Nove Sóis — Jogo Oficial 2D</title>
-  <meta name="description" content="Um jogo de plataforma 2D surpreendente com a identidade visual do Oxe, era assim? Gráficos incríveis, física fluida e trilha de forró 8-bit sintetizada!">
+  <title>OXE! 2.0: A Grande Jornada dos Nove Sóis — Jogo Oficial 2D</title>
+  <meta name="description" content="Jogo de plataforma 2D com a identidade visual do Oxe, era assim? 6 mundos, 30 fases, Desafio Sertanejo diário e trilha de forró 8-bit sintetizada. Jogue grátis, até offline!">
+  <link rel="canonical" href="https://oxeeraassim.github.io/jogo-do-oxe/">
+
+  <!-- Open Graph / Social -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Jogo do Oxe">
+  <meta property="og:locale" content="pt_BR">
+  <meta property="og:title" content="OXE! 2.0: A Grande Jornada dos Nove Sóis">
+  <meta property="og:description" content="Corra, pule, plane com o chapéu de couro e salve o sertão! 6 mundos, 30 fases e um Desafio Sertanejo novo todo dia. Será que você me vence?">
+  <meta property="og:url" content="https://oxeeraassim.github.io/jogo-do-oxe/">
+  <meta property="og:image" content="https://oxeeraassim.github.io/jogo-do-oxe/icon-512.png">
+  <meta property="og:image:width" content="512">
+  <meta property="og:image:height" content="512">
+  <meta property="og:image:alt" content="Ícone do Jogo do Oxe">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="OXE! 2.0: A Grande Jornada dos Nove Sóis">
+  <meta name="twitter:description" content="Plataforma 2D arretado com forró 8-bit. 6 mundos, 30 fases e Desafio Diário!">
+  <meta name="twitter:image" content="https://oxeeraassim.github.io/jogo-do-oxe/icon-512.png">
+
+  <!-- PWA -->
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon-192.png">
   <link rel="icon" type="image/svg+xml" href="icon.svg">
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Jogo do Oxe">
   <meta name="theme-color" content="#E8590C">
+  <meta name="format-detection" content="telephone=no">
+
+  <!-- Fontes (com fallback offline completo na pilha CSS) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Outfit:wght@400;600;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
   <style>
     :root {
       --oxe-orange: #E8590C;
@@ -26,6 +50,18 @@
       --oxe-cream: #FFF9DB;
       --oxe-teal: #1098AD;
       --oxe-red: #FA5252;
+
+      --font-title: 'Cinzel', 'Palatino Linotype', 'Book Antiqua', 'Georgia', serif;
+      --font-ui: 'Outfit', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-left: env(safe-area-inset-left, 0px);
+      --safe-right: env(safe-area-inset-right, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+
+      /* Touch: escala e opacidade (ajustadas via JS/configurações) */
+      --touch-scale: 1;
+      --touch-opacity: 0.8;
     }
 
     * {
@@ -43,9 +79,13 @@
       height: 100%;
       overflow: hidden;
       background: #0B0806;
-      font-family: 'Outfit', sans-serif;
+      font-family: var(--font-ui);
       color: #fff;
+      overscroll-behavior: none;
+      touch-action: none;
     }
+
+    button { font-family: var(--font-ui); }
 
     #gameContainer {
       position: relative;
@@ -73,10 +113,11 @@
       top: 0;
       left: 0;
       width: 100%;
-      padding: env(safe-area-inset-top, 16px) 20px 10px 20px;
+      padding: calc(var(--safe-top) + 12px) calc(var(--safe-right) + 16px) 10px calc(var(--safe-left) + 16px);
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
+      gap: 10px;
       pointer-events: none;
       z-index: 10;
       text-shadow: 0 2px 4px rgba(0,0,0,0.8), 0 0 10px rgba(0,0,0,0.5);
@@ -85,8 +126,12 @@
     .hud-left, .hud-center, .hud-right {
       display: flex;
       align-items: center;
-      gap: 14px;
+      gap: 10px;
+      flex-wrap: wrap;
     }
+    .hud-left { justify-content: flex-start; flex: 1 1 0; }
+    .hud-center { justify-content: center; flex: 0 0 auto; }
+    .hud-right { justify-content: flex-end; flex: 1 1 0; }
 
     .hud-card {
       background: rgba(26, 18, 11, 0.85);
@@ -94,36 +139,35 @@
       -webkit-backdrop-filter: blur(8px);
       border: 2px solid rgba(245, 159, 0, 0.6);
       border-radius: 14px;
-      padding: 6px 14px;
+      padding: 5px 12px;
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
       box-shadow: 0 4px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.2);
     }
 
-    .hearts-box {
-      display: flex;
-      gap: 4px;
-    }
+    .hearts-box { display: flex; gap: 3px; }
 
     .heart-icon {
-      width: 26px;
-      height: 26px;
+      width: 24px;
+      height: 24px;
       filter: drop-shadow(0 2px 4px rgba(250, 82, 82, 0.5));
       transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     }
-
     .heart-icon.lost {
       filter: grayscale(1) opacity(0.35);
       transform: scale(0.8);
     }
+    .heart-icon.bonus { filter: drop-shadow(0 0 6px #66D9E8); }
 
     .hud-val {
-      font-size: 1.2rem;
+      font-size: 1.1rem;
       font-weight: 900;
       color: var(--oxe-gold);
       letter-spacing: 0.5px;
+      font-variant-numeric: tabular-nums;
     }
+    .hud-val.score { color: #FFF9DB; letter-spacing: 1.5px; }
 
     .hud-label {
       font-size: 0.75rem;
@@ -131,29 +175,55 @@
       color: #E9ECEF;
       text-transform: uppercase;
       letter-spacing: 1px;
+      white-space: nowrap;
     }
 
-    .caju-gems {
-      display: flex;
-      gap: 6px;
-    }
-
+    .caju-gems { display: flex; gap: 6px; }
     .caju-gem {
       width: 22px;
       height: 22px;
       filter: grayscale(1) opacity(0.3);
       transition: all 0.3s ease;
     }
-
     .caju-gem.collected {
       filter: drop-shadow(0 0 8px #FFD43B);
       transform: scale(1.15);
     }
 
+    .hud-icon-btn {
+      pointer-events: auto;
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: rgba(26, 18, 11, 0.88);
+      border: 2px solid rgba(245, 159, 0, 0.6);
+      color: #FFF9DB;
+      font-size: 1.15rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.6);
+      touch-action: manipulation;
+      transition: transform 0.15s ease, border-color 0.15s ease;
+    }
+    .hud-icon-btn:hover { border-color: var(--oxe-gold); }
+    .hud-icon-btn:active { transform: scale(0.9); }
+    .hud-icon-btn:focus-visible { outline: 3px solid #66D9E8; outline-offset: 2px; }
+
+    @media (max-width: 720px), (max-height: 420px) {
+      .hud-card { padding: 4px 8px; border-radius: 12px; }
+      .heart-icon { width: 19px; height: 19px; }
+      .hud-val { font-size: 0.95rem; }
+      .caju-gem { width: 18px; height: 18px; }
+      .hud-icon-btn { width: 36px; height: 36px; font-size: 1rem; }
+      .hud-label { font-size: 0.65rem; }
+    }
+
     /* BOSS HEALTH BAR */
     #bossBarContainer {
       position: absolute;
-      top: 80px;
+      top: calc(var(--safe-top) + 72px);
       left: 50%;
       transform: translateX(-50%);
       width: min(90%, 460px);
@@ -164,9 +234,8 @@
       z-index: 10;
       pointer-events: none;
     }
-
     #bossName {
-      font-family: 'Cinzel', serif;
+      font-family: var(--font-title);
       font-size: 1.1rem;
       font-weight: 900;
       color: #FFF;
@@ -174,7 +243,6 @@
       text-shadow: 0 0 10px #FA5252, 0 2px 4px #000;
       text-transform: uppercase;
     }
-
     .boss-bar-frame {
       width: 100%;
       height: 18px;
@@ -184,7 +252,6 @@
       padding: 2px;
       box-shadow: 0 0 15px rgba(250, 82, 82, 0.4), inset 0 2px 4px rgba(0,0,0,0.8);
     }
-
     #bossHpFill {
       width: 100%;
       height: 100%;
@@ -197,7 +264,7 @@
     /* ==================== DIALOGUE BOX ==================== */
     #dialogueBox {
       position: absolute;
-      bottom: 24px;
+      bottom: calc(var(--safe-bottom) + 24px);
       left: 50%;
       transform: translateX(-50%);
       width: min(92%, 680px);
@@ -211,8 +278,8 @@
       box-shadow: 0 10px 30px rgba(0,0,0,0.8), 0 0 20px rgba(245, 159, 0, 0.3);
       z-index: 20;
       backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
     }
-
     .dialogue-avatar {
       width: 72px;
       height: 72px;
@@ -226,27 +293,21 @@
       flex-shrink: 0;
       box-shadow: 0 4px 10px rgba(0,0,0,0.5);
     }
-
-    .dialogue-content {
-      flex: 1;
-    }
-
+    .dialogue-content { flex: 1; }
     .dialogue-speaker {
-      font-family: 'Cinzel', serif;
+      font-family: var(--font-title);
       font-size: 1rem;
       font-weight: 900;
       color: var(--oxe-gold);
       margin-bottom: 4px;
       letter-spacing: 1px;
     }
-
     .dialogue-text {
       font-size: 0.95rem;
       line-height: 1.45;
       color: #FFF9DB;
       font-weight: 500;
     }
-
     .dialogue-prompt {
       align-self: flex-end;
       font-size: 0.75rem;
@@ -256,112 +317,219 @@
       letter-spacing: 1px;
       animation: pulseText 1s infinite alternate;
     }
-
     @keyframes pulseText {
       from { opacity: 0.5; transform: translateY(0); }
       to { opacity: 1; transform: translateY(-2px); }
     }
+    @media (max-height: 420px) {
+      .dialogue-avatar { width: 52px; height: 52px; font-size: 1.6rem; }
+      #dialogueBox { padding: 10px 14px; gap: 10px; }
+      .dialogue-text { font-size: 0.85rem; }
+    }
 
-    /* ==================== TOUCH CONTROLS (MOBILE) ==================== */
+    /* ==================== TOUCH CONTROLS "DE CONSOLE" ==================== */
     #touchControls {
       position: absolute;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
+      inset: 0;
       pointer-events: none;
       z-index: 15;
       display: none;
+      opacity: var(--touch-opacity);
+      transition: opacity 0.2s ease;
     }
 
-    /* Ativa automaticamente em telas sensíveis ao toque (smartphones e tablets) */
-    @media (hover: none) and (pointer: coarse), (max-width: 1024px) {
-      #touchControls {
-        display: block !important;
-      }
+    /* B18: somente dispositivos realmente touch (ou forçado via classe) */
+    @media (hover: none) and (pointer: coarse) {
+      #touchControls { display: block; }
+    }
+    #touchControls.force-touch,
+    body.force-touch #touchControls { display: block; }
+    #touchControls.hidden-by-game { display: none !important; }
+
+    #touchControls.size-sm { --touch-scale: 0.82; }
+    #touchControls.size-md { --touch-scale: 1; }
+    #touchControls.size-lg { --touch-scale: 1.22; }
+
+    .touch-zone {
+      position: absolute;
+      bottom: calc(var(--safe-bottom) + 18px);
+      pointer-events: auto;
+      touch-action: none;
+    }
+
+    /* Zona esquerda: D-pad em "pílula" contínua para deslizar o polegar entre ◀ e ▶ (B19) */
+    #dpadZone {
+      left: calc(var(--safe-left) + 18px);
+      width: calc(196px * var(--touch-scale));
+      height: calc(170px * var(--touch-scale));
+    }
+
+    #actionZone {
+      right: calc(var(--safe-right) + 18px);
+      width: calc(210px * var(--touch-scale));
+      height: calc(170px * var(--touch-scale));
     }
 
     .touch-btn {
-      pointer-events: auto;
       position: absolute;
       background: radial-gradient(circle, rgba(245, 159, 0, 0.35) 0%, rgba(26, 18, 11, 0.6) 100%);
       border: 2.5px solid rgba(255, 212, 59, 0.75);
-      border-radius: 50%;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       color: #FFF9DB;
       font-weight: 900;
+      line-height: 1.05;
+      text-align: center;
       box-shadow: 0 6px 16px rgba(0,0,0,0.6), inset 0 2px 6px rgba(255,255,255,0.3);
       backdrop-filter: blur(4px);
       -webkit-backdrop-filter: blur(4px);
-      touch-action: manipulation;
+      touch-action: none;
+      pointer-events: none; /* a zona captura os toques; o JS calcula o botão sob o dedo */
+      transition: transform 0.06s ease, background 0.06s ease, border-color 0.06s ease;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.8);
     }
 
-    .touch-btn:active, .touch-btn.active {
+    .touch-btn.active {
       transform: scale(0.92);
-      background: radial-gradient(circle, rgba(232, 89, 12, 0.6) 0%, rgba(26, 18, 11, 0.8) 100%);
+      background: radial-gradient(circle, rgba(232, 89, 12, 0.65) 0%, rgba(26, 18, 11, 0.85) 100%);
       border-color: #FFA94D;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.6), 0 0 18px rgba(255, 169, 77, 0.55);
     }
 
-    /* D-PAD */
+    /* Trilho de fundo unindo ◀ e ▶ */
+    #dpadZone::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      width: 100%;
+      height: calc(84px * var(--touch-scale));
+      border-radius: 999px;
+      background: rgba(26, 18, 11, 0.45);
+      border: 2px solid rgba(255, 212, 59, 0.3);
+      box-shadow: inset 0 2px 8px rgba(0,0,0,0.6);
+    }
+
+    #dpadLeft, #dpadRight {
+      bottom: calc(4px * var(--touch-scale));
+      width: calc(94px * var(--touch-scale));
+      height: calc(76px * var(--touch-scale));
+      font-size: calc(1.9rem * var(--touch-scale));
+    }
     #dpadLeft {
-      left: 24px;
-      bottom: 36px;
-      width: 68px;
-      height: 68px;
-      font-size: 1.8rem;
+      left: calc(4px * var(--touch-scale));
+      border-radius: 999px 14px 14px 999px;
     }
-
     #dpadRight {
-      left: 104px;
-      bottom: 36px;
-      width: 68px;
-      height: 68px;
-      font-size: 1.8rem;
+      right: calc(4px * var(--touch-scale));
+      border-radius: 14px 999px 999px 14px;
     }
-
     #dpadDown {
-      left: 64px;
-      bottom: 110px;
-      width: 64px;
-      height: 64px;
-      font-size: 1.5rem;
+      left: 50%;
+      bottom: calc(92px * var(--touch-scale));
+      margin-left: calc(-34px * var(--touch-scale));
+      width: calc(68px * var(--touch-scale));
+      height: calc(68px * var(--touch-scale));
+      border-radius: 50%;
+      font-size: calc(1.5rem * var(--touch-scale));
     }
 
-    /* ACTION BUTTONS */
+    /* Zona direita: apenas PULAR (segure = planar) e CHICOTE (B20) */
     #btnJump {
-      right: 28px;
-      bottom: 44px;
-      width: 82px;
-      height: 82px;
-      font-size: 1.3rem;
-      background: radial-gradient(circle, rgba(16, 152, 173, 0.45) 0%, rgba(26, 18, 11, 0.65) 100%);
+      right: 0;
+      bottom: calc(4px * var(--touch-scale));
+      width: calc(112px * var(--touch-scale));
+      height: calc(112px * var(--touch-scale));
+      border-radius: 50%;
+      font-size: calc(1.25rem * var(--touch-scale));
+      background: radial-gradient(circle, rgba(16, 152, 173, 0.5) 0%, rgba(26, 18, 11, 0.65) 100%);
       border-color: #66D9E8;
+      letter-spacing: 1px;
+    }
+    #btnJump small {
+      display: block;
+      margin-top: 4px;
+      font-size: calc(0.6rem * var(--touch-scale));
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      color: #C5F6FA;
+      opacity: 0.9;
+    }
+    #btnJump.active {
+      background: radial-gradient(circle, rgba(16, 152, 173, 0.85) 0%, rgba(26, 18, 11, 0.85) 100%);
+      border-color: #99E9F2;
+    }
+    #btnJump.gliding {
+      box-shadow: 0 0 22px rgba(102, 217, 232, 0.8), inset 0 2px 6px rgba(255,255,255,0.3);
     }
 
     #btnWhip {
-      right: 120px;
-      bottom: 36px;
-      width: 72px;
-      height: 72px;
-      font-size: 1.1rem;
-      background: radial-gradient(circle, rgba(232, 89, 12, 0.45) 0%, rgba(26, 18, 11, 0.65) 100%);
+      right: calc(122px * var(--touch-scale));
+      bottom: calc(10px * var(--touch-scale));
+      width: calc(80px * var(--touch-scale));
+      height: calc(80px * var(--touch-scale));
+      border-radius: 50%;
+      font-size: calc(0.9rem * var(--touch-scale));
+      background: radial-gradient(circle, rgba(232, 89, 12, 0.5) 0%, rgba(26, 18, 11, 0.65) 100%);
       border-color: #FFA94D;
     }
+    #btnWhip .ico { font-size: calc(1.4rem * var(--touch-scale)); }
 
-    #btnGlide {
-      right: 48px;
-      bottom: 136px;
-      width: 64px;
-      height: 64px;
-      font-size: 0.95rem;
-      background: radial-gradient(circle, rgba(245, 159, 0, 0.45) 0%, rgba(26, 18, 11, 0.65) 100%);
-      border-color: #FFD43B;
+    /* Modo canhoto: espelha as zonas */
+    #touchControls.left-handed #dpadZone {
+      left: auto;
+      right: calc(var(--safe-right) + 18px);
+    }
+    #touchControls.left-handed #actionZone {
+      right: auto;
+      left: calc(var(--safe-left) + 18px);
+    }
+    #touchControls.left-handed #btnJump { right: auto; left: 0; }
+    #touchControls.left-handed #btnWhip { right: auto; left: calc(122px * var(--touch-scale)); }
+
+    @media (max-height: 380px) {
+      .touch-zone { bottom: calc(var(--safe-bottom) + 8px); }
     }
 
-    /* ==================== TELAS OVERLAY (TITLE, OVERWORLD, PAUSE, VICTORY) ==================== */
+    /* ==================== OVERLAY DE ROTAÇÃO (B22) ==================== */
+    #rotateOverlay {
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+      padding: calc(var(--safe-top) + 24px) 24px calc(var(--safe-bottom) + 24px);
+      background: radial-gradient(circle at center, #2C1810 0%, #0B0806 100%);
+      text-align: center;
+    }
+    @media (orientation: portrait) and (hover: none) and (pointer: coarse) {
+      #rotateOverlay:not(.dismissed) { display: flex; }
+    }
+    .rotate-phone {
+      font-size: 4.5rem;
+      animation: rotatePhone 2.2s ease-in-out infinite;
+      filter: drop-shadow(0 6px 16px rgba(232, 89, 12, 0.5));
+    }
+    @keyframes rotatePhone {
+      0%, 20% { transform: rotate(0deg); }
+      50%, 70% { transform: rotate(-90deg); }
+      100% { transform: rotate(0deg); }
+    }
+    .rotate-text {
+      font-family: var(--font-title);
+      font-size: 1.35rem;
+      font-weight: 900;
+      color: var(--oxe-gold);
+      line-height: 1.35;
+      max-width: 320px;
+    }
+
+    /* ==================== TELAS OVERLAY ==================== */
     .screen-overlay {
       position: absolute;
       inset: 0;
@@ -373,30 +541,41 @@
       align-items: center;
       justify-content: center;
       z-index: 50;
-      padding: 24px;
+      padding: calc(var(--safe-top) + 24px) calc(var(--safe-right) + 24px) calc(var(--safe-bottom) + 24px) calc(var(--safe-left) + 24px);
       text-align: center;
+      overflow-y: auto;
+      touch-action: pan-y;
+    }
+    @media (max-height: 520px) {
+      .screen-overlay { justify-content: flex-start; }
     }
 
     .game-logo {
-      font-family: 'Cinzel', serif;
+      font-family: var(--font-title);
       font-size: clamp(2rem, 6vw, 3.8rem);
       font-weight: 900;
       letter-spacing: 2px;
       background: linear-gradient(180deg, #FFF9DB 0%, #FFD43B 40%, #E8590C 100%);
       -webkit-background-clip: text;
+      background-clip: text;
       -webkit-text-fill-color: transparent;
       filter: drop-shadow(0 6px 12px rgba(232, 89, 12, 0.5));
       margin-bottom: 6px;
       line-height: 1.1;
     }
+    .game-logo .ver {
+      font-size: 0.5em;
+      vertical-align: super;
+    }
 
     .game-sub {
+      font-family: var(--font-title);
       font-size: clamp(0.9rem, 2.5vw, 1.25rem);
       color: #FFA94D;
-      font-weight: 800;
+      font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 4px;
-      margin-bottom: 24px;
+      letter-spacing: 3px;
+      margin-bottom: 22px;
     }
 
     .hero-badge {
@@ -407,63 +586,73 @@
       border: 1px solid rgba(245, 159, 0, 0.4);
       border-radius: 99px;
       padding: 6px 16px;
-      margin-bottom: 28px;
+      margin-bottom: 22px;
       font-size: 0.85rem;
       font-weight: 700;
       color: #FFE066;
     }
 
     .menu-btn {
-      width: min(85%, 340px);
-      padding: 14px 28px;
+      width: min(85%, 360px);
+      padding: 13px 26px;
       background: linear-gradient(180deg, #F59F00 0%, #D9480F 100%);
       border: none;
       border-radius: 16px;
       color: #FFF9DB;
-      font-family: 'Cinzel', serif;
-      font-size: 1.15rem;
+      font-family: var(--font-title);
+      font-size: 1.1rem;
       font-weight: 900;
       letter-spacing: 1.5px;
       cursor: pointer;
       box-shadow: 0 8px 24px rgba(217, 72, 15, 0.5), inset 0 2px 0 rgba(255,255,255,0.4);
       transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-      margin-bottom: 12px;
+      margin-bottom: 11px;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 10px;
+      flex-shrink: 0;
+      touch-action: manipulation;
     }
-
-    .menu-btn:hover {
-      transform: translateY(-3px) scale(1.02);
-      box-shadow: 0 12px 30px rgba(217, 72, 15, 0.7);
-    }
-
-    .menu-btn:active {
-      transform: translateY(1px) scale(0.98);
-    }
+    .menu-btn:hover { transform: translateY(-3px) scale(1.02); box-shadow: 0 12px 30px rgba(217, 72, 15, 0.7); }
+    .menu-btn:active { transform: translateY(1px) scale(0.98); }
+    .menu-btn:focus-visible { outline: 3px solid #66D9E8; outline-offset: 3px; }
 
     .menu-btn.sec {
       background: rgba(60, 42, 33, 0.8);
       border: 2px solid rgba(245, 159, 0, 0.4);
       box-shadow: 0 4px 14px rgba(0,0,0,0.5);
       color: #E9ECEF;
-      font-family: 'Outfit', sans-serif;
+      font-family: var(--font-ui);
       font-size: 0.95rem;
       font-weight: 700;
     }
+    .menu-btn.sec:hover { background: rgba(80, 56, 44, 0.9); border-color: #F59F00; }
 
-    .menu-btn.sec:hover {
-      background: rgba(80, 56, 44, 0.9);
-      border-color: #F59F00;
+    .menu-btn.teal {
+      border-color: #1098AD;
+      color: #E3FAFC;
+      background: rgba(16, 152, 173, 0.2);
+    }
+    .menu-btn.gold {
+      border-color: #FFD43B;
+      color: #FFE066;
+      background: rgba(245, 159, 0, 0.18);
     }
 
     .controls-hint {
-      margin-top: 24px;
+      margin-top: 18px;
       font-size: 0.85rem;
       color: #ADB5BD;
-      max-width: 440px;
+      max-width: 460px;
       line-height: 1.6;
+    }
+    @media (hover: none) and (pointer: coarse) {
+      .controls-hint.desktop-only { display: none; }
+    }
+    .controls-hint.touch-only { display: none; }
+    @media (hover: none) and (pointer: coarse) {
+      .controls-hint.touch-only { display: block; }
     }
 
     .key-badge {
@@ -478,51 +667,74 @@
       margin: 0 2px;
     }
 
-    /* MAPA DOS MUNDOS */
-    #worldMapScreen {
-      display: none;
+    /* Estrelas da vitória */
+    .victory-stars {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      font-size: 2.4rem;
+      margin: 4px 0 14px;
+      min-height: 2.6rem;
     }
+    .victory-stars .star {
+      color: #495057;
+      filter: grayscale(1);
+      transform: scale(0.85);
+      transition: all 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    .victory-stars .star.earned {
+      color: #FFD43B;
+      filter: drop-shadow(0 0 10px rgba(255, 212, 59, 0.8));
+      transform: scale(1.1);
+    }
+
+    .seed-info {
+      font-size: 0.8rem;
+      color: #ADB5BD;
+      margin-bottom: 16px;
+      letter-spacing: 0.5px;
+    }
+
+    /* MAPA DOS MUNDOS */
+    #worldMapScreen { display: none; }
 
     .world-tabs {
       display: flex;
-      gap: 10px;
-      margin-bottom: 16px;
+      gap: 8px;
+      margin-bottom: 14px;
       flex-wrap: wrap;
       justify-content: center;
+      max-width: 720px;
     }
-
     .world-tab {
-      padding: 8px 18px;
+      padding: 8px 14px;
       background: rgba(44, 24, 16, 0.85);
       border: 2px solid rgba(245, 159, 0, 0.4);
       border-radius: 99px;
       color: #E9ECEF;
-      font-size: 0.9rem;
+      font-size: 0.85rem;
       font-weight: 800;
       cursor: pointer;
       transition: all 0.2s ease;
-      font-family: 'Cinzel', serif;
+      font-family: var(--font-title);
+      touch-action: manipulation;
+      white-space: nowrap;
     }
-
-    .world-tab:hover {
-      background: rgba(70, 38, 26, 0.95);
-      border-color: var(--oxe-gold);
-      transform: translateY(-2px);
-    }
-
+    .world-tab:hover { background: rgba(70, 38, 26, 0.95); border-color: var(--oxe-gold); transform: translateY(-2px); }
     .world-tab.active {
       background: linear-gradient(180deg, #F59F00 0%, #D9480F 100%);
       border-color: #FFD43B;
       color: #FFF;
       box-shadow: 0 4px 14px rgba(217, 72, 15, 0.5);
     }
+    .world-tab.locked { opacity: 0.45; }
 
     .world-title {
-      font-family: 'Cinzel', serif;
-      font-size: 1.5rem;
+      font-family: var(--font-title);
+      font-size: 1.4rem;
       font-weight: 900;
       color: var(--oxe-gold);
-      margin-bottom: 16px;
+      margin-bottom: 14px;
       letter-spacing: 1px;
       text-align: center;
     }
@@ -531,14 +743,13 @@
       display: flex;
       flex-wrap: wrap;
       justify-content: center;
-      gap: 16px;
-      max-width: 500px;
-      margin-bottom: 24px;
+      gap: 14px;
+      max-width: 620px;
+      margin-bottom: 20px;
     }
-
     .level-card {
       width: 100px;
-      height: 120px;
+      height: 116px;
       background: rgba(44, 24, 16, 0.9);
       border: 2px solid rgba(245, 159, 0, 0.5);
       border-radius: 16px;
@@ -546,43 +757,33 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 8px;
+      gap: 6px;
       cursor: pointer;
       transition: all 0.2s ease;
       box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+      color: #fff;
+      touch-action: manipulation;
     }
-
     .level-card:hover {
       transform: translateY(-4px);
       border-color: var(--oxe-gold);
       background: rgba(70, 38, 26, 0.95);
       box-shadow: 0 8px 20px rgba(245, 159, 0, 0.4);
     }
-
-    .level-card.locked {
-      opacity: 0.4;
-      pointer-events: none;
-      border-color: #495057;
+    .level-card.locked { opacity: 0.4; pointer-events: none; border-color: #495057; }
+    .level-card.boss { border-color: #FA5252; }
+    .level-num { font-size: 1.35rem; font-weight: 900; color: #FFF; }
+    .level-stars { display: flex; gap: 2px; font-size: 0.75rem; color: #FFD43B; }
+    @media (max-height: 460px) {
+      .level-card { width: 84px; height: 92px; }
+      .level-grid { gap: 10px; }
     }
 
-    .level-num {
-      font-size: 1.4rem;
-      font-weight: 900;
-      color: #FFF;
-    }
-
-    .level-stars {
-      display: flex;
-      gap: 2px;
-      font-size: 0.75rem;
-      color: #FFD43B;
-    }
-
-    /* MUDO BUTTON */
+    /* MUDO */
     #soundToggle {
       position: absolute;
-      top: 16px;
-      right: 16px;
+      top: calc(var(--safe-top) + 14px);
+      right: calc(var(--safe-right) + 14px);
       z-index: 60;
       background: rgba(26, 18, 11, 0.85);
       border: 2px solid rgba(245, 159, 0, 0.6);
@@ -596,21 +797,27 @@
       cursor: pointer;
       color: #FFF9DB;
       box-shadow: 0 4px 10px rgba(0,0,0,0.6);
+      touch-action: manipulation;
     }
+    body.in-game #soundToggle { display: none; }
 
-    /* MODAL DE INSTALAÇÃO NO CELULAR (PWA) */
-    #installModal {
+    /* ==================== MODAIS ==================== */
+    .modal-backdrop {
       display: none;
       position: absolute;
       inset: 0;
       background: rgba(11, 8, 6, 0.95);
       backdrop-filter: blur(14px);
       -webkit-backdrop-filter: blur(14px);
-      z-index: 70;
+      z-index: 80;
       align-items: center;
       justify-content: center;
-      padding: 20px;
+      padding: calc(var(--safe-top) + 16px) calc(var(--safe-right) + 16px) calc(var(--safe-bottom) + 16px) calc(var(--safe-left) + 16px);
+      touch-action: pan-y;
     }
+    .modal-backdrop.open { display: flex; }
+
+    #installModal { z-index: 70; }
 
     .modal-card {
       background: linear-gradient(145deg, rgba(44, 24, 16, 0.98), rgba(26, 18, 11, 0.98));
@@ -618,19 +825,26 @@
       border-radius: 20px;
       max-width: 480px;
       width: 100%;
-      padding: 24px;
+      padding: 22px;
       text-align: center;
       box-shadow: 0 20px 50px rgba(0,0,0,0.8), 0 0 30px rgba(245, 159, 0, 0.25);
-      max-height: 90vh;
+      max-height: 100%;
       overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
     }
-
+    .modal-title {
+      font-family: var(--font-title);
+      color: #FFD43B;
+      font-size: 1.45rem;
+      margin-bottom: 6px;
+    }
     .modal-icon {
       width: 72px;
       height: 72px;
       margin: 0 auto 12px auto;
       border-radius: 16px;
       box-shadow: 0 8px 20px rgba(232, 89, 12, 0.4);
+      display: block;
     }
 
     .install-step {
@@ -646,7 +860,6 @@
       font-size: 0.9rem;
       line-height: 1.4;
     }
-
     .step-num {
       background: #F59F00;
       color: #1A120B;
@@ -660,35 +873,240 @@
       flex-shrink: 0;
       font-size: 0.8rem;
     }
+
+    /* Configurações */
+    .settings-section {
+      text-align: left;
+      margin: 14px 0 6px;
+      font-family: var(--font-title);
+      font-size: 0.85rem;
+      color: #FFA94D;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      border-bottom: 1px solid rgba(245, 159, 0, 0.25);
+      padding-bottom: 4px;
+    }
+    .setting-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 10px 12px;
+      margin: 6px 0;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(245, 159, 0, 0.2);
+      border-radius: 12px;
+      text-align: left;
+    }
+    .setting-row label.setting-label,
+    .setting-label {
+      flex: 1;
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: #FFF9DB;
+      cursor: pointer;
+    }
+    .setting-desc {
+      display: block;
+      font-size: 0.74rem;
+      font-weight: 500;
+      color: #ADB5BD;
+      margin-top: 2px;
+      line-height: 1.35;
+    }
+
+    .seg-control {
+      display: inline-flex;
+      background: rgba(11, 8, 6, 0.7);
+      border: 1px solid rgba(245, 159, 0, 0.4);
+      border-radius: 10px;
+      padding: 3px;
+      gap: 3px;
+    }
+    .seg-control input { position: absolute; opacity: 0; pointer-events: none; }
+    .seg-control label {
+      padding: 6px 12px;
+      font-size: 0.8rem;
+      font-weight: 800;
+      color: #CED4DA;
+      border-radius: 7px;
+      cursor: pointer;
+      min-width: 38px;
+      text-align: center;
+    }
+    .seg-control input:checked + label {
+      background: linear-gradient(180deg, #F59F00 0%, #D9480F 100%);
+      color: #FFF;
+    }
+    .seg-control input:focus-visible + label { outline: 2px solid #66D9E8; }
+
+    .range-wrap { display: flex; align-items: center; gap: 8px; }
+    .range-wrap output {
+      min-width: 42px;
+      font-weight: 800;
+      color: var(--oxe-gold);
+      font-size: 0.85rem;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 130px;
+      height: 6px;
+      border-radius: 3px;
+      background: rgba(245, 159, 0, 0.3);
+      outline: none;
+      touch-action: pan-x;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #FFD43B;
+      border: 2px solid #E8590C;
+      cursor: pointer;
+    }
+    input[type="range"]::-moz-range-thumb {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #FFD43B;
+      border: 2px solid #E8590C;
+      cursor: pointer;
+    }
+
+    .switch {
+      position: relative;
+      width: 50px;
+      height: 28px;
+      flex-shrink: 0;
+    }
+    .switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+    .switch .slider {
+      position: absolute;
+      inset: 0;
+      background: rgba(73, 80, 87, 0.8);
+      border-radius: 99px;
+      transition: background 0.2s ease;
+      cursor: pointer;
+      border: 1px solid rgba(255,255,255,0.15);
+    }
+    .switch .slider::before {
+      content: '';
+      position: absolute;
+      left: 3px;
+      top: 3px;
+      width: 20px;
+      height: 20px;
+      background: #FFF9DB;
+      border-radius: 50%;
+      transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    }
+    .switch input:checked + .slider { background: linear-gradient(90deg, #F59F00, #E8590C); }
+    .switch input:checked + .slider::before { transform: translateX(22px); }
+    .switch input:focus-visible + .slider { outline: 2px solid #66D9E8; outline-offset: 2px; }
+
+    /* ==================== TOAST / BANNER PWA ==================== */
+    #swUpdateBanner {
+      position: fixed;
+      left: 50%;
+      bottom: calc(var(--safe-bottom) + 18px);
+      transform: translate(-50%, 160%);
+      z-index: 150;
+      background: linear-gradient(180deg, #1098AD 0%, #0C8599 100%);
+      color: #E3FAFC;
+      border: 2px solid #66D9E8;
+      border-radius: 99px;
+      padding: 12px 22px;
+      font-weight: 800;
+      font-size: 0.92rem;
+      box-shadow: 0 10px 28px rgba(0,0,0,0.7);
+      cursor: pointer;
+      transition: transform 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      white-space: nowrap;
+      max-width: calc(100% - 32px);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      touch-action: manipulation;
+    }
+    #swUpdateBanner.show { transform: translate(-50%, 0); }
+
+    #toast {
+      position: fixed;
+      left: 50%;
+      top: calc(var(--safe-top) + 70px);
+      transform: translate(-50%, -20px);
+      z-index: 160;
+      background: rgba(26, 18, 11, 0.95);
+      border: 2px solid var(--oxe-gold);
+      color: #FFF9DB;
+      border-radius: 14px;
+      padding: 10px 18px;
+      font-weight: 700;
+      font-size: 0.9rem;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.25s ease;
+      box-shadow: 0 8px 22px rgba(0,0,0,0.6);
+    }
+    #toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      white-space: nowrap;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
   </style>
 </head>
 <body>
 
   <div id="gameContainer">
-    <canvas id="gameCanvas" width="960" height="540"></canvas>
+    <canvas id="gameCanvas" width="960" height="540" aria-label="Tela do jogo"></canvas>
 
-    <!-- HUD SUPERIOR -->
+    <!-- ==================== HUD SUPERIOR ==================== -->
     <div id="hud">
       <div class="hud-left">
-        <div class="hud-card">
-          <div class="hearts-box" id="heartsBox">
-            <svg class="heart-icon" viewBox="0 0 24 24" fill="#FA5252"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-            <svg class="heart-icon" viewBox="0 0 24 24" fill="#FA5252"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-            <svg class="heart-icon" viewBox="0 0 24 24" fill="#FA5252"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+        <div class="hud-card" title="Vida">
+          <div class="hearts-box" id="heartsBox" aria-label="Corações de vida">
+            <svg class="heart-icon" viewBox="0 0 24 24" fill="#FA5252" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+            <svg class="heart-icon" viewBox="0 0 24 24" fill="#FA5252" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+            <svg class="heart-icon" viewBox="0 0 24 24" fill="#FA5252" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
           </div>
         </div>
-        <div class="hud-card">
-          <span>🍬</span>
+        <div class="hud-card" title="Vidas restantes">
+          <span aria-hidden="true">🤠</span>
+          <span class="hud-val" id="hudLives">×3</span>
+        </div>
+        <div class="hud-card" title="Rapaduras">
+          <span aria-hidden="true">🍬</span>
           <span class="hud-val" id="hudRapaduras">00</span>
+        </div>
+        <div class="hud-card" title="Pontuação">
+          <span aria-hidden="true">⭐</span>
+          <span class="hud-val score" id="hudScore">00000</span>
         </div>
       </div>
 
       <div class="hud-center">
-        <div class="hud-card">
+        <div class="hud-card" title="Joias de Caju">
           <div class="caju-gems">
-            <svg class="caju-gem" id="caju1" viewBox="0 0 24 24" fill="#F59F00"><path d="M12 2C8.5 2 5.5 4.5 5 8c-.6 4 2 9 7 14 5-5 7.6-10 7-14-.5-3.5-3.5-6-7-6z"/></svg>
-            <svg class="caju-gem" id="caju2" viewBox="0 0 24 24" fill="#F59F00"><path d="M12 2C8.5 2 5.5 4.5 5 8c-.6 4 2 9 7 14 5-5 7.6-10 7-14-.5-3.5-3.5-6-7-6z"/></svg>
-            <svg class="caju-gem" id="caju3" viewBox="0 0 24 24" fill="#F59F00"><path d="M12 2C8.5 2 5.5 4.5 5 8c-.6 4 2 9 7 14 5-5 7.6-10 7-14-.5-3.5-3.5-6-7-6z"/></svg>
+            <svg class="caju-gem" id="caju1" viewBox="0 0 24 24" fill="#F59F00" aria-hidden="true"><path d="M12 2C8.5 2 5.5 4.5 5 8c-.6 4 2 9 7 14 5-5 7.6-10 7-14-.5-3.5-3.5-6-7-6z"/></svg>
+            <svg class="caju-gem" id="caju2" viewBox="0 0 24 24" fill="#F59F00" aria-hidden="true"><path d="M12 2C8.5 2 5.5 4.5 5 8c-.6 4 2 9 7 14 5-5 7.6-10 7-14-.5-3.5-3.5-6-7-6z"/></svg>
+            <svg class="caju-gem" id="caju3" viewBox="0 0 24 24" fill="#F59F00" aria-hidden="true"><path d="M12 2C8.5 2 5.5 4.5 5 8c-.6 4 2 9 7 14 5-5 7.6-10 7-14-.5-3.5-3.5-6-7-6z"/></svg>
           </div>
         </div>
       </div>
@@ -697,6 +1115,8 @@
         <div class="hud-card">
           <span class="hud-label" id="hudStageName">Fase 1-1</span>
         </div>
+        <button class="hud-icon-btn" id="btnSettingsHud" type="button" title="Configurações" aria-label="Configurações">⚙️</button>
+        <button class="hud-icon-btn" id="btnPauseHud" type="button" title="Pausar" aria-label="Pausar">⏸</button>
       </div>
     </div>
 
@@ -709,7 +1129,7 @@
     </div>
 
     <!-- CAIXA DE DIÁLOGO / CORDEL -->
-    <div id="dialogueBox">
+    <div id="dialogueBox" role="dialog" aria-live="polite">
       <div class="dialogue-avatar" id="dialogueAvatar">🤠</div>
       <div class="dialogue-content">
         <div class="dialogue-speaker" id="dialogueSpeaker">Avô Vaqueiro</div>
@@ -718,52 +1138,64 @@
       <div class="dialogue-prompt">Toque para continuar ▶</div>
     </div>
 
-    <!-- CONTROLES MOBILE TOUCH -->
-    <div id="touchControls">
-      <div class="touch-btn" id="dpadLeft">◀</div>
-      <div class="touch-btn" id="dpadRight">▶</div>
-      <div class="touch-btn" id="dpadDown">▼</div>
-      
-      <div class="touch-btn" id="btnGlide">🪂 Planar</div>
-      <div class="touch-btn" id="btnWhip">⚡ Chicote</div>
-      <div class="touch-btn" id="btnJump">PULAR</div>
-    </div>
+    <!-- ==================== CONTROLES TOUCH "DE CONSOLE" ==================== -->
+    <div id="touchControls" class="size-md" aria-hidden="true">
+      <div class="touch-zone" id="dpadZone">
+        <div class="touch-btn" id="dpadDown" data-action="down">▼</div>
+        <div class="touch-btn" id="dpadLeft" data-action="left">◀</div>
+        <div class="touch-btn" id="dpadRight" data-action="right">▶</div>
+      </div>
 
-    <!-- BOTÃO MUDO FLUTUANTE -->
-    <button id="soundToggle" title="Ativar/Desativar Som">🔊</button>
-
-    <!-- TELA 1: TELA DE TÍTULO -->
-    <div class="screen-overlay" id="titleScreen">
-      <div class="hero-badge">🌵 UMA AVENTURA ÉPICA NO SERTÃO</div>
-      <h1 class="game-logo">OXE!</h1>
-      <div class="game-sub">A Odisseia dos Nove Sóis</div>
-
-      <button class="menu-btn" id="btnStartGame">
-        <span>▶</span> INICIAR JORNADA
-      </button>
-      <button class="menu-btn sec" id="btnInstallApp" style="border-color: #1098AD; color: #E3FAFC; background: rgba(16, 152, 173, 0.2);">
-        <span>📲</span> BAIXAR JOGO NO CELULAR
-      </button>
-      <button class="menu-btn sec" id="btnOpenMap">
-        <span>🗺️</span> MAPA DOS MUNDOS
-      </button>
-      <button class="menu-btn sec" id="btnStartChallenge" style="border-color: #FFD43B; color: #FFE066; background: rgba(245, 159, 0, 0.18);">
-        <span>⚡</span> DESAFIO SERTANEJO (30s)
-      </button>
-
-      <div class="controls-hint">
-        🎮 <strong>Controles:</strong> <span class="key-badge">←</span> <span class="key-badge">→</span> ou <span class="key-badge">A</span> <span class="key-badge">D</span> para Correr • <span class="key-badge">Espaço</span> para Pular (segure no ar para <strong>Planar com o Chapéu</strong>) • <span class="key-badge">J</span> ou <span class="key-badge">X</span> para <strong>Chicote de Caroá</strong> • <span class="key-badge">S</span> ou <span class="key-badge">↓</span> para <strong>Pisão de Pedra</strong>.
+      <div class="touch-zone" id="actionZone">
+        <div class="touch-btn" id="btnWhip" data-action="whip"><span class="ico">⚡</span>Chicote</div>
+        <div class="touch-btn" id="btnJump" data-action="jump">PULAR<small>Segure=Planar</small></div>
       </div>
     </div>
 
-    <!-- TELA 2: MAPA DOS MUNDOS (3 MUNDOS • 12 FASES ÉPICAS) -->
-    <div class="screen-overlay" id="worldMapScreen">
-      <div class="hero-badge">🗺️ MAPA DO SERTÃO • 12 FASES</div>
+    <!-- BOTÃO MUDO FLUTUANTE -->
+    <button id="soundToggle" type="button" title="Ativar/Desativar Som" aria-label="Ativar ou desativar som">🔊</button>
 
-      <div class="world-tabs" id="worldTabs">
-        <button class="world-tab active" onclick="switchWorldMap(0)">🌵 Mundo 1</button>
-        <button class="world-tab" onclick="switchWorldMap(1)">🦇 Mundo 2</button>
-        <button class="world-tab" onclick="switchWorldMap(2)">☀️ Mundo 3</button>
+    <!-- ==================== TELA 1: TÍTULO ==================== -->
+    <div class="screen-overlay" id="titleScreen">
+      <div class="hero-badge">🌵 UMA AVENTURA ÉPICA NO SERTÃO</div>
+      <h1 class="game-logo">OXE! <span class="ver">2.0</span></h1>
+      <div class="game-sub">A Grande Jornada dos Nove Sóis</div>
+
+      <button class="menu-btn" id="btnStartGame" type="button">
+        <span>▶</span> INICIAR JORNADA
+      </button>
+      <button class="menu-btn sec" id="btnOpenMap" type="button">
+        <span>🗺️</span> MAPA DOS MUNDOS
+      </button>
+      <button class="menu-btn sec gold" id="btnStartChallenge" type="button">
+        <span>⚡</span> DESAFIO SERTANEJO DO DIA (30s)
+      </button>
+      <button class="menu-btn sec" id="btnTitleSettings" type="button">
+        <span>⚙️</span> CONFIGURAÇÕES
+      </button>
+      <button class="menu-btn sec teal" id="btnInstallApp" type="button">
+        <span>📲</span> BAIXAR JOGO NO CELULAR
+      </button>
+
+      <div class="controls-hint desktop-only">
+        🎮 <strong>Controles:</strong> <span class="key-badge">←</span> <span class="key-badge">→</span> ou <span class="key-badge">A</span> <span class="key-badge">D</span> para Correr • <span class="key-badge">Espaço</span> para Pular (segure no ar para <strong>Planar com o Chapéu</strong>) • <span class="key-badge">J</span> ou <span class="key-badge">X</span> para <strong>Chicote de Caroá</strong> • <span class="key-badge">S</span> ou <span class="key-badge">↓</span> para <strong>Pisão de Pedra</strong> • <span class="key-badge">Esc</span> ou <span class="key-badge">P</span> para Pausar.
+      </div>
+      <div class="controls-hint touch-only">
+        👆 <strong>Toque:</strong> deslize o polegar esquerdo entre ◀ e ▶ para correr, ▼ para o Pisão. Segure <strong>PULAR</strong> no ar para planar e use <strong>⚡ Chicote</strong> para atacar. Ajuste tamanho e lado em ⚙️.
+      </div>
+    </div>
+
+    <!-- ==================== TELA 2: MAPA DOS MUNDOS (6 MUNDOS • 30 FASES) ==================== -->
+    <div class="screen-overlay" id="worldMapScreen">
+      <div class="hero-badge">🗺️ MAPA DO SERTÃO • 6 MUNDOS • 30 FASES</div>
+
+      <div class="world-tabs" id="worldTabs" role="tablist">
+        <button class="world-tab active" type="button" role="tab" onclick="switchWorldMap(0)">🌵 Mundo 1</button>
+        <button class="world-tab" type="button" role="tab" onclick="switchWorldMap(1)">🦇 Mundo 2</button>
+        <button class="world-tab" type="button" role="tab" onclick="switchWorldMap(2)">🌿 Mundo 3</button>
+        <button class="world-tab" type="button" role="tab" onclick="switchWorldMap(3)">🦀 Mundo 4</button>
+        <button class="world-tab" type="button" role="tab" onclick="switchWorldMap(4)">🌋 Mundo 5</button>
+        <button class="world-tab" type="button" role="tab" onclick="switchWorldMap(5)">☀️ Mundo 6</button>
       </div>
 
       <h2 class="world-title" id="worldTitleText">Mundo 1: O Sertão dos Mandacarus</h2>
@@ -772,80 +1204,155 @@
         <!-- Renderizado dinamicamente via switchWorldMap() -->
       </div>
 
-      <button class="menu-btn sec" id="btnCloseMap">
+      <button class="menu-btn sec" id="btnCloseMap" type="button">
         <span>◀</span> VOLTAR
       </button>
     </div>
 
-    <!-- TELA 3: PAUSA -->
+    <!-- ==================== TELA 3: PAUSA ==================== -->
     <div class="screen-overlay" id="pauseScreen" style="display:none;">
       <h2 class="game-logo" style="font-size:2.5rem;">PAUSA</h2>
-      <button class="menu-btn" id="btnResume">CONTINUAR</button>
-      <button class="menu-btn sec" id="btnRestart">REINICIAR FASE</button>
-      <button class="menu-btn sec" id="btnQuitMap">MAPA DOS MUNDOS</button>
+      <button class="menu-btn" id="btnResume" type="button">▶ CONTINUAR</button>
+      <button class="menu-btn sec" id="btnRestart" type="button">⏪ REINICIAR FASE</button>
+      <button class="menu-btn sec" id="btnPauseSettings" type="button">⚙️ CONFIGURAÇÕES</button>
+      <button class="menu-btn sec" id="btnQuitMap" type="button">🗺️ MAPA DOS MUNDOS</button>
     </div>
 
-    <!-- TELA 4: VITÓRIA / CONCLUSÃO DE FASE -->
+    <!-- ==================== TELA 4: VITÓRIA ==================== -->
     <div class="screen-overlay" id="victoryScreen" style="display:none;">
       <div class="hero-badge">☀️ FRAGMENTO DO SOL RECUPERADO!</div>
-      <h2 class="game-logo" style="font-size:2.6rem;">VITÓRIA ARRETADA!</h2>
-      <p style="color:#FFF9DB; font-size:1.1rem; margin-bottom:20px;" id="victoryMsg">Você derrotou o Touro de Fogo e restaurou a luz sobre o primeiro sertão!</p>
+      <h2 class="game-logo" style="font-size: clamp(2rem, 5vw, 2.6rem);">VITÓRIA ARRETADA!</h2>
+      <div class="victory-stars" id="victoryStars" aria-label="Estrelas conquistadas">
+        <span class="star">★</span><span class="star">★</span><span class="star">★</span>
+      </div>
+      <p style="color:#FFF9DB; font-size:1.05rem; margin-bottom:18px; max-width:480px; line-height:1.45;" id="victoryMsg">Você derrotou o Touro de Fogo e restaurou a luz sobre o primeiro sertão!</p>
 
-      <button class="menu-btn" id="btnNextStage">PRÓXIMA FASE ▶</button>
-      <button class="menu-btn sec" id="btnVictoryMap">MAPA DOS MUNDOS</button>
+      <button class="menu-btn" id="btnNextStage" type="button">PRÓXIMA FASE ▶</button>
+      <button class="menu-btn sec gold" id="btnShareStage" type="button">🔗 DESAFIAR AMIGO NESTA FASE</button>
+      <button class="menu-btn sec" id="btnVictoryMap" type="button">🗺️ MAPA DOS MUNDOS</button>
     </div>
 
-    <!-- TELA 5: GAME OVER ACOLHEDOR (SEM ALERT BLOQUEANTE) -->
+    <!-- ==================== TELA 5: GAME OVER ==================== -->
     <div class="screen-overlay" id="gameOverScreen" style="display:none;">
       <div class="hero-badge" style="border-color:#FA5252; color:#FFA8A8; background:rgba(250,82,82,0.15);">💔 OXE, NÃO FOI DESSA VEZ!</div>
-      <h2 class="game-logo" style="font-size: clamp(2rem, 5vw, 3.2rem); background: linear-gradient(180deg, #FFF5F5 0%, #FA5252 50%, #C92A2A 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">TENTAR DE NOVO?</h2>
-      <p style="color:#E9ECEF; font-size:1.05rem; max-width:440px; text-align:center; line-height:1.5; margin-bottom:24px;">
+      <h2 class="game-logo" style="font-size: clamp(2rem, 5vw, 3.2rem); background: linear-gradient(180deg, #FFF5F5 0%, #FA5252 50%, #C92A2A 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">TENTAR DE NOVO?</h2>
+      <p style="color:#E9ECEF; font-size:1.05rem; max-width:440px; text-align:center; line-height:1.5; margin-bottom:22px;">
         O sertanejo não desiste nunca! Respire fundo, aprume o chapéu e retome a caminhada.
       </p>
-      <button class="menu-btn" id="btnRestartFromCheckpoint">
+      <button class="menu-btn" id="btnRestartFromCheckpoint" type="button">
         <span>🔄</span> VOLTAR DO CHECKPOINT
       </button>
-      <button class="menu-btn sec" id="btnRestartFullLevel">
+      <button class="menu-btn sec" id="btnRestartFullLevel" type="button">
         <span>⏪</span> REINICIAR FASE
       </button>
-      <button class="menu-btn sec" id="btnGameOverMap">
+      <button class="menu-btn sec" id="btnGameOverMap" type="button">
         <span>🗺️</span> MAPA DOS MUNDOS
       </button>
     </div>
 
-    <!-- TELA 6: RESULTADO DO DESAFIO SERTANEJO (30s) -->
+    <!-- ==================== TELA 6: RESULTADO DO DESAFIO SERTANEJO ==================== -->
     <div class="screen-overlay" id="challengeResultScreen" style="display:none;">
-      <div class="hero-badge" style="border-color:#FFD43B; color:#FFE066; background:rgba(245,159,0,0.15);">⚡ DESAFIO SERTANEJO (30s)</div>
+      <div class="hero-badge" style="border-color:#FFD43B; color:#FFE066; background:rgba(245,159,0,0.15);">⚡ DESAFIO SERTANEJO DO DIA (30s)</div>
       <h2 class="game-logo" style="font-size: clamp(2.2rem, 6vw, 3.2rem);">CABRA DA PESTE!</h2>
-      <div id="challengeStats" style="color:#FFF9DB; font-size:1.15rem; font-weight:700; margin-bottom:20px; text-align:center; line-height:1.6;"></div>
-      <button class="menu-btn" id="btnShareChallenge">
-        <span>📲</span> BAIXAR CARTÃO DE RESULTADO (9:16)
+      <div id="challengeStats" style="color:#FFF9DB; font-size:1.1rem; font-weight:700; margin-bottom:8px; text-align:center; line-height:1.6;"></div>
+      <div class="seed-info" id="challengeSeedInfo">Desafio do dia • Semente #00000000</div>
+      <button class="menu-btn" id="btnShareChallenge" type="button">
+        <span>📲</span> COMPARTILHAR CARTÃO 9:16
       </button>
-      <button class="menu-btn sec" id="btnRetryChallenge">
+      <button class="menu-btn sec gold" id="btnCopyChallengeLink" type="button">
+        <span>🔗</span> COPIAR LINK DO DESAFIO DO DIA
+      </button>
+      <button class="menu-btn sec" id="btnRetryChallenge" type="button">
         <span>🔄</span> JOGAR NOVAMENTE
       </button>
-      <button class="menu-btn sec" id="btnCloseChallenge">
+      <button class="menu-btn sec" id="btnCloseChallenge" type="button">
         <span>◀</span> MENU PRINCIPAL
       </button>
     </div>
 
-    <!-- TELA 5: MODAL DE INSTALAÇÃO NO CELULAR (PWA & OFFLINE) -->
-    <div id="installModal">
+    <!-- ==================== MODAL: CONFIGURAÇÕES & ACESSIBILIDADE ==================== -->
+    <div class="modal-backdrop" id="settingsModal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+      <div class="modal-card">
+        <h2 class="modal-title" id="settingsTitle">⚙️ Configurações</h2>
+        <p style="color:#ADB5BD; font-size:0.82rem; margin-bottom:6px;">Ajeite o jogo do seu jeito, visse?</p>
+
+        <div class="settings-section">📱 Controles Touch</div>
+
+        <div class="setting-row">
+          <span class="setting-label">Tamanho dos botões
+            <span class="setting-desc">Botões maiores para dedos mais largos.</span>
+          </span>
+          <div class="seg-control" id="optTouchSize" role="radiogroup" aria-label="Tamanho dos botões touch">
+            <input type="radio" name="optTouchSize" id="optTouchSizeSm" value="sm">
+            <label for="optTouchSizeSm">P</label>
+            <input type="radio" name="optTouchSize" id="optTouchSizeMd" value="md" checked>
+            <label for="optTouchSizeMd">M</label>
+            <input type="radio" name="optTouchSize" id="optTouchSizeLg" value="lg">
+            <label for="optTouchSizeLg">G</label>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <label class="setting-label" for="optTouchOpacity">Opacidade dos botões
+            <span class="setting-desc">Deixe mais transparente para ver melhor a fase.</span>
+          </label>
+          <div class="range-wrap">
+            <input type="range" id="optTouchOpacity" min="40" max="100" step="5" value="80">
+            <output id="optTouchOpacityVal" for="optTouchOpacity">80%</output>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <label class="setting-label" for="optLeftHanded">Modo canhoto
+            <span class="setting-desc">Inverte: pulo e chicote à esquerda, direcional à direita.</span>
+          </label>
+          <span class="switch"><input type="checkbox" id="optLeftHanded"><span class="slider" onclick="document.getElementById('optLeftHanded').click()"></span></span>
+        </div>
+
+        <div class="setting-row">
+          <label class="setting-label" for="optVibration">Vibração no celular
+            <span class="setting-desc">Tremidinha ao levar dano, pegar caju e bater no chefão.</span>
+          </label>
+          <span class="switch"><input type="checkbox" id="optVibration" checked><span class="slider" onclick="document.getElementById('optVibration').click()"></span></span>
+        </div>
+
+        <div class="settings-section">💛 Acessibilidade</div>
+
+        <div class="setting-row">
+          <label class="setting-label" for="optAssistMode">Modo "Cabra Tranquilo"
+            <span class="setting-desc">5 corações de vida + auxílio extra (mais tempo de invencibilidade e planar mais longo).</span>
+          </label>
+          <span class="switch"><input type="checkbox" id="optAssistMode"><span class="slider" onclick="document.getElementById('optAssistMode').click()"></span></span>
+        </div>
+
+        <div class="setting-row">
+          <label class="setting-label" for="optReduceShake">Reduzir tremor de tela
+            <span class="setting-desc">Diminui sacudidas da câmera e flashes intensos.</span>
+          </label>
+          <span class="switch"><input type="checkbox" id="optReduceShake"><span class="slider" onclick="document.getElementById('optReduceShake').click()"></span></span>
+        </div>
+
+        <button class="menu-btn" id="btnCloseSettings" type="button" style="width:100%; margin-top:16px; margin-bottom:0;">
+          💾 SALVAR E VOLTAR
+        </button>
+      </div>
+    </div>
+
+    <!-- ==================== MODAL: INSTALAÇÃO PWA ==================== -->
+    <div class="modal-backdrop" id="installModal" role="dialog" aria-modal="true" aria-labelledby="installTitle">
       <div class="modal-card">
         <img src="icon-192.png" alt="Ícone Jogo do Oxe" class="modal-icon">
-        <h2 style="font-family:'Cinzel',serif; color:#FFD43B; font-size:1.5rem; margin-bottom:6px;">Instalar no Celular</h2>
+        <h2 class="modal-title" id="installTitle">Instalar no Celular</h2>
         <p style="color:#FFF9DB; font-size:0.88rem; margin-bottom:16px;">
           Jogue em <strong>tela cheia</strong> com ícone direto na tela de início, <strong>100% offline</strong> sem gastar dados de internet!
         </p>
 
-        <!-- Seção Android / Chrome / Desktop -->
         <div id="androidInstallSection" style="display:none; margin-bottom:14px;">
-          <button class="menu-btn" id="btnNativeInstall" style="width:100%; margin-bottom:8px; background:linear-gradient(180deg,#1098AD 0%,#0C8599 100%);">
+          <button class="menu-btn" id="btnNativeInstall" type="button" style="width:100%; margin-bottom:8px; background:linear-gradient(180deg,#1098AD 0%,#0C8599 100%);">
             📲 INSTALAR APLICATIVO AGORA
           </button>
         </div>
 
-        <!-- Seção iPhone / iPad (iOS Safari) -->
         <div id="iosInstallSection" style="margin-bottom:14px;">
           <div class="install-step">
             <span class="step-num">1</span>
@@ -861,78 +1368,331 @@
           </div>
         </div>
 
-        <!-- Opção de Download ZIP Offline -->
         <div style="margin-top:16px; padding-top:14px; border-top:1px solid rgba(245,159,0,0.3);">
           <a href="oxe-jogo-offline.zip" download="oxe-jogo-offline.zip" class="menu-btn sec" style="width:100%; text-decoration:none; margin-bottom:10px;">
             💾 BAIXAR PACOTE COMPLETO (.ZIP OFFLINE)
           </a>
-          <button class="menu-btn sec" id="btnCloseInstallModal" style="width:100%;">
+          <button class="menu-btn sec" id="btnCloseInstallModal" type="button" style="width:100%;">
             FECHAR
           </button>
         </div>
       </div>
     </div>
 
+    <!-- ==================== TOASTS ==================== -->
+    <div id="toast" role="status" aria-live="polite"></div>
+    <button id="swUpdateBanner" type="button" aria-live="polite">✨ Nova versão disponível! Toque para atualizar</button>
+
   </div>
 
-  <!-- SCRIPT DE ÁUDIO PROCEDURAL SINTETIZADO -->
-  <script src="audio.js"></script>
+  <!-- ==================== OVERLAY DE ROTAÇÃO (fora do container) ==================== -->
+  <div id="rotateOverlay" role="alertdialog" aria-labelledby="rotateText">
+    <div class="rotate-phone" aria-hidden="true">📱</div>
+    <div class="rotate-text" id="rotateText">📱 Gire o celular para o modo paisagem 🔄</div>
+    <p style="color:#ADB5BD; font-size:0.9rem; max-width:300px; line-height:1.45;">O sertão é largo, visse? O jogo fica bem mais arretado deitado.</p>
+    <button class="menu-btn sec" id="btnDismissRotate" type="button">Jogar assim mesmo</button>
+  </div>
 
-  <!-- MOTOR DO JOGO COMPLETO -->
+  <!-- ==================== CAMADA DE UI: CONFIGURAÇÕES, ROTAÇÃO, TOAST ==================== -->
+  <script>
+    (function () {
+      'use strict';
+      var STORAGE_KEY = 'oxe2_settings';
+      var DEFAULTS = {
+        touchSize: 'md',
+        touchOpacity: 80,
+        leftHanded: false,
+        vibration: true,
+        assistMode: false,
+        reduceShake: false
+      };
+
+      function loadSettings() {
+        var s = Object.assign({}, DEFAULTS);
+        try {
+          var raw = localStorage.getItem(STORAGE_KEY);
+          if (raw) Object.assign(s, JSON.parse(raw));
+        } catch (e) { /* storage indisponível */ }
+        if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches && !localStorage.getItem(STORAGE_KEY)) {
+          s.reduceShake = true;
+        }
+        s.touchOpacity = Math.min(100, Math.max(40, parseInt(s.touchOpacity, 10) || 80));
+        if (['sm', 'md', 'lg'].indexOf(s.touchSize) === -1) s.touchSize = 'md';
+        return s;
+      }
+
+      function saveSettings(s) {
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch (e) {}
+      }
+
+      var settings = loadSettings();
+      var $ = function (id) { return document.getElementById(id); };
+
+      function applySettings(s) {
+        var tc = $('touchControls');
+        if (tc) {
+          tc.classList.remove('size-sm', 'size-md', 'size-lg');
+          tc.classList.add('size-' + s.touchSize);
+          tc.classList.toggle('left-handed', !!s.leftHanded);
+          tc.style.setProperty('--touch-opacity', (s.touchOpacity / 100).toFixed(2));
+        }
+        document.body.classList.toggle('reduce-shake', !!s.reduceShake);
+        document.body.classList.toggle('assist-mode', !!s.assistMode);
+        window.dispatchEvent(new CustomEvent('oxe:settings-changed', { detail: Object.assign({}, s) }));
+      }
+
+      function syncForm(s) {
+        var radio = document.querySelector('input[name="optTouchSize"][value="' + s.touchSize + '"]');
+        if (radio) radio.checked = true;
+        $('optTouchOpacity').value = s.touchOpacity;
+        $('optTouchOpacityVal').textContent = s.touchOpacity + '%';
+        $('optLeftHanded').checked = !!s.leftHanded;
+        $('optVibration').checked = !!s.vibration;
+        $('optAssistMode').checked = !!s.assistMode;
+        $('optReduceShake').checked = !!s.reduceShake;
+      }
+
+      function readForm() {
+        var sel = document.querySelector('input[name="optTouchSize"]:checked');
+        return {
+          touchSize: sel ? sel.value : 'md',
+          touchOpacity: parseInt($('optTouchOpacity').value, 10) || 80,
+          leftHanded: $('optLeftHanded').checked,
+          vibration: $('optVibration').checked,
+          assistMode: $('optAssistMode').checked,
+          reduceShake: $('optReduceShake').checked
+        };
+      }
+
+      // API pública consumida por game.js
+      window.OxeSettings = {
+        get: function () { return Object.assign({}, settings); },
+        set: function (patch) {
+          settings = Object.assign({}, settings, patch || {});
+          saveSettings(settings);
+          syncForm(settings);
+          applySettings(settings);
+        },
+        vibrate: function (pattern) {
+          if (settings.vibration && navigator.vibrate) {
+            try { navigator.vibrate(pattern || 30); } catch (e) {}
+          }
+        }
+      };
+
+      var settingsOpenedFrom = null;
+      window.openSettings = window.openSettings || function (from) {
+        settingsOpenedFrom = from || null;
+        syncForm(settings);
+        $('settingsModal').classList.add('open');
+        window.dispatchEvent(new CustomEvent('oxe:settings-open', { detail: { from: settingsOpenedFrom } }));
+        setTimeout(function () { var b = $('btnCloseSettings'); if (b) b.focus({ preventScroll: true }); }, 50);
+      };
+      window.closeSettings = window.closeSettings || function () {
+        settings = readForm();
+        saveSettings(settings);
+        applySettings(settings);
+        $('settingsModal').classList.remove('open');
+        window.dispatchEvent(new CustomEvent('oxe:settings-close', { detail: { from: settingsOpenedFrom } }));
+        settingsOpenedFrom = null;
+      };
+
+      window.showToast = window.showToast || function (msg, ms) {
+        var t = $('toast');
+        if (!t) return;
+        t.textContent = msg;
+        t.classList.add('show');
+        clearTimeout(window.__oxeToastTimer);
+        window.__oxeToastTimer = setTimeout(function () { t.classList.remove('show'); }, ms || 2200);
+      };
+
+      document.addEventListener('DOMContentLoaded', function () {
+        syncForm(settings);
+        applySettings(settings);
+
+        // Pré-visualização ao vivo
+        ['optTouchOpacity'].forEach(function (id) {
+          $(id).addEventListener('input', function () {
+            $('optTouchOpacityVal').textContent = this.value + '%';
+            applySettings(readForm());
+          });
+        });
+        document.querySelectorAll('input[name="optTouchSize"], #optLeftHanded, #optVibration, #optAssistMode, #optReduceShake')
+          .forEach(function (el) {
+            el.addEventListener('change', function () {
+              if (el.id === 'optVibration' && el.checked && navigator.vibrate) { try { navigator.vibrate(40); } catch (e) {} }
+              applySettings(readForm());
+            });
+          });
+
+        $('btnTitleSettings').addEventListener('click', function () { window.openSettings('title'); });
+        $('btnPauseSettings').addEventListener('click', function () { window.openSettings('pause'); });
+        $('btnCloseSettings').addEventListener('click', function () { window.closeSettings(); });
+        $('settingsModal').addEventListener('click', function (e) {
+          if (e.target === this) window.closeSettings();
+        });
+        document.addEventListener('keydown', function (e) {
+          if (e.key === 'Escape' && $('settingsModal').classList.contains('open')) {
+            e.stopPropagation();
+            window.closeSettings();
+          }
+        }, true);
+
+        // Overlay de rotação
+        var rot = $('rotateOverlay');
+        try { if (sessionStorage.getItem('oxe2_rotate_dismissed') === '1') rot.classList.add('dismissed'); } catch (e) {}
+        $('btnDismissRotate').addEventListener('click', function () {
+          rot.classList.add('dismissed');
+          try { sessionStorage.setItem('oxe2_rotate_dismissed', '1'); } catch (e) {}
+        });
+        // Tenta travar paisagem quando em tela cheia (suportado em Android/PWA)
+        function tryLockLandscape() {
+          if (screen.orientation && screen.orientation.lock) {
+            screen.orientation.lock('landscape').catch(function () {});
+          }
+        }
+        document.addEventListener('fullscreenchange', tryLockLandscape);
+        if (window.matchMedia('(display-mode: fullscreen), (display-mode: standalone)').matches) tryLockLandscape();
+
+        // Bloqueia menu de contexto e gestos indesejados nos controles touch
+        var tc = $('touchControls');
+        if (tc) {
+          tc.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+          tc.addEventListener('touchmove', function (e) { e.preventDefault(); }, { passive: false });
+        }
+        document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+
+        // Força touch via URL (?touch=1) para testes
+        if (/[?&]touch=1/.test(location.search)) tc && tc.classList.add('force-touch');
+      });
+    })();
+  </script>
+
+  <!-- ÁUDIO PROCEDURAL SINTETIZADO -->
+  <script src="audio.js"></script>
+  <!-- DADOS DAS FASES (6 MUNDOS • 30 FASES) -->
+  <script src="levels.js"></script>
+  <!-- MOTOR DO JOGO -->
   <script src="game.js"></script>
 
-  <!-- REGISTRO PWA E SERVICE WORKER -->
+  <!-- ==================== PWA: SERVICE WORKER, ATUALIZAÇÃO E INSTALAÇÃO ==================== -->
   <script>
-    // Registro do Service Worker para funcionalidade 100% Offline
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js')
-          .then(reg => console.log('[PWA] Service Worker registrado com sucesso:', reg.scope))
-          .catch(err => console.warn('[PWA] Falha ao registrar Service Worker:', err));
-      });
-    }
+    (function () {
+      'use strict';
+      var banner = document.getElementById('swUpdateBanner');
+      var waitingWorker = null;
+      var refreshing = false;
 
-    // Gerenciador de Instalação PWA
-    let deferredPrompt = null;
-    window.addEventListener('beforeinstallprompt', (e) => {
-      e.preventDefault();
-      deferredPrompt = e;
-      const androidSection = document.getElementById('androidInstallSection');
-      if (androidSection) androidSection.style.display = 'block';
-    });
+      function showUpdate(worker) {
+        waitingWorker = worker;
+        if (banner) banner.classList.add('show');
+      }
 
-    const modal = document.getElementById('installModal');
-    const btnOpenInstall = document.getElementById('btnInstallApp');
-    const btnCloseInstall = document.getElementById('btnCloseInstallModal');
-    const btnNativeInstall = document.getElementById('btnNativeInstall');
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function () {
+          navigator.serviceWorker.register('sw.js')
+            .then(function (reg) {
+              console.log('[PWA] Service Worker registrado:', reg.scope);
+              if (reg.waiting && navigator.serviceWorker.controller) showUpdate(reg.waiting);
+              reg.addEventListener('updatefound', function () {
+                var nw = reg.installing;
+                if (!nw) return;
+                nw.addEventListener('statechange', function () {
+                  if (nw.state === 'installed' && navigator.serviceWorker.controller) showUpdate(nw);
+                });
+              });
+              // Verifica atualizações ao voltar para o app
+              document.addEventListener('visibilitychange', function () {
+                if (document.visibilityState === 'visible') reg.update().catch(function () {});
+              });
+            })
+            .catch(function (err) { console.warn('[PWA] Falha ao registrar Service Worker:', err); });
 
-    if (btnOpenInstall) {
-      btnOpenInstall.addEventListener('click', (e) => {
+          navigator.serviceWorker.addEventListener('controllerchange', function () {
+            if (refreshing) return;
+            refreshing = true;
+            window.location.reload();
+          });
+        });
+      }
+
+      if (banner) {
+        banner.addEventListener('click', function () {
+          banner.textContent = '⏳ Atualizando...';
+          if (waitingWorker) {
+            waitingWorker.postMessage({ type: 'SKIP_WAITING' });
+            waitingWorker.postMessage('SKIP_WAITING');
+            setTimeout(function () { if (!refreshing) window.location.reload(); }, 2500);
+          } else {
+            window.location.reload();
+          }
+        });
+      }
+
+      // Instalação
+      var deferredPrompt = null;
+      var modal = document.getElementById('installModal');
+      var androidSection = document.getElementById('androidInstallSection');
+      var iosSection = document.getElementById('iosInstallSection');
+      var isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) ||
+                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      var isStandalone = window.matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches ||
+                         window.navigator.standalone === true;
+
+      if (!isIOS && iosSection) iosSection.style.display = 'none';
+      if (isStandalone) {
+        var b = document.getElementById('btnInstallApp');
+        if (b) b.style.display = 'none';
+      }
+
+      window.addEventListener('beforeinstallprompt', function (e) {
         e.preventDefault();
-        modal.style.display = 'flex';
+        deferredPrompt = e;
+        if (androidSection) androidSection.style.display = 'block';
       });
-    }
 
-    if (btnCloseInstall) {
-      btnCloseInstall.addEventListener('click', (e) => {
-        e.preventDefault();
-        modal.style.display = 'none';
+      window.addEventListener('appinstalled', function () {
+        deferredPrompt = null;
+        if (modal) modal.classList.remove('open');
+        var b = document.getElementById('btnInstallApp');
+        if (b) b.style.display = 'none';
+        if (window.showToast) window.showToast('🎉 Jogo instalado! Procure o ícone na tela inicial.');
       });
-    }
 
-    if (btnNativeInstall) {
-      btnNativeInstall.addEventListener('click', async () => {
-        if (deferredPrompt) {
-          deferredPrompt.prompt();
-          const { outcome } = await deferredPrompt.userChoice;
-          console.log('[PWA] Escolha do usuário:', outcome);
-          deferredPrompt = null;
-          modal.style.display = 'none';
-        } else {
-          alert('Para instalar: toque no menu de 3 pontinhos do navegador e selecione "Instalar aplicativo" ou "Adicionar à tela inicial"!');
-        }
-      });
-    }
+      var btnOpenInstall = document.getElementById('btnInstallApp');
+      var btnCloseInstall = document.getElementById('btnCloseInstallModal');
+      var btnNativeInstall = document.getElementById('btnNativeInstall');
+
+      if (btnOpenInstall) {
+        btnOpenInstall.addEventListener('click', function (e) {
+          e.preventDefault();
+          if (!isIOS && !deferredPrompt && iosSection) iosSection.style.display = 'none';
+          modal.classList.add('open');
+        });
+      }
+      if (btnCloseInstall) {
+        btnCloseInstall.addEventListener('click', function (e) {
+          e.preventDefault();
+          modal.classList.remove('open');
+        });
+      }
+      if (modal) {
+        modal.addEventListener('click', function (e) { if (e.target === modal) modal.classList.remove('open'); });
+      }
+      if (btnNativeInstall) {
+        btnNativeInstall.addEventListener('click', async function () {
+          if (deferredPrompt) {
+            deferredPrompt.prompt();
+            var choice = await deferredPrompt.userChoice;
+            console.log('[PWA] Escolha do usuário:', choice.outcome);
+            deferredPrompt = null;
+            modal.classList.remove('open');
+          } else if (window.showToast) {
+            window.showToast('Toque no menu ⋮ do navegador e escolha "Instalar aplicativo".', 3500);
+          }
+        });
+      }
+    })();
   </script>
 
 </body>

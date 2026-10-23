@@ -19276,7 +19276,7 @@ function shareResult() {
   const uf = params.get('uf');
   if (rival && pts) {
     setTimeout(() => {
-      alert(`⚔️ DESAFIO DE REVANCHE RECEBIDO!\n\n${rival} fez ${pts} pontos defendendo ${uf || 'o Nordeste'} e te desafiou!\n\nMostre sua força na Arena!`);
+      console.log(`⚔️ DESAFIO DE REVANCHE RECEBIDO!\n\n${rival} fez ${pts} pontos defendendo ${uf || 'o Nordeste'} e te desafiou!\n\nMostre sua força na Arena!`);
       if (arenaI >= 0 && arenaI < ARENAS.length) {
         startArena(arenaI);
       }
@@ -19438,6 +19438,764 @@ if (/Instagram/i.test(navigator.userAgent)) {
 
 initCommunityStats(); checkReferral();
 
+// === START OXE ARENA 10 IMPROVEMENTS ===
+/* =====================================================================
+ * Arena do Oxe — Módulo "10 Melhorias" (v10.0)
+ * Carregar SÍNCRONO, logo após o <script> principal.
+ * ===================================================================== */
+(function () {
+  'use strict';
+  if (window.__OXE10__) return;
+  if (typeof S === 'undefined' || typeof Q === 'undefined' || typeof go !== 'function') {
+    console.warn('[Oxe10] Script principal não encontrado. Carregue este módulo DEPOIS dele.');
+    return;
+  }
+  window.__OXE10__ = true;
+  var W = window;
+  var VERSION = '10.0.0';
+
+  /* ---------------------------------------------------------------
+   * UTILITÁRIOS
+   * ------------------------------------------------------------- */
+  var g$ = function (id) { return document.getElementById(id); };
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function norm(s) {
+    return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  }
+  var NOW = function () { return new Date(); };
+  function ymd(d) {
+    d = d || NOW();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  function dayDiff(a, b) {
+    var pa = new Date(a + 'T00:00:00'), pb = new Date(b + 'T00:00:00');
+    return Math.round((pb - pa) / 86400000);
+  }
+  function seedOf(d) {
+    d = d || NOW();
+    return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+  }
+  function msToMidnight() {
+    var n = NOW(), m = new Date(n); m.setHours(24, 0, 0, 0); return m - n;
+  }
+  function hhmmss(ms) {
+    var s = Math.max(0, Math.floor(ms / 1000));
+    return [Math.floor(s / 3600), Math.floor(s % 3600 / 60), s % 60].map(function (v) { return String(v).padStart(2, '0'); }).join(':');
+  }
+  function baseUrl() {
+    return location.protocol.indexOf('http') === 0 ? (location.origin + location.pathname) : 'https://oxeeraassim.github.io/arena-do-oxe/';
+  }
+  function openZap(msg) {
+    W.open('https://api.whatsapp.com/send?text=' + encodeURIComponent(msg), '_blank');
+  }
+  function copyText(txt) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(txt).then(function () { toast('📋 Copiado! Cola no grupo.'); }, fallback);
+    }
+    fallback();
+    function fallback() {
+      var ta = document.createElement('textarea'); ta.value = txt; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); toast('📋 Copiado!'); } catch (e) { toast('Não deu pra copiar 😕'); }
+      ta.remove();
+    }
+  }
+  function sfxWin() { try { if (typeof audioFX === 'function') audioFX('win'); } catch (e) {} }
+  function qById(id) { return Q.find(function (q) { return q.id === id; }); }
+
+  /* Defaults do estado novo */
+  var DEF = {
+    streak: 0, lastStreakDate: '', lastBonusDate: '', streakShield: 0,
+    oxedleLastDay: 0, oxedleGrid: '', oxedleScore: 0,
+    bestCaboclo: 0, bestCrono: 0, medals: [], bodegaBuys: 0, zapShares: 0, soundOff: false
+  };
+  Object.keys(DEF).forEach(function (k) {
+    if (S[k] === undefined) S[k] = Array.isArray(DEF[k]) ? [] : DEF[k];
+  });
+  save();
+
+  /* ---------------------------------------------------------------
+   * CSS INJETADO
+   * ------------------------------------------------------------- */
+  var css = `
+  .toast{z-index:100002 !important}
+  /* M1 — Ficha Editorial Oxe nos botões da Home */
+  .menu .mbtn,.menu .oxedle-btn,.menu a.mbtn{background:var(--card) !important;color:var(--ink) !important;border:1.5px solid #d8cfbd !important;border-top:5px solid var(--rule) !important;box-shadow:0 3px 0 #cfc6b3 !important;border-radius:8px !important;text-align:left}
+  .menu .mbtn .t,.menu .oxedle-btn .t,.menu a.mbtn .t{color:var(--ink) !important;font-family:'Zilla Slab',serif;font-weight:700 !important}
+  .menu .mbtn .s,.menu .oxedle-btn .s,.menu a.mbtn .s{color:#6b6455 !important}
+  .menu a.mbtn{grid-column:1/-1;border-top-color:var(--gold) !important}
+  .menu .oxedle-btn{border-top-color:var(--ok) !important;margin-bottom:0}
+  .menu .mbtn[onclick*="Caboclo"]{border-top-color:#8c2d19 !important}
+  .menu .mbtn[onclick*="Cronometro"]{border-top-color:var(--gold) !important}
+  .menu .mbtn.main{border-top-color:var(--rule) !important;background:#fff6ea !important}
+  .menu .mbtn.ox-bodega{border-top-color:var(--accent) !important}
+  .menu .mbtn.ox-passa{border-top-color:#1f6aa5 !important}
+  .menu .mbtn.ox-medal{border-top-color:var(--gold) !important}
+  .menu .badge{font-family:'Courier Prime',monospace}
+  .ox-rec{display:inline-block;margin-top:4px;font-family:'Courier Prime',monospace;font-size:.64rem;background:#1f2a44;color:#ffe6a8;padding:1px 6px;border-radius:3px}
+  .ox-oxshare{grid-column:1/-1;background:#25D366;color:#063;font-family:'Zilla Slab',serif;font-weight:700;padding:9px;border-radius:8px;box-shadow:0 3px 0 #1a9b4a;display:none}
+  .ox-oxshare.on{display:block}
+  #hReis{cursor:pointer}
+  #hStreak{cursor:pointer;background:rgba(200,67,58,.35);border-color:#ffb38a}
+  /* Modais Oxe */
+  .ox-btn{width:100%;background:var(--ink);color:#fff;font-family:'Zilla Slab',serif;font-weight:700;padding:11px;border-radius:8px;box-shadow:0 3px 0 #0f1526;margin-top:8px}
+  .ox-btn.gold{background:var(--gold);color:#1a120b;box-shadow:0 3px 0 #9c6f1f}
+  .ox-btn.red{background:var(--rule);box-shadow:0 3px 0 #8a2a23}
+  .ox-btn.zap{background:#25D366;color:#063;box-shadow:0 3px 0 #1a9b4a}
+  .ox-btn.ghost{background:#d8cfbd;color:var(--ink);box-shadow:none}
+  .ox-btn:disabled{opacity:.45}
+  .ox-kicker{font-family:'Courier Prime',monospace;font-size:.68rem;color:#6b6455;letter-spacing:.06em;text-transform:uppercase}
+  .ox-big{font-family:'Zilla Slab',serif;font-size:2.2rem;font-weight:700;color:var(--rule);text-align:center;line-height:1.1}
+  .ox-shop{display:grid;gap:8px;margin-top:8px}
+  .ox-item{display:flex;align-items:center;gap:10px;background:#fff;border:1.5px solid #d8cfbd;border-left:5px solid var(--accent);border-radius:8px;padding:9px 10px}
+  .ox-item .ic{font-size:1.5rem}
+  .ox-item .tx{flex:1;min-width:0}
+  .ox-item .tx b{font-family:'Zilla Slab',serif;font-size:.95rem;display:block}
+  .ox-item .tx small{font-family:'Courier Prime',monospace;font-size:.64rem;color:#6b6455}
+  .ox-item button{background:var(--ink);color:#ffe6a8;font-family:'Courier Prime',monospace;font-weight:700;font-size:.72rem;padding:7px 9px;border-radius:6px;white-space:nowrap}
+  .ox-item button:disabled{opacity:.4}
+  .ox-cartorio{border:3px double #1f2a44;padding:14px;background:repeating-linear-gradient(0deg,#fbf8f1,#fbf8f1 22px,#efe7d6 23px);position:relative;font-family:'Courier Prime',monospace;color:#1f2a44}
+  .ox-cartorio h3{font-family:'Zilla Slab',serif;text-align:center;letter-spacing:.04em;margin:2px 0 8px}
+  .ox-cartorio p{font-size:.8rem;line-height:1.5}
+  .ox-stamp{position:absolute;right:10px;bottom:10px;transform:rotate(-12deg);border:3px solid #a31914;color:#a31914;font-weight:700;font-size:.7rem;padding:4px 8px;border-radius:4px;opacity:.85}
+  .ox-medals{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+  .ox-medal{background:#fff;border:1.5px solid #d8cfbd;border-top:4px solid var(--gold);border-radius:8px;padding:8px;text-align:center}
+  .ox-medal .e{font-size:1.6rem}
+  .ox-medal b{display:block;font-family:'Zilla Slab',serif;font-size:.82rem;line-height:1.15;margin:2px 0}
+  .ox-medal small{font-family:'Courier Prime',monospace;font-size:.6rem;color:#6b6455}
+  .ox-medal.lock{filter:grayscale(1);opacity:.45;border-top-color:#a49a86}
+  .ox-grid{font-size:1.6rem;letter-spacing:4px;text-align:center;margin:8px 0}
+  .ox-input{width:100%;font-family:'Courier Prime',monospace;font-size:.9rem;padding:8px;border:1px solid #cfc6b3;border-radius:6px;margin-top:4px;background:#fff;color:var(--ink)}
+  /* M8 — Álbum 2.0 */
+  .alb-bar{padding:10px 12px 0;display:grid;gap:6px}
+  .alb-chips{display:flex;gap:5px;overflow-x:auto;padding-bottom:2px;-webkit-overflow-scrolling:touch}
+  .alb-chip{flex-shrink:0;background:var(--card);border:1.5px solid #d8cfbd;color:var(--ink);font-family:'Courier Prime',monospace;font-size:.7rem;font-weight:700;padding:5px 9px;border-radius:99px}
+  .alb-chip.on{background:var(--ink);color:#ffe6a8;border-color:var(--ink)}
+  .alb-search{width:100%;font-family:'Courier Prime',monospace;font-size:.82rem;padding:8px 10px;border:1.5px solid #d8cfbd;border-radius:8px;background:#fff;color:var(--ink)}
+  .alb-info{font-family:'Courier Prime',monospace;font-size:.66rem;color:#6b6455}
+  .alb-more{margin:4px 12px 18px;width:calc(100% - 24px)}
+  /* M10 — Confete */
+  .ox-confetti{position:fixed;inset:0;pointer-events:none;z-index:100001;overflow:hidden}
+  .ox-confetti i{position:absolute;top:-12px;width:8px;height:12px;border-radius:2px;animation:oxFall linear forwards}
+  @keyframes oxFall{0%{transform:translateY(-10vh) rotate(0)}100%{transform:translateY(110vh) rotate(720deg);opacity:.8}}
+  @media (prefers-reduced-motion:reduce){.ox-confetti{display:none}}
+  `;
+  var st = document.createElement('style'); st.id = 'oxe10-css'; st.textContent = css; document.head.appendChild(st);
+
+  /* ---------------------------------------------------------------
+   * SISTEMA DE MODAIS
+   * ------------------------------------------------------------- */
+  function openSheet(id, html, opts) {
+    opts = opts || {};
+    var m = g$(id);
+    if (!m) {
+      m = document.createElement('div');
+      m.className = 'modal'; m.id = id;
+      m.innerHTML = '<div class="mcard"></div>';
+      m.addEventListener('click', function (e) {
+        if (e.target === m && !m.dataset.lock) m.classList.remove('on');
+      });
+      document.body.appendChild(m);
+    }
+    if (opts.lock) m.dataset.lock = '1'; else delete m.dataset.lock;
+    var card = m.querySelector('.mcard');
+    card.style.borderTopColor = opts.color || '';
+    card.innerHTML = html;
+    m.classList.add('on');
+    return m;
+  }
+  function closeSheet(id) { var m = g$(id); if (m) m.classList.remove('on'); }
+  W.closeSheet = closeSheet;
+
+  /* ---------------------------------------------------------------
+   * M10 — CONFETE + ÁUDIO UNIFICADO
+   * ------------------------------------------------------------- */
+  function confetti(n) {
+    n = n || 90;
+    if (W.matchMedia && W.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    var box = document.createElement('div'); box.className = 'ox-confetti';
+    var cols = ['#d49b35', '#ffd166', '#f5c26b', '#fff3cf', '#c8433a', '#a8521f'];
+    var html = '';
+    for (var i = 0; i < n; i++) {
+      html += '<i style="left:' + (Math.random() * 100).toFixed(1) + '%;background:' + cols[i % cols.length] +
+        ';animation-duration:' + (2 + Math.random() * 1.8).toFixed(2) + 's;animation-delay:' + (Math.random() * .6).toFixed(2) +
+        's;width:' + (6 + Math.random() * 6 | 0) + 'px"></i>';
+    }
+    box.innerHTML = html;
+    document.body.appendChild(box);
+    setTimeout(function () { box.remove(); }, 4800);
+  }
+
+  function syncSoundIcon() {
+    var b = g$('btnSound'); if (b) b.textContent = S.soundOff ? '🔇' : '🔊';
+  }
+  W.toggleAudio = function () {
+    S.soundOff = !S.soundOff;
+    try { soundEnabled = !S.soundOff; } catch (e) {}
+    save(); syncSoundIcon();
+    toast(S.soundOff ? '🔇 Som desligado' : '🔊 Som ligado, oxe!');
+  };
+  try { soundEnabled = !S.soundOff; } catch (e) {}
+  syncSoundIcon();
+
+  /* ---------------------------------------------------------------
+   * M9 — MEDALHAS
+   * ------------------------------------------------------------- */
+  var MEDALHAS = [
+    { id: 'batismo', e: '🌱', n: 'Batismo no Sertão', d: 'Termine sua 1ª partida', c: function (x) { return x && x.ended; } },
+    { id: 'invicto', e: '🎯', n: 'Cabra Invicto 5/5', d: 'Acerte 5 de 5 numa partida', c: function (x) { return x && x.ended && x.total === 5 && x.hits === 5; } },
+    { id: 'oxedle', e: '🌵', n: 'Mestre do Oxedle', d: 'Gabarite o Oxedle oficial', c: function (x) { return x && x.oxedle && x.hits === 5; } },
+    { id: 'caboclo', e: '💀', n: 'Sobrevivente Caboclo', d: '5+ acertos seguidos no Caboclo', c: function () { return S.bestCaboclo >= 5; } },
+    { id: 'raio', e: '⚡', n: 'Raio do Cronômetro', d: '8+ acertos no Cronômetro', c: function () { return S.bestCrono >= 8; } },
+    { id: 'bodega', e: '🏪', n: 'Freguês da Bodega', d: 'Compre algo na Bodega', c: function () { return S.bodegaBuys >= 1; } },
+    { id: 'colecao', e: '🃏', n: 'Colecionador', d: 'Cole 10+ figurinhas', c: function () { return S.cards.length >= 10; } },
+    { id: 'orgulho', e: '🏳️', n: 'Orgulho do Estado', d: 'Vença a arena do estado que você defende', c: function (x) { return x && x.arenaWin && x.uf === S.heart; } },
+    { id: 'zap', e: '📲', n: 'Desafiante do Zap', d: 'Compartilhe um desafio', c: function () { return S.zapShares >= 1; } },
+    { id: 'milionario', e: '💰', n: 'Milionário do Sertão', d: 'Junte 500+ réis', c: function () { return S.reis >= 500; } }
+  ];
+  var toastQ = [], toastBusy = false;
+  function queueToast(m) {
+    toastQ.push(m);
+    if (toastBusy) return;
+    (function next() {
+      var x = toastQ.shift(); if (!x) { toastBusy = false; return; }
+      toastBusy = true; toast(x); setTimeout(next, 2500);
+    })();
+  }
+  function checkMedals(ctx) {
+    var news = [];
+    MEDALHAS.forEach(function (m) {
+      if (S.medals.indexOf(m.id) >= 0) return;
+      var ok = false; try { ok = !!m.c(ctx || {}); } catch (e) {}
+      if (ok) { S.medals.push(m.id); news.push(m); }
+    });
+    if (news.length) {
+      save();
+      news.forEach(function (m) { queueToast('🏅 Medalha desbloqueada: ' + m.e + ' ' + m.n + '!'); });
+      confetti(60);
+      refreshExtras();
+    }
+    return news.map(function (m) { return m.id; });
+  }
+  function openMedals() {
+    var have = S.medals.length;
+    var html = '<div class="ox-kicker">Mural de conquistas</div><h3>🏅 Medalhas do Sertão</h3>' +
+      '<p class="mono" style="font-size:.72rem;color:#6b6455">' + have + ' / ' + MEDALHAS.length + ' conquistadas</p>' +
+      '<div class="ox-medals">' + MEDALHAS.map(function (m) {
+        var on = S.medals.indexOf(m.id) >= 0;
+        return '<div class="ox-medal ' + (on ? '' : 'lock') + '"><div class="e">' + m.e + '</div><b>' + m.n + '</b><small>' + m.d + '</small></div>';
+      }).join('') + '</div><button class="ox-btn ghost" onclick="closeSheet(\'medalsModal\')">Fechar</button>';
+    openSheet('medalsModal', html, { color: 'var(--gold)' });
+  }
+  W.openMedals = openMedals;
+
+  /* ---------------------------------------------------------------
+   * M2 — OFENSIVA "FOGO DO SERTÃO"
+   * ------------------------------------------------------------- */
+  function updateStreak() {
+    var today = ymd();
+    if (S.lastStreakDate === today) return S.streak;
+    if (!S.lastStreakDate) S.streak = 1;
+    else {
+      var d = dayDiff(S.lastStreakDate, today);
+      if (d <= 0) return S.streak;
+      if (d === 1) S.streak++;
+      else if (d === 2 && S.streakShield > 0) {
+        S.streakShield--; S.streak++;
+        setTimeout(function () { toast('🛡️ Salva-Ofensiva usado! Seu fogo continua aceso.'); }, 1500);
+      } else S.streak = 1;
+    }
+    S.lastStreakDate = today; save();
+    return S.streak;
+  }
+  function dailyBonusValue(streak) {
+    streak = Math.max(1, streak || S.streak || 1);
+    return Math.min(150, 30 + (streak - 1) * 20);
+  }
+  function bonusPending() { return S.lastBonusDate !== ymd(); }
+  function claimDailyBonus() {
+    if (!bonusPending()) { toast('🔥 Bônus de hoje já foi recolhido. Volte amanhã!'); return 0; }
+    updateStreak();
+    var v = dailyBonusValue(S.streak);
+    S.reis += v; S.lastBonusDate = ymd(); save();
+    queueToast('🔥 Fogo do Sertão dia ' + S.streak + ': +' + v + ' Réis!');
+    confetti(40);
+    try { closeSheet('streakModal'); } catch (e) {}
+    if (typeof refreshHome === 'function') try { refreshHome(); } catch (e) {}
+    checkMedals({ bonus: true });
+    refreshExtras();
+    return v;
+  }
+  function openStreakModal() {
+    updateStreak();
+    var pend = bonusPending(), v = dailyBonusValue(S.streak), tom = dailyBonusValue(S.streak + 1);
+    var days = '';
+    for (var i = 1; i <= 7; i++) {
+      var on = i <= ((S.streak - 1) % 7) + 1;
+      days += '<span style="display:inline-block;width:34px;text-align:center;opacity:' + (on ? 1 : .35) + '">' + (on ? '🔥' : '·') + '<br><small class="mono">D' + i + '</small></span>';
+    }
+    var html = '<div class="ox-kicker">Ofensiva diária</div><h3>🔥 Fogo do Sertão: ' + S.streak + ' dia' + (S.streak > 1 ? 's' : '') + '</h3>' +
+      '<div style="margin:10px 0">' + days + '</div>' +
+      '<p class="mono" style="font-size:.75rem;color:#6b6455">🛡️ Salva-Ofensiva: ' + (S.streakShield || 0) + ' · Amanhã: +' + tom + ' Réis</p>' +
+      (pend ? '<button class="ox-btn" onclick="claimDailyBonus()">Recolher +' + v + ' Réis 🪙</button>'
+            : '<p class="mono" style="font-size:.75rem">✔ Bônus de hoje recolhido.</p>') +
+      '<button class="ox-btn ghost" onclick="closeSheet(\'streakModal\')">Fechar</button>';
+    openSheet('streakModal', html, { color: '#e07a38' });
+  }
+  function injectStreakChip() {
+    var tb = document.querySelector('.topbar');
+    if (!tb) return;
+    var chip = document.getElementById('hStreak');
+    if (!chip) {
+      chip = document.createElement('span');
+      chip.id = 'hStreak'; chip.className = 'chip ox-streak';
+      chip.style.cursor = 'pointer';
+      chip.onclick = openStreakModal;
+      tb.appendChild(chip);
+    }
+    chip.textContent = '🔥 ' + (S.streak || 0) + (bonusPending() ? ' •' : '');
+    chip.title = bonusPending() ? 'Bônus diário disponível!' : 'Ofensiva do Sertão';
+  }
+  W.claimDailyBonus = claimDailyBonus;
+  W.openStreakModal = openStreakModal;
+
+  /* ---------------------------------------------------------------
+   * M3 — BODEGA DO SERTÃO
+   * ------------------------------------------------------------- */
+  var BODEGA_ITEMS = [
+    { id: 'reza', e: '🙏', n: 'Rezadeira', d: 'Tira 2 alternativas erradas', p: 60 },
+    { id: 'rede', e: '⏳', n: 'Rede (+10s)', d: 'Mais tempo pra pensar', p: 50 },
+    { id: 'chapeu', e: '🤠', n: 'Chapéu de Couro', d: 'Rival leva metade se errar', p: 70 },
+    { id: 'shield', e: '🛡️', n: 'Salva-Ofensiva', d: 'Protege seu fogo por 1 dia', p: 150 },
+    { id: 'pack_card', e: '🃏', n: 'Pacote de Figurinha', d: 'Uma figurinha inédita', p: 120 }
+  ];
+  function openBodega() {
+    var html = '<div class="ox-kicker">Secos & Molhados</div><h3>🏪 Bodega do Sertão</h3>' +
+      '<p class="mono" style="font-size:.75rem;color:#6b6455">Saldo: 🪙 ' + S.reis + ' Réis</p>' +
+      '<div class="ox-bodega">' + BODEGA_ITEMS.map(function (it) {
+        var dis = S.reis < it.p ? 'disabled' : '';
+        return '<div class="ox-item" style="display:flex;align-items:center;gap:10px;margin:8px 0">' +
+          '<div style="font-size:1.6rem">' + it.e + '</div><div style="flex:1"><b>' + it.n + '</b><br><small>' + it.d + '</small></div>' +
+          '<button class="ox-btn" ' + dis + ' onclick="buyBodegaItem(\'' + it.id + '\')">🪙 ' + it.p + '</button></div>';
+      }).join('') + '</div><button class="ox-btn ghost" onclick="closeSheet(\'bodegaModal\')">Fechar</button>';
+    openSheet('bodegaModal', html, { color: '#8c5828' });
+  }
+  function buyBodegaItem(itemId) {
+    var it = null;
+    BODEGA_ITEMS.forEach(function (x) { if (x.id === itemId) it = x; });
+    if (!it) return false;
+    if (S.reis < it.p) { toast('Oxe, faltam Réis! Precisa de ' + it.p + '.'); return false; }
+    if (itemId === 'pack_card') {
+      var pool = Q.filter(function (q) { return S.cards.indexOf(q.id) < 0; });
+      if (!pool.length) { toast('Álbum completo! Nada inédito na bodega.'); return false; }
+      var q = pool[Math.random() * pool.length | 0];
+      S.reis -= it.p; S.cards.push(q.id); save();
+      try { closeSheet('bodegaModal'); } catch (e) {}
+      queueToast('🃏 Figurinha nova: ' + q.id + '!');
+      confetti(50);
+      if (typeof openFig === 'function') try { W.openFig(q.id); } catch (e) {}
+    } else {
+      S.reis -= it.p;
+      if (itemId === 'shield') S.streakShield = (S.streakShield || 0) + 1;
+      else { S.pups = S.pups || {}; S.pups[itemId] = (S.pups[itemId] || 0) + 1; }
+      save();
+      toast('✔ Comprou ' + it.e + ' ' + it.n + '!');
+      openBodega();
+    }
+    S.bodegaBuys = (S.bodegaBuys || 0) + 1; save();
+    if (typeof refreshHome === 'function') try { refreshHome(); } catch (e) {}
+    checkMedals({ buy: itemId });
+    refreshExtras();
+    return true;
+  }
+  W.openBodega = openBodega;
+  W.buyBodegaItem = buyBodegaItem;
+  function bindReis() {
+    var r = document.getElementById('hReis');
+    if (r && !r.__oxBound) { r.__oxBound = true; r.style.cursor = 'pointer'; r.title = 'Abrir Bodega'; r.addEventListener('click', openBodega); }
+  }
+
+  /* ---------------------------------------------------------------
+   * M4 — OXEDLE 2.0
+   * ------------------------------------------------------------- */
+  var origStartOxedle = W.startOxedle;
+  function oxedleDoneToday() { return !!(S.oxedleGrid && S.oxedleGrid.date === ymd()); }
+  function msToMidnight() {
+    var n = new Date(), m = new Date(n.getFullYear(), n.getMonth(), n.getDate() + 1);
+    return m - n;
+  }
+  function fmtHMS(ms) {
+    var s = Math.max(0, Math.floor(ms / 1000)), h = s / 3600 | 0, mi = (s % 3600) / 60 | 0, se = s % 60;
+    return (h < 10 ? '0' : '') + h + ':' + (mi < 10 ? '0' : '') + mi + ':' + (se < 10 ? '0' : '') + se;
+  }
+  W.startOxedle = function () {
+    if (oxedleDoneToday()) {
+      toast('Oxedle de hoje já foi! Próximo em ' + fmtHMS(msToMidnight()));
+      shareOxedleGridPrompt();
+      return;
+    }
+    var r;
+    if (typeof origStartOxedle === 'function') r = origStartOxedle.apply(this, arguments);
+    try { if (B) B.isOxedle = true; } catch (e) {}
+    return r;
+  };
+  function shareOxedleGridPrompt() {
+    var g = S.oxedleGrid; if (!g) return;
+    var html = '<div class="ox-kicker">Oxedle do dia</div><h3>🧩 ' + g.hits + '/' + g.grid.length + '</h3>' +
+      '<p style="font-size:1.6rem">' + g.grid + '</p><p class="mono" style="font-size:.75rem">Próximo em <span id="oxdTimer">' + fmtHMS(msToMidnight()) + '</span></p>' +
+      '<button class="ox-btn" onclick="shareOxedleGrid()">📲 Compartilhar grade</button>' +
+      '<button class="ox-btn ghost" onclick="closeSheet(\'oxedleModal\')">Fechar</button>';
+    openSheet('oxedleModal', html, { color: '#3fae6a' });
+  }
+  function shareOxedleGrid() {
+    var g = S.oxedleGrid;
+    if (!g) { toast('Jogue o Oxedle de hoje primeiro!'); return; }
+    var msg = 'Oxedle do Nordeste ' + g.date + ' · ' + g.hits + '/' + g.grid.length + '\n\n' + g.grid +
+      '\n\n🔥 Ofensiva: ' + (S.streak || 1) + ' dias\nJoga tu também, cabra:\n' + location.origin + location.pathname;
+    S.zapShares = (S.zapShares || 0) + 1; save();
+    W.open('https://api.whatsapp.com/send?text=' + encodeURIComponent(msg), '_blank');
+    checkMedals({ share: true });
+  }
+  W.shareOxedleGrid = shareOxedleGrid;
+  var oxedleTick = null;
+  function updateOxedleBtn() {
+    var btns = document.querySelectorAll('.oxedle-btn');
+    if (!btns.length) return;
+    btns.forEach(function (b) {
+      if (!b.__oxOrigHTML) b.__oxOrigHTML = b.innerHTML;
+      if (oxedleDoneToday()) {
+        b.innerHTML = '✅ Oxedle de hoje: ' + S.oxedleGrid.grid + ' · próximo em <span class="oxd-cd">' + fmtHMS(msToMidnight()) + '</span>';
+        b.classList.add('done');
+      } else {
+        b.innerHTML = b.__oxOrigHTML + ' <small class="mono">· NOVO HOJE!</small>';
+        b.classList.remove('done');
+      }
+    });
+    clearInterval(oxedleTick);
+    oxedleTick = setInterval(function () {
+      var t = fmtHMS(msToMidnight());
+      document.querySelectorAll('.oxd-cd,#oxdTimer').forEach(function (x) { x.textContent = t; });
+      if (S.oxedleGrid && S.oxedleGrid.date !== ymd()) updateOxedleBtn();
+    }, 1000);
+  }
+
+  /* ---------------------------------------------------------------
+   * M5 — COMPARTILHAMENTO UNIFICADO + REVANCHE
+   * ------------------------------------------------------------- */
+  function buildShareLink() {
+    var qids = (B && B.qs ? B.qs.slice(0, 5) : []).map(function (q) { return q.id; }).join(',');
+    var base = location.origin + location.pathname;
+    return base + '?rival=' + encodeURIComponent(myTag()) + '&pts=' + (B ? B.me : 0) +
+      '&arena=' + encodeURIComponent(B && B.arena >= 0 ? B.a.nome : 'Duelo Rápido') +
+      '&uf=' + encodeURIComponent(S.heart || 'PE') + '&qids=' + encodeURIComponent(qids);
+  }
+  function shareResult() {
+    if (!B) return;
+    var grid = B.results.map(function (r) { return r > 0 ? '🟩' : '🟥'; }).join('');
+    var heart = UFS_NE[S.heart] || 'o Nordeste';
+    var msg = 'Ei cabra, cravei ' + B.me + ' pontos na Arena do Oxe (' + (B.arena >= 0 ? B.a.nome : 'Duelo Rápido') + ')!\n\n' +
+      grid + '\nEu defendo ' + heart + ' com orgulho! 🔥 ' + (S.streak || 1) + ' dias de ofensiva\n\n' +
+      'Duvido tu bater com AS MESMAS perguntas:\n' + buildShareLink() + '\n\nCausos no Instagram: instagram.com/oxe_eraassim';
+    S.zapShares = (S.zapShares || 0) + 1; save();
+    W.open('https://api.whatsapp.com/send?text=' + encodeURIComponent(msg), '_blank');
+    checkMedals({ share: true });
+    return msg;
+  }
+  W.shareResult = shareResult;
+  var pendingRevanche = null;
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function checkUrlChallenge() {
+    var p; try { p = new URLSearchParams(location.search); } catch (e) { return null; }
+    if (!p.get('rival')) return null;
+    var ids = (p.get('qids') || '').split(',').filter(Boolean);
+    pendingRevanche = { rival: p.get('rival'), pts: +p.get('pts') || 0, arena: p.get('arena') || 'Duelo', uf: p.get('uf') || '', qids: ids };
+    var html = '<div class="ox-kicker">Cartório do Sertão · Intimação</div><h3>📜 Desafio de Revanche</h3>' +
+      '<p style="font-family:\'Courier Prime\',monospace;font-size:.85rem;line-height:1.5">Certifico, para os devidos fins, que <b>' + esc(pendingRevanche.rival) +
+      '</b>' + (pendingRevanche.uf ? ' (' + esc(pendingRevanche.uf) + ')' : '') + ' fez <b>' + pendingRevanche.pts + ' pontos</b> na arena <b>' + esc(pendingRevanche.arena) +
+      '</b> e intima Vossa Senhoria a responder às <b>mesmas ' + (ids.length || 5) + ' perguntas</b>. Dou fé.</p>' +
+      '<button class="ox-btn" onclick="acceptRevanche()">⚔️ Aceitar a Revanche</button>' +
+      '<button class="ox-btn ghost" onclick="closeSheet(\'revancheModal\')">Fugir (vergonha)</button>';
+    openSheet('revancheModal', html, { color: '#c8433a' });
+    return pendingRevanche;
+  }
+  function acceptRevanche() {
+    var rv = pendingRevanche; if (!rv) return;
+    try { closeSheet('revancheModal'); } catch (e) {}
+    var qs = rv.qids.map(function (id) { return Q.filter(function (q) { return q.id === id; })[0]; }).filter(Boolean);
+    if (qs.length < 5) qs = qs.concat(shuffle(Q.filter(function (q) { return qs.indexOf(q) < 0; })).slice(0, 5 - qs.length));
+    var a = ARENAS[0];
+    B = { arena: -1, a: a, mode: a.mode, qs: qs.slice(0, 5), r: 0, me: 0, bot: 0, hitsMe: 0, results: [], combo: 0,
+      rival: '📜 ' + rv.rival + ' (' + rv.pts + ')', newCards: [], botSkill: .6, isRevanche: true, revanche: rv };
+    try { history.replaceState(null, '', location.pathname); } catch (e) {}
+    go('battle'); setupBattle();
+  }
+  W.checkUrlChallenge = checkUrlChallenge;
+  W.acceptRevanche = acceptRevanche;
+
+  /* ---------------------------------------------------------------
+   * M6 — PASSA O CELULAR (2 JOGADORES)
+   * ------------------------------------------------------------- */
+  function startPassaCelular() {
+    if (typeof initAudio === 'function') try { initAudio(); } catch (e) {}
+    var a = ARENAS[Math.random() * ARENAS.length | 0];
+    B = { arena: -1, a: a, mode: a.mode, qs: pickQs('XX', 6), r: 0, me: 0, bot: 0, hitsMe: 0, results: [], combo: 0,
+      rival: '👤 Jogador 2', newCards: [], botSkill: 0, isPassa: true,
+      players: [{ n: 'Jogador 1', pts: 0, hits: 0, res: [] }, { n: 'Jogador 2', pts: 0, hits: 0, res: [] }] };
+    go('battle'); setupBattle();
+  }
+  function resumeTimer() {
+    clearInterval(tmr);
+    tmr = setInterval(function () {
+      tLeft -= 0.1;
+      var tb = document.getElementById('tBar'); if (tb) tb.style.transform = 'scaleX(' + Math.max(0, tLeft / tMax) + ')';
+      if (tLeft <= 0) { clearInterval(tmr); W.answer(-1, null); }
+    }, 100);
+  }
+  function passaTurnModal() {
+    clearInterval(tmr);
+    var cur = B.r % 2, p = B.players[cur];
+    var html = '<div class="ox-kicker">Rodada ' + (B.r + 1) + ' / 6</div><h3>📱 Passa o celular pro ' + p.n + '!</h3>' +
+      '<p class="mono">J1 ' + B.players[0].pts + ' x ' + B.players[1].pts + ' J2</p>' +
+      '<button class="ox-btn" onclick="__oxPassaGo()">Tô pronto, bora!</button>';
+    openSheet('passaModal', html, { color: cur ? '#2563eb' : '#c8433a' });
+  }
+  W.__oxPassaGo = function () { try { closeSheet('passaModal'); } catch (e) {} tLeft = tMax; resumeTimer(); };
+  function endPassa() {
+    clearInterval(tmr);
+    var p1 = B.players[0], p2 = B.players[1];
+    var w = p1.pts > p2.pts ? p1.n + ' venceu! 🏆' : p2.pts > p1.pts ? p2.n + ' venceu! 🏆' : 'Empate arretado! 🤝';
+    var row = function (p) { return '<div style="flex:1;text-align:center"><b>' + p.n + '</b><div style="font-size:1.6rem">' + p.pts + '</div><small>' + p.hits + '/3 acertos</small><div>' + p.res.map(function (r) { return r ? '🟩' : '🟥'; }).join('') + '</div></div>'; };
+    var html = '<div class="ox-kicker">Duelo Local</div><h3>' + w + '</h3><div style="display:flex;gap:10px">' + row(p1) + '<div style="align-self:center">⚔️</div>' + row(p2) + '</div>' +
+      '<button class="ox-btn" onclick="closeSheet(\'passaModal\');startPassaCelular()">🔁 Revanche</button>' +
+      '<button class="ox-btn ghost" onclick="closeSheet(\'passaModal\');go(\'home\')">Voltar pra Home</button>';
+    S.passaGames = (S.passaGames || 0) + 1; save();
+    confetti(80);
+    openSheet('passaModal', html, { color: 'var(--gold)' });
+    checkMedals({ passa: true });
+  }
+  W.startPassaCelular = startPassaCelular;
+
+  /* ---------------------------------------------------------------
+   * M7 — CABOCLO VALENTE (MORTE SÚBITA REAL) + WRAPS DE BATALHA
+   * ------------------------------------------------------------- */
+  var origStartCaboclo = W.startCabocloValente;
+  W.startCabocloValente = function () {
+    var r = typeof origStartCaboclo === 'function' ? origStartCaboclo.apply(this, arguments) : null;
+    try { if (B) { B.isCaboclo = true; B.cabocloFailed = false; } } catch (e) {}
+    return r;
+  };
+  var origNextRound = W.nextRound;
+  W.nextRound = function (first) {
+    if (B && B.isCaboclo && B.cabocloFailed) return W.endBattle();
+    if (B && B.isPassa && !first && B.r + 1 >= B.qs.length) { B.r++; return endPassa(); }
+    var r = origNextRound.apply(this, arguments);
+    if (B && B.isPassa) {
+      B.botOk = false; B.botT = 999;
+      var bn = document.getElementById('banner');
+      if (bn) bn.textContent = '📱 PASSA O CELULAR · RODADA ' + (B.r + 1) + '/6 · VEZ DO ' + B.players[B.r % 2].n.toUpperCase();
+      var nm = document.getElementById('nmMe'); if (nm) nm.textContent = 'Jogador 1';
+      passaTurnModal();
+    }
+    return r;
+  };
+  var origAnswer = W.answer;
+  W.answer = function (idx, btn) {
+    if (!B || answered) return origAnswer.apply(this, arguments);
+    var hitsBefore = B.hitsMe, meBefore = B.me, shieldOn = !!shield;
+    var r = origAnswer.apply(this, arguments);
+    var ok = B.hitsMe > hitsBefore;
+    var fbN = document.getElementById('fbN');
+    if (B.isPassa) {
+      var p = B.players[B.r % 2];
+      p.pts += B.me - meBefore; p.hits += ok ? 1 : 0; p.res.push(ok);
+      B.bot = 0;
+      var a = document.getElementById('scMe'), b = document.getElementById('scBot');
+      if (a) a.textContent = B.players[0].pts; if (b) b.textContent = B.players[1].pts;
+      if (fbN) fbN.textContent = B.r >= B.qs.length - 1 ? 'Ver placar final →' : 'Passar o celular →';
+    }
+    if (B.isCaboclo && !ok) {
+      if (shieldOn) {
+        toast('🤠 O chapéu de couro te salvou da morte súbita!');
+      } else {
+        B.cabocloFailed = true;
+        if (fbN) fbN.textContent = '💀 Fim da linha · Ver resultado →';
+        toast('💀 Morte Súbita! Sequência: ' + B.hitsMe + ' acertos.');
+      }
+    }
+    return r;
+  };
+  var origEndBattle = W.endBattle;
+  W.endBattle = function () {
+    if (!B) return;
+    if (B.isPassa) return endPassa();
+    var wasB = B;
+    var win = B.isCaboclo ? (B.hitsMe >= 3) : B.isCronometro ? (B.hitsMe >= 5) : (B.me > B.bot);
+    if (B.isCaboclo) { S.bestCaboclo = Math.max(S.bestCaboclo || 0, B.hitsMe); }
+    if (B.isCronometro) { S.bestCrono = Math.max(S.bestCrono || 0, B.hitsMe); }
+    if (B.isOxedle) {
+      S.oxedleGrid = { date: ymd(), grid: B.results.map(function (x) { return x > 0 ? '🟩' : '🟥'; }).join(''), hits: B.hitsMe };
+    }
+    save();
+    var r = origEndBattle.apply(this, arguments);
+    if (wasB.isCaboclo) { var l = document.getElementById('rLine'); if (l) l.textContent = '💀 Sequência: ' + wasB.hitsMe + ' acertos · Recorde: ' + S.bestCaboclo; }
+    if (wasB.isCronometro) { var l2 = document.getElementById('rLine'); if (l2) l2.textContent = '⚡ ' + wasB.hitsMe + ' acertos em 60s · Recorde: ' + S.bestCrono; }
+    if (wasB.isRevanche && wasB.revanche) {
+      var beat = wasB.me > wasB.revanche.pts;
+      queueToast(beat ? '⚔️ Revanche vencida! ' + wasB.me + ' x ' + wasB.revanche.pts : '😬 ' + wasB.revanche.rival + ' segue na frente: ' + wasB.revanche.pts);
+      if (beat) S.revanchesWon = (S.revanchesWon || 0) + 1;
+    }
+    S.battles = (S.battles || 0) + 1; if (win) S.wins = (S.wins || 0) + 1;
+    save();
+    if (win) confetti(90);
+    checkMedals({ win: win, hits: wasB.hitsMe, pts: wasB.me, caboclo: !!wasB.isCaboclo, crono: !!wasB.isCronometro, oxedle: !!wasB.isOxedle, boss: !!(wasB.a && wasB.a.boss) });
+    return r;
+  };
+
+  /* ---------------------------------------------------------------
+   * M8 — ÁLBUM 2.0
+   * ------------------------------------------------------------- */
+  var ALB = { f: 'coladas', s: '', lim: 60 };
+  var ALB_UFS = ['PE', 'BA', 'CE', 'PB', 'RN', 'AL', 'SE', 'MA', 'PI'];
+  function albContainer() {
+    var scr = document.getElementById('album'); if (!scr) return null;
+    var c = document.getElementById('albGrid') || document.getElementById('albumGrid') || scr.querySelector('.alb-grid');
+    if (!c) { c = document.createElement('div'); c.className = 'alb-grid'; scr.appendChild(c); }
+    return c;
+  }
+  function drawAlbum() {
+    var c = albContainer(); if (!c) return;
+    var scr = document.getElementById('album');
+    var bar = scr.querySelector('.alb-bar');
+    if (!bar) {
+      bar = document.createElement('div'); bar.className = 'alb-bar';
+      c.parentNode.insertBefore(bar, c);
+    }
+    var chips = ['coladas', 'todas'].concat(ALB_UFS).map(function (f) {
+      var lb = f === 'coladas' ? 'Coladas' : f === 'todas' ? 'Todas' : f;
+      return '<button class="chip alb-chip' + (ALB.f === f ? ' on' : '') + '" data-f="' + f + '">' + lb + '</button>';
+    }).join('');
+    bar.innerHTML = '<input class="alb-search" placeholder="🔎 Buscar causo, tema, ID..." value="' + esc(ALB.s) + '">' +
+      '<div class="alb-chips" style="display:flex;flex-wrap:wrap;gap:4px;margin:6px 0">' + chips + '</div>';
+    bar.querySelectorAll('.alb-chip').forEach(function (b) { b.onclick = function () { ALB.f = b.dataset.f; ALB.lim = 60; drawAlbum(); }; });
+    var inp = bar.querySelector('.alb-search');
+    inp.oninput = function () { ALB.s = inp.value; ALB.lim = 60; renderAlbGrid(); };
+    renderAlbGrid();
+  }
+  function albFiltered() {
+    var s = ALB.s.trim().toLowerCase();
+    return Q.filter(function (q) {
+      var have = S.cards.indexOf(q.id) >= 0;
+      if (ALB.f === 'coladas' && !have) return false;
+      if (ALB_UFS.indexOf(ALB.f) >= 0 && q.uf !== ALB.f) return false;
+      if (s && !have) return String(q.id).toLowerCase().indexOf(s) >= 0;
+      if (s) return (q.id + ' ' + q.tema + ' ' + q.q + ' ' + q.uf).toLowerCase().indexOf(s) >= 0;
+      return true;
+    });
+  }
+  function renderAlbGrid() {
+    var c = albContainer(); if (!c) return;
+    var list = albFiltered(), shown = list.slice(0, ALB.lim);
+    c.innerHTML = (shown.length ? shown.map(function (q) {
+      return S.cards.indexOf(q.id) >= 0 ? figHTML(q) :
+        '<div class="fig lock" style="opacity:.4;text-align:center;padding:10px"><b>🔒</b><br><small class="mono">' + q.id + '</small></div>';
+    }).join('') : '<p class="mono" style="font-size:.75rem;color:#6b6455">Nenhuma figurinha aqui ainda, cabra.</p>') +
+      (list.length > ALB.lim ? '<button class="ox-btn ghost alb-more" style="grid-column:1/-1">Carregar Mais (' + (list.length - ALB.lim) + ')</button>' : '');
+    var m = c.querySelector('.alb-more'); if (m) m.onclick = function () { ALB.lim += 60; renderAlbGrid(); };
+    var h = document.getElementById('hAlb'); if (h) h.textContent = S.cards.length + ' / ' + Q.length + ' figurinhas';
+  }
+  W.drawAlbum = drawAlbum;
+  function shareFig(id) {
+    var q = Q.filter(function (x) { return x.id === id; })[0]; if (!q) return;
+    var msg = '📜 Causo do Nordeste (' + q.uf + ' · ' + q.tema + ')\n\n' + q.q + '\n👉 ' + q.opts[q.ans] + '\n\n' + (q.exp || '') +
+      '\n\nColei essa figurinha na Arena do Oxe! Vem colecionar:\n' + location.origin + location.pathname;
+    S.zapShares = (S.zapShares || 0) + 1; save();
+    W.open('https://api.whatsapp.com/send?text=' + encodeURIComponent(msg), '_blank');
+    checkMedals({ share: true });
+  }
+  W.__oxShareFig = shareFig;
+  var origOpenFig = W.openFig;
+  W.openFig = function (id) {
+    var r = typeof origOpenFig === 'function' ? origOpenFig.apply(this, arguments) : null;
+    setTimeout(function () {
+      var box = document.getElementById('figModal') || document.getElementById('figSheet') || document.querySelector('.modal.on,.sheet.on,.overlay.on');
+      if (!box) return;
+      var old = box.querySelector('.ox-figshare'); if (old) old.remove();
+      var b = document.createElement('button');
+      b.className = 'ox-btn ox-figshare'; b.textContent = '📲 Compartilhar este Causo no WhatsApp';
+      b.onclick = function () { shareFig(id); };
+      (box.querySelector('.sheet-body,.box,.card') || box).appendChild(b);
+    }, 30);
+    return r;
+  };
+
+  /* ---------------------------------------------------------------
+   * HOME / NAVEGAÇÃO
+   * ------------------------------------------------------------- */
+  function refreshExtras() {
+    injectStreakChip(); bindReis(); updateOxedleBtn();
+    var home = document.getElementById('home'); if (!home) return;
+    var box = document.getElementById('oxExtras');
+    if (!box) {
+      box = document.createElement('div'); box.id = 'oxExtras'; box.className = 'ox-extras';
+      box.style.cssText = 'display:grid;gap:8px;margin:10px 0';
+      var anchor = home.querySelector('.oxedle-btn');
+      if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(box, anchor.nextSibling);
+      else (home.querySelector('.wrap,main') || home).appendChild(box);
+    }
+    box.innerHTML =
+      (bonusPending() ? '<button class="ox-btn" onclick="openStreakModal()">🔥 Bônus diário: +' + dailyBonusValue(S.streak) + ' Réis</button>' : '') +
+      '<button class="ox-btn" onclick="openBodega()">🏪 Bodega do Sertão <small>· 🪙 ' + S.reis + '</small></button>' +
+      '<button class="ox-btn" onclick="startPassaCelular()">👥 Passa o Celular (2P)</button>' +
+      '<button class="ox-btn ghost" onclick="openMedals()">🏅 Medalhas do Sertão <small>· ' + S.medals.length + '/' + MEDALHAS.length + '</small></button>' +
+      ((S.bestCaboclo || S.bestCrono) ? '<p class="mono" style="font-size:.7rem;color:#6b6455;text-align:center">💀 Caboclo: ' + (S.bestCaboclo || 0) + ' · ⚡ Crono: ' + (S.bestCrono || 0) + '</p>' : '');
+  }
+  W.refreshExtras = refreshExtras;
+  ['renderHome', 'refreshHome'].forEach(function (fn) {
+    var o = W[fn]; if (typeof o !== 'function') return;
+    W[fn] = function () { var r = o.apply(this, arguments); try { refreshExtras(); } catch (e) {} return r; };
+  });
+  var origGo = W.go;
+  W.go = function (id) {
+    if (id !== 'battle' && typeof cronoTimer !== 'undefined' && B && B.isCronometro && id === 'home') clearInterval(cronoTimer);
+    var r = origGo.apply(this, arguments);
+    try { if (id === 'home') { refreshExtras(); checkMedals({}); } } catch (e) {}
+    return r;
+  };
+
+  /* ---------------------------------------------------------------
+   * INIT
+   * ------------------------------------------------------------- */
+  var urlChecked = false;
+  function oxInit() {
+    updateStreak();
+    refreshExtras();
+    checkMedals({});
+    if (!urlChecked) { urlChecked = true; setTimeout(checkUrlChallenge, 600); }
+    if (bonusPending()) setTimeout(function () { if (!document.getElementById('revancheModal') || !pendingRevanche) openStreakModal(); }, 1200);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', oxInit);
+  else setTimeout(oxInit, 0);
+
+  W.__ARENA_TEST__ = {
+    S: S, Q: Q, MEDALHAS: MEDALHAS, BODEGA_ITEMS: BODEGA_ITEMS, ALB: ALB,
+    getB: function () { return B; }, setB: function (v) { B = v; },
+    ymd: ymd, dayDiff: dayDiff, updateStreak: updateStreak, dailyBonusValue: dailyBonusValue, bonusPending: bonusPending,
+    claimDailyBonus: claimDailyBonus, openStreakModal: openStreakModal, checkMedals: checkMedals, openMedals: openMedals,
+    openBodega: openBodega, buyBodegaItem: buyBodegaItem, shareResult: shareResult, buildShareLink: buildShareLink,
+    checkUrlChallenge: checkUrlChallenge, acceptRevanche: acceptRevanche, getPendingRevanche: function () { return pendingRevanche; },
+    startPassaCelular: startPassaCelular, endPassa: endPassa, shareOxedleGrid: shareOxedleGrid, updateOxedleBtn: updateOxedleBtn,
+    msToMidnight: msToMidnight, fmtHMS: fmtHMS, drawAlbum: drawAlbum, albFiltered: albFiltered, renderAlbGrid: renderAlbGrid,
+    shareFig: shareFig, refreshExtras: refreshExtras, injectStreakChip: injectStreakChip,
+    answer: function (i) { return W.answer(i, null); }, endBattle: function () { return W.endBattle(); },
+    reset: function () { S.medals = []; S.streak = 0; S.lastStreakDate = null; S.lastBonusDate = null; save(); }
+  };
+})();
+
+// === END OXE ARENA 10 IMPROVEMENTS ===
 </script>
 </body>
 </html>

@@ -1,7 +1,14 @@
 /**
- * AUDIO ENGINE PROCEDURAL — OXE! A ODISSEIA DOS NOVE SÓIS
+ * AUDIO ENGINE PROCEDURAL — OXE! 2.0: A GRANDE JORNADA DOS NOVE SÓIS
  * Trilha sonora e efeitos sintetizados 100% em Web Audio API.
- * Autêntico baião, xote e forró (Zabumba, Triângulo, Sanfona) + SFX arcade sertanejo.
+ * Baião, xote, forró, coco, maracatu e frevo (Zabumba, Triângulo, Sanfona) + SFX arcade sertanejo.
+ *
+ * Correções:
+ *  - B4 : todas as faixas chamadas pelo jogo existem em SONGS (sem silêncio ao trocar de mundo).
+ *  - B9 : pauseMusic()/resumeMusic() reais (preservam currentState e nextStep).
+ *  - B10: todos os SFX chamados pelo jogo implementados (death, leaf, splash, geyser, vine, quake...).
+ *  - Extra: conversão MIDI->Hz corrigida, race condition do songGain no stopMusic,
+ *           desbloqueio duplicado no unlock(), faixas não-loop finalizam corretamente.
  */
 
 const AudioEngine = (() => {
@@ -74,39 +81,43 @@ const AudioEngine = (() => {
       noiseBuffer = createNoise();
     } catch (e) {
       console.warn('[AudioEngine] Erro ao inicializar Web Audio:', e);
+      ctx = null;
     }
     return ctx;
   }
 
   // ===================== UNLOCK MOBILE =====================
+  function flushPending() {
+    if (!pendingState) return;
+    const st = pendingState;
+    pendingState = null;
+    currentState = null; // força criação do sequenciador
+    playMusic(st);
+  }
+
   function unlock() {
     try {
       init();
       if (!ctx) return;
-      if (ctx.state === 'suspended') {
-        ctx.resume().then(() => {
-          unlocked = true;
-          if (pendingState) {
-            const st = pendingState;
-            pendingState = null;
-            playMusic(st);
-          }
-        }).catch(() => {});
-      } else {
-        unlocked = true;
-      }
 
       // Buffer silencioso para desbloquear Web Audio no iOS Safari
-      const b = ctx.createBuffer(1, 1, 22050);
-      const s = ctx.createBufferSource();
-      s.buffer = b;
-      s.connect(ctx.destination);
-      s.start(0);
+      try {
+        const b = ctx.createBuffer(1, 1, 22050);
+        const s = ctx.createBufferSource();
+        s.buffer = b;
+        s.connect(ctx.destination);
+        s.start(0);
+      } catch (e) {}
 
-      if (pendingState) {
-        const st = pendingState;
-        pendingState = null;
-        playMusic(st);
+      if (ctx.state === 'suspended' || ctx.state === 'interrupted') {
+        ctx.resume().then(() => {
+          unlocked = true;
+          flushPending();
+          if (seq && !paused && !schedTimer) startScheduler();
+        }).catch(() => {});
+      } else if (ctx.state === 'running') {
+        unlocked = true;
+        flushPending();
       }
     } catch (e) {
       console.warn('[AudioEngine] Erro ao destravar áudio:', e);
@@ -118,7 +129,9 @@ const AudioEngine = (() => {
     const handler = () => {
       unlock();
       if (ctx && ctx.state === 'running') {
-        unlockEvents.forEach(e => document.removeEventListener(e, handler, true));
+        unlockEvents.forEach(e => {
+          try { document.removeEventListener(e, handler, true); } catch (err) {}
+        });
       }
     };
     unlockEvents.forEach(e => {
@@ -130,11 +143,15 @@ const AudioEngine = (() => {
   if (typeof document !== 'undefined') attachUnlock();
 
   // ===================== UTILITÁRIOS =====================
+  function midiToFreq(m) {
+    return 440 * Math.pow(2, (m - 69) / 12);
+  }
+
   function env(gainNode, t, a, peak, d, sustain = 0.0001) {
     const g = gainNode.gain;
     g.cancelScheduledValues(t);
     g.setValueAtTime(0.0001, t);
-    g.linearRampToValueAtTime(peak, t + a);
+    g.linearRampToValueAtTime(Math.max(peak, 0.0002), t + a);
     g.exponentialRampToValueAtTime(Math.max(sustain, 0.0001), t + a + d);
   }
 
@@ -148,11 +165,26 @@ const AudioEngine = (() => {
     return s;
   }
 
+  function tone(type, t, f0, f1, dur, peak, dest, attack = 0.003, ramp = 'exp') {
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(f0, t);
+    if (f1 && f1 !== f0) {
+      if (ramp === 'lin') o.frequency.linearRampToValueAtTime(f1, t + dur);
+      else o.frequency.exponentialRampToValueAtTime(Math.max(f1, 1), t + dur);
+    }
+    env(g, t, attack, peak, dur);
+    o.connect(g); g.connect(dest || sfxBus);
+    o.start(t); o.stop(t + attack + dur + 0.03);
+    return { o, g };
+  }
+
   // ===================== INSTRUMENTOS =====================
 
   // Zabumba: batida grave da pele
   function zabumbaKick(t, vel = 1, dest = musicBus) {
-    if (!ctx) return;
+    if (!ctx || !dest) return;
     try {
       const o = ctx.createOscillator();
       const g = ctx.createGain();
@@ -179,7 +211,7 @@ const AudioEngine = (() => {
 
   // Zabumba Rim: vareta (bacalhau) no aro de baixo
   function zabumbaRim(t, vel = 1, dest = musicBus) {
-    if (!ctx) return;
+    if (!ctx || !dest) return;
     try {
       const o = ctx.createOscillator();
       const g = ctx.createGain();
@@ -203,7 +235,7 @@ const AudioEngine = (() => {
 
   // Triângulo: batida metálica típica do forró
   function triangulo(t, open = false, vel = 1, dest = musicBus) {
-    if (!ctx) return;
+    if (!ctx || !dest) return;
     try {
       const base = 3600;
       const ratios = [1, 1.28, 1.54, 1.72];
@@ -228,17 +260,18 @@ const AudioEngine = (() => {
     } catch (e) {}
   }
 
-  // Sanfona: fole com palhetas sintetizadas em saw + square desafinadas
+  // Sanfona: fole com palhetas sintetizadas em saw + triangle desafinadas
   function sanfona(t, freq, dur, vel = 1, dest = musicBus, bright = 1) {
-    if (!ctx || !freq) return;
+    if (!ctx || !freq || !dest) return;
     try {
       const out = ctx.createGain();
       const a = 0.02, r = 0.05;
+      const d = Math.max(dur, a + 0.03);
       const peak = 0.12 * vel;
       out.gain.setValueAtTime(0.0001, t);
       out.gain.linearRampToValueAtTime(peak, t + a);
-      out.gain.setValueAtTime(peak, t + Math.max(a, dur - r));
-      out.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      out.gain.setValueAtTime(peak, t + Math.max(a, d - r));
+      out.gain.exponentialRampToValueAtTime(0.0001, t + d);
 
       const lp = ctx.createBiquadFilter();
       lp.type = 'lowpass';
@@ -253,7 +286,7 @@ const AudioEngine = (() => {
         o.detune.value = cents;
         g.gain.value = i === 1 ? 0.45 : 0.28;
         o.connect(g); g.connect(lp);
-        o.start(t); o.stop(t + dur + 0.05);
+        o.start(t); o.stop(t + d + 0.05);
       });
 
       lp.connect(out);
@@ -263,6 +296,7 @@ const AudioEngine = (() => {
   }
 
   // ===================== COMPOSIÇÕES NORDESTINAS =====================
+  // root = nota MIDI de referência; melody = [semitons acima do root | null (pausa), duração em 16 avos]
   const SONGS = {
     title: {
       bpm: 94, root: 55, // G3 — Xote
@@ -274,7 +308,7 @@ const AudioEngine = (() => {
         [17, 4], [16, 2], [14, 2], [12, 8],
         [19, 2], [21, 2], [22, 4], [21, 2], [19, 2], [17, 4],
         [16, 4], [14, 2], [16, 2], [12, 8]
-      ],
+      ]
     },
     overworld: {
       bpm: 110, root: 57, // A3 — Xote animado
@@ -284,7 +318,17 @@ const AudioEngine = (() => {
         [18, 2], [16, 2], [14, 4], [12, 8],
         [12, 2], [14, 2], [16, 2], [18, 2], [21, 4], [19, 2], [18, 2],
         [19, 4], [14, 4], [7, 8]
-      ],
+      ]
+    },
+    map: {
+      bpm: 102, root: 53, // F3 — Xote de estrada (mapa dos Nove Sóis)
+      style: 'xote', loops: true,
+      melody: [
+        [7, 2], [12, 2], [14, 2], [16, 2], [17, 4], [16, 2], [14, 2],
+        [12, 4], [10, 4], [12, 8],
+        [12, 2], [14, 2], [16, 2], [17, 2], [19, 4], [21, 2], [19, 2],
+        [17, 4], [16, 2], [14, 2], [12, 8]
+      ]
     },
     stage: {
       bpm: 130, root: 52, // E3 — Baião
@@ -296,7 +340,95 @@ const AudioEngine = (() => {
         [16, 2], [14, 2], [12, 2], [10, 2], [12, 8],
         [17, 3], [17, 3], [19, 2], [21, 4], [17, 4],
         [15, 3], [15, 3], [17, 2], [19, 4], [15, 4]
-      ],
+      ]
+    },
+    baiao: {
+      bpm: 128, root: 50, // D3 — Mundo 1: Sertão Rachado (baião mixolídio)
+      style: 'baiao', loops: true,
+      melody: [
+        [12, 3], [16, 3], [19, 2], [22, 4], [21, 2], [19, 2],
+        [17, 3], [16, 3], [14, 2], [12, 8],
+        [14, 3], [17, 3], [21, 2], [22, 4], [24, 2], [22, 2],
+        [21, 3], [19, 3], [17, 2], [19, 8],
+        [24, 2], [22, 2], [21, 2], [19, 2], [17, 2], [16, 2], [14, 2], [12, 2],
+        [10, 3], [10, 3], [14, 2], [12, 8]
+      ]
+    },
+    xote: {
+      bpm: 100, root: 55, // G3 — Mundo 2: Agreste Florido
+      style: 'xote', loops: true,
+      melody: [
+        [12, 4], [16, 2], [19, 2], [21, 4], [19, 4],
+        [17, 2], [16, 2], [14, 2], [16, 2], [12, 8],
+        [14, 4], [17, 2], [21, 2], [22, 4], [21, 4],
+        [19, 2], [17, 2], [16, 2], [14, 2], [12, 8]
+      ]
+    },
+    caverna: {
+      bpm: 84, root: 45, // A2 — Mundo 2: Grutas de Ubajara (xote menor, reverberante)
+      style: 'xote', loops: true, wet: 0.6, bright: 0.6,
+      melody: [
+        [12, 4], [15, 4], [17, 4], [15, 2], [14, 2],
+        [12, 8], [null, 4], [10, 4],
+        [12, 4], [15, 2], [19, 2], [20, 6], [19, 2],
+        [17, 4], [15, 4], [12, 8],
+        [24, 4], [22, 2], [20, 2], [19, 4], [17, 4],
+        [15, 4], [14, 4], [12, 8]
+      ]
+    },
+    forro: {
+      bpm: 140, root: 52, // E3 — Mundo 3: Pé-de-Serra (forró arrasta-pé)
+      style: 'forro', loops: true,
+      melody: [
+        [12, 2], [14, 2], [16, 2], [19, 2], [21, 2], [19, 2], [16, 2], [14, 2],
+        [12, 4], [10, 4], [12, 8],
+        [16, 2], [17, 2], [19, 2], [21, 2], [22, 4], [21, 2], [19, 2],
+        [17, 2], [16, 2], [14, 2], [10, 2], [12, 8],
+        [24, 2], [22, 2], [21, 2], [19, 2], [22, 2], [21, 2], [19, 2], [17, 2],
+        [16, 4], [14, 4], [12, 8]
+      ]
+    },
+    coco: {
+      bpm: 118, root: 57, // A3 — Mundo 4: Litoral das Jangadas (coco de roda)
+      style: 'coco', loops: true, wet: 0.25,
+      melody: [
+        [12, 2], [12, 2], [16, 2], [12, 2], [19, 4], [17, 4],
+        [16, 2], [16, 2], [14, 2], [12, 2], [14, 8],
+        [14, 2], [14, 2], [17, 2], [14, 2], [21, 4], [19, 4],
+        [17, 2], [16, 2], [14, 2], [10, 2], [12, 8]
+      ]
+    },
+    maracatu: {
+      bpm: 96, root: 50, // D3 — Mundo 5: Cortejo das Alfaias (dórico, solene)
+      style: 'maracatu', loops: true, wet: 0.35,
+      melody: [
+        [12, 4], [15, 4], [17, 6], [15, 2],
+        [14, 4], [12, 4], [10, 8],
+        [12, 4], [15, 4], [19, 6], [17, 2],
+        [21, 4], [19, 4], [17, 8],
+        [24, 4], [22, 2], [21, 2], [19, 4], [17, 4],
+        [15, 4], [14, 4], [12, 8]
+      ]
+    },
+    frevo: {
+      bpm: 168, root: 58, // A#3 — Mundo 6: Ladeiras em Chamas (frevo de rua)
+      style: 'frevo', loops: true, bright: 1.2,
+      melody: [
+        [12, 1], [14, 1], [16, 1], [17, 1], [19, 2], [24, 2], [19, 2], [16, 2], [12, 4],
+        [14, 1], [16, 1], [17, 1], [19, 1], [21, 2], [26, 2], [21, 2], [17, 2], [14, 4],
+        [24, 2], [23, 2], [21, 2], [19, 2], [17, 2], [16, 2], [14, 2], [12, 2],
+        [11, 2], [14, 2], [17, 2], [19, 2], [24, 8]
+      ]
+    },
+    asaBranca: {
+      bpm: 150, root: 55, // G3 — Power-up "Asa Branca" (tema original, baião acelerado)
+      style: 'baiao', loops: true, bright: 1.3,
+      melody: [
+        [12, 2], [16, 2], [19, 2], [24, 2], [22, 2], [19, 2], [17, 2], [16, 2],
+        [17, 2], [21, 2], [24, 2], [26, 2], [24, 4], [19, 4],
+        [12, 2], [16, 2], [19, 2], [24, 2], [26, 2], [28, 2], [26, 2], [24, 2],
+        [22, 2], [21, 2], [19, 2], [17, 2], [19, 8]
+      ]
     },
     boss: {
       bpm: 146, root: 50, // D3 — Forró tenso
@@ -306,7 +438,7 @@ const AudioEngine = (() => {
         [15, 2], [17, 2], [15, 2], [14, 2], [12, 8],
         [12, 2], [15, 2], [17, 2], [19, 2], [21, 2], [22, 2], [24, 4],
         [22, 2], [21, 2], [19, 2], [17, 2], [21, 8]
-      ],
+      ]
     },
     victory: {
       bpm: 138, root: 60, // C4 — Fanfarra Baião
@@ -316,7 +448,7 @@ const AudioEngine = (() => {
         [17, 2], [21, 2], [24, 4], [21, 2], [19, 2],
         [17, 2], [19, 2], [21, 2], [23, 2], [26, 4], [23, 4],
         [24, 12]
-      ],
+      ]
     }
   };
 
@@ -336,46 +468,105 @@ const AudioEngine = (() => {
       zab: ['K', '.', 'R', 'K', '.', 'R', 'R', '.', 'K', '.', 'R', 'K', '.', 'R', 'K', 'R'],
       tri: ['t', 't', 'T', 't', 't', 't', 'T', 't', 't', 't', 'T', 't', 't', 't', 'T', 't'],
       bass: [0, null, null, 0, null, null, 7, null, 0, null, null, 0, null, null, 10, null]
+    },
+    coco: {
+      // Coco de roda: pisada sincopada + ganzá contínuo
+      zab: ['K', '.', 'R', '.', 'R', 'K', '.', 'R', 'K', '.', 'R', '.', 'R', 'K', 'R', '.'],
+      tri: ['t', 't', 't', 'T', 't', 't', 't', 'T', 't', 't', 't', 'T', 't', 't', 't', 'T'],
+      bass: [0, null, null, null, null, 7, null, null, 0, null, null, null, null, 5, null, 7]
+    },
+    maracatu: {
+      // Maracatu de baque virado: alfaias pesadas, gonguê no triângulo aberto
+      zab: ['K', '.', 'K', '.', 'R', '.', 'K', 'K', '.', 'R', 'K', '.', 'K', '.', 'R', 'R'],
+      tri: ['T', '.', '.', 't', '.', '.', 'T', '.', '.', 't', '.', '.', 'T', '.', 't', '.'],
+      bass: [0, null, 0, null, null, null, 3, null, null, null, 5, null, 0, null, null, null]
+    },
+    frevo: {
+      // Frevo: caixa rufando em semicolcheias, surdo no tempo
+      zab: ['K', 'R', 'R', 'R', 'K', 'R', 'R', 'R', 'K', 'R', 'R', 'R', 'K', 'R', 'K', 'R'],
+      tri: ['t', 't', 'T', 't', 't', 't', 'T', 't', 't', 't', 'T', 't', 't', 't', 'T', 'T'],
+      bass: [0, null, 7, null, 0, null, 7, null, 5, null, 12, null, 7, null, 4, null]
     }
   };
+
+  const SFX_NAMES = [
+    'jump', 'doubleJump', 'whip', 'stomp', 'hit', 'death', 'coin', 'caju', 'checkpoint',
+    'bossRoar', 'glide', 'spine', 'bee', 'whistle', 'miasma', 'bonk', 'metal', 'leaf',
+    'splash', 'geyser', 'vine', 'quake'
+  ];
 
   // ===================== SEQUENCIADOR DE MÚSICA =====================
   let currentState = null;
   let pendingState = null;
   let songGain = null;
+  let songWet = null;
   let schedTimer = null;
   let seq = null;
+  let paused = false;
+  let autoPaused = false;
   const LOOKAHEAD = 0.12;
   const INTERVAL = 25;
 
   function buildMelodyEvents(song) {
-    const ev = [];
+    const map = new Map();
     let pos = 0;
     song.melody.forEach(([n, d]) => {
-      if (n !== null) ev.push({ step: pos, note: n, len: d });
+      if (n !== null && n !== undefined) map.set(pos, { note: n, len: d });
       pos += d;
     });
-    return { events: ev, length: pos };
+    return { map, length: Math.max(pos, 1) };
+  }
+
+  function startScheduler() {
+    if (schedTimer) clearInterval(schedTimer);
+    schedTimer = setInterval(scheduler, INTERVAL);
+  }
+
+  function stopScheduler() {
+    if (schedTimer) {
+      clearInterval(schedTimer);
+      schedTimer = null;
+    }
   }
 
   function playMusic(state) {
-    if (!SONGS[state]) return;
-    init();
-    if (!ctx) return;
-    if (ctx.state !== 'running' && !unlocked) {
-      pendingState = state;
-      currentState = state;
+    if (!SONGS[state]) {
+      console.warn('[AudioEngine] Faixa inexistente:', state);
       return;
     }
-    if (currentState === state && seq) return;
+    init();
+    if (!ctx) return;
+
+    if (ctx.state !== 'running' && !unlocked) {
+      pendingState = state;
+      return;
+    }
+
+    if (currentState === state && seq) {
+      if (paused) resumeMusic();
+      return;
+    }
+
     stopMusic(0.3);
     currentState = state;
+    pendingState = null;
+    paused = false;
+    autoPaused = false;
 
     const song = SONGS[state];
+    const now = ctx.currentTime;
+
     songGain = ctx.createGain();
-    songGain.gain.setValueAtTime(0.0001, ctx.currentTime);
-    songGain.gain.linearRampToValueAtTime(1, ctx.currentTime + 0.3);
+    songGain.gain.setValueAtTime(0.0001, now);
+    songGain.gain.linearRampToValueAtTime(1, now + 0.3);
     songGain.connect(musicBus);
+
+    if (song.wet && reverbSend) {
+      songWet = ctx.createGain();
+      songWet.gain.value = song.wet;
+      songGain.connect(songWet);
+      songWet.connect(reverbSend);
+    }
 
     const mel = buildMelodyEvents(song);
     const pat = GROOVES[song.style] || GROOVES.baiao;
@@ -386,104 +577,183 @@ const AudioEngine = (() => {
       mel,
       pat,
       stepDur,
-      startCtxTime: ctx.currentTime + 0.05,
+      gain: songGain,
+      startCtxTime: now + 0.05,
       nextStep: 0,
-      loopLength: Math.max(mel.length, pat.zab.length)
+      endStep: song.loops ? Infinity : mel.length
     };
 
-    if (schedTimer) clearInterval(schedTimer);
-    schedTimer = setInterval(scheduler, INTERVAL);
+    startScheduler();
   }
 
   function scheduler() {
-    if (!seq || !ctx || ctx.state !== 'running') return;
+    if (!seq || paused || !ctx || ctx.state !== 'running') return;
+    const s = seq;
     const scheduleUntil = ctx.currentTime + LOOKAHEAD;
-    while (seq.startCtxTime + seq.nextStep * seq.stepDur < scheduleUntil) {
-      const stepTime = seq.startCtxTime + seq.nextStep * seq.stepDur;
-      const stepInLoop = seq.nextStep % seq.loopLength;
+
+    while (s.startCtxTime + s.nextStep * s.stepDur < scheduleUntil) {
+      if (s.nextStep >= s.endStep) {
+        // Faixa não-loop terminou: deixa a última nota soar e encerra
+        const tail = Math.max(0.6, s.stepDur * 4);
+        const finishedState = currentState;
+        stopScheduler();
+        setTimeout(() => {
+          if (seq === s && currentState === finishedState) stopMusic(0.4);
+        }, tail * 1000);
+        return;
+      }
+
+      const stepTime = s.startCtxTime + s.nextStep * s.stepDur;
+      const dest = s.gain;
 
       // 1. Zabumba
-      const zStep = stepInLoop % seq.pat.zab.length;
-      const zHit = seq.pat.zab[zStep];
-      if (zHit === 'K') zabumbaKick(stepTime, 0.9, songGain);
-      else if (zHit === 'R') zabumbaRim(stepTime, 0.7, songGain);
+      const zHit = s.pat.zab[s.nextStep % s.pat.zab.length];
+      if (zHit === 'K') zabumbaKick(stepTime, 0.9, dest);
+      else if (zHit === 'R') zabumbaRim(stepTime, 0.7, dest);
 
       // 2. Triângulo
-      const tStep = stepInLoop % seq.pat.tri.length;
-      const tHit = seq.pat.tri[tStep];
-      if (tHit === 'T') triangulo(stepTime, true, 0.55, songGain);
-      else if (tHit === 't') triangulo(stepTime, false, 0.45, songGain);
+      const tHit = s.pat.tri[s.nextStep % s.pat.tri.length];
+      if (tHit === 'T') triangulo(stepTime, true, 0.55, dest);
+      else if (tHit === 't') triangulo(stepTime, false, 0.45, dest);
 
-      // 3. Baixo
-      const bStep = stepInLoop % seq.pat.bass.length;
-      const bNote = seq.pat.bass[bStep];
+      // 3. Baixo (uma oitava abaixo do root)
+      const bNote = s.pat.bass[s.nextStep % s.pat.bass.length];
       if (bNote !== null && bNote !== undefined) {
-        const rootFreq = 55 * Math.pow(2, (seq.song.root || 0) / 12);
-        const freq = rootFreq * Math.pow(2, bNote / 12);
-        sanfona(stepTime, freq, seq.stepDur * 1.5, 0.35, songGain, 0.5);
+        const freq = midiToFreq((s.song.root || 48) - 12 + bNote);
+        sanfona(stepTime, freq, s.stepDur * 1.5, 0.35, dest, 0.5);
       }
 
       // 4. Melodia
-      const melEv = seq.mel.events.find(e => e.step === (seq.nextStep % seq.mel.length));
+      const melEv = s.mel.map.get(s.nextStep % s.mel.length);
       if (melEv) {
-        const rootFreq = 220 * Math.pow(2, (seq.song.root || 0) / 12);
-        const freq = rootFreq * Math.pow(2, melEv.note / 12);
-        sanfona(stepTime, freq, melEv.len * seq.stepDur * 0.9, 0.5, songGain, 1);
+        const freq = midiToFreq((s.song.root || 48) + melEv.note);
+        sanfona(stepTime, freq, melEv.len * s.stepDur * 0.9, 0.5, dest, s.song.bright || 1);
       }
 
-      seq.nextStep++;
+      s.nextStep++;
     }
+  }
+
+  function fadeOutAndDisconnect(gainNode, wetNode, fadeTime) {
+    if (!ctx || !gainNode) return;
+    try {
+      const now = ctx.currentTime;
+      gainNode.gain.cancelScheduledValues(now);
+      gainNode.gain.setValueAtTime(Math.max(gainNode.gain.value, 0.0001), now);
+      gainNode.gain.linearRampToValueAtTime(0.0001, now + Math.max(fadeTime, 0.01));
+    } catch (e) {}
+    setTimeout(() => {
+      try { gainNode.disconnect(); } catch (e) {}
+      if (wetNode) { try { wetNode.disconnect(); } catch (e) {} }
+    }, Math.max(fadeTime, 0.01) * 1000 + 60);
   }
 
   function stopMusic(fadeTime = 0.3) {
-    if (schedTimer) {
-      clearInterval(schedTimer);
-      schedTimer = null;
+    stopScheduler();
+    if (songGain) {
+      // Captura local: evita que o timeout anule o songGain de uma nova faixa
+      fadeOutAndDisconnect(songGain, songWet, fadeTime);
     }
-    if (songGain && ctx) {
-      try {
-        songGain.gain.setValueAtTime(songGain.gain.value, ctx.currentTime);
-        songGain.gain.linearRampToValueAtTime(0.0001, ctx.currentTime + fadeTime);
-        setTimeout(() => {
-          try { songGain.disconnect(); } catch (e) {}
-          songGain = null;
-        }, fadeTime * 1000 + 40);
-      } catch (e) {}
-    }
+    songGain = null;
+    songWet = null;
     seq = null;
     currentState = null;
+    pendingState = null;
+    paused = false;
+    autoPaused = false;
+  }
+
+  // ===================== PAUSA / RETOMADA REAIS (B9) =====================
+  function pauseMusic() {
+    if (paused) return;
+    paused = true;
+    stopScheduler();
+    if (songGain && ctx) {
+      try {
+        const now = ctx.currentTime;
+        songGain.gain.cancelScheduledValues(now);
+        songGain.gain.setValueAtTime(Math.max(songGain.gain.value, 0.0001), now);
+        songGain.gain.linearRampToValueAtTime(0.0001, now + 0.06);
+      } catch (e) {}
+    }
+    // currentState e seq.nextStep são preservados intencionalmente
+  }
+
+  function resumeMusic() {
+    if (!paused) return;
+    paused = false;
+    autoPaused = false;
+    if (!ctx) return;
+
+    if (!seq) {
+      // Pausado antes do unlock: toca o pendente se houver
+      if (pendingState && (unlocked || ctx.state === 'running')) flushPending();
+      return;
+    }
+
+    const doResume = () => {
+      if (!seq || paused) return;
+      const now = ctx.currentTime;
+      // Re-ancora a linha do tempo para que nextStep toque daqui a ~60ms
+      seq.startCtxTime = now + 0.06 - seq.nextStep * seq.stepDur;
+      if (songGain) {
+        try {
+          songGain.gain.cancelScheduledValues(now);
+          songGain.gain.setValueAtTime(0.0001, now);
+          songGain.gain.linearRampToValueAtTime(1, now + 0.15);
+        } catch (e) {}
+      }
+      if (seq.nextStep < seq.endStep) startScheduler();
+    };
+
+    if (ctx.state === 'suspended') {
+      ctx.resume().then(doResume).catch(() => {});
+    } else {
+      doResume();
+    }
+  }
+
+  // Pausa automática quando a aba fica oculta (não interfere na pausa do jogador)
+  if (typeof document !== 'undefined') {
+    try {
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+          if (seq && !paused) {
+            pauseMusic();
+            autoPaused = true;
+          }
+        } else if (autoPaused) {
+          autoPaused = false;
+          resumeMusic();
+        }
+      });
+    } catch (e) {}
   }
 
   // ===================== EFEITOS SONOROS (SFX ARCADE) =====================
+  const lastSfxTime = {};
+  const SFX_MIN_GAP = 0.025;
+
   function playSFX(name) {
     if (muted) return;
     init();
     if (!ctx || ctx.state !== 'running') return;
     const t = ctx.currentTime;
 
+    // Anti-spam: evita empilhar o mesmo SFX no mesmo frame
+    if (lastSfxTime[name] !== undefined && t - lastSfxTime[name] < SFX_MIN_GAP) return;
+    lastSfxTime[name] = t;
+
     try {
       switch (name) {
         case 'jump': {
-          const o = ctx.createOscillator();
-          const g = ctx.createGain();
-          o.type = 'square';
-          o.frequency.setValueAtTime(160, t);
-          o.frequency.exponentialRampToValueAtTime(480, t + 0.12);
-          env(g, t, 0.005, 0.3, 0.12);
-          o.connect(g); g.connect(sfxBus);
-          o.start(t); o.stop(t + 0.14);
+          tone('square', t, 160, 480, 0.12, 0.3, sfxBus, 0.005);
           break;
         }
 
         case 'doubleJump': {
-          const o = ctx.createOscillator();
-          const g = ctx.createGain();
-          o.type = 'triangle';
-          o.frequency.setValueAtTime(320, t);
-          o.frequency.exponentialRampToValueAtTime(680, t + 0.15);
-          env(g, t, 0.005, 0.35, 0.15);
-          o.connect(g); g.connect(sfxBus);
-          o.start(t); o.stop(t + 0.16);
+          tone('triangle', t, 320, 680, 0.15, 0.35, sfxBus, 0.005);
+          tone('sine', t + 0.05, 640, 1200, 0.1, 0.12, sfxBus, 0.003);
           break;
         }
 
@@ -504,76 +774,55 @@ const AudioEngine = (() => {
         }
 
         case 'stomp': {
-          // Pisão em cima do inimigo
-          const o = ctx.createOscillator();
-          const g = ctx.createGain();
-          o.type = 'sine';
-          o.frequency.setValueAtTime(220, t);
-          o.frequency.exponentialRampToValueAtTime(50, t + 0.15);
-          env(g, t, 0.002, 0.5, 0.16);
-          o.connect(g); g.connect(sfxBus);
-          o.start(t); o.stop(t + 0.18);
+          tone('sine', t, 220, 50, 0.16, 0.5, sfxBus, 0.002);
           break;
         }
 
         case 'hit': {
-          // Dano sofrido
-          const o = ctx.createOscillator();
-          const g = ctx.createGain();
-          o.type = 'sawtooth';
-          o.frequency.setValueAtTime(180, t);
-          o.frequency.exponentialRampToValueAtTime(40, t + 0.22);
-          env(g, t, 0.002, 0.45, 0.22);
-          o.connect(g); g.connect(sfxBus);
-          o.start(t); o.stop(t + 0.24);
+          tone('sawtooth', t, 180, 40, 0.22, 0.45, sfxBus, 0.002);
+          break;
+        }
+
+        case 'death': {
+          // Lamento descendente + baque no chão
+          const notes = [659, 587, 523, 440, 392, 330];
+          notes.forEach((f, i) => {
+            tone('square', t + i * 0.09, f, f * 0.97, 0.09, 0.22, sfxBus, 0.004);
+          });
+          const tEnd = t + notes.length * 0.09;
+          tone('sine', tEnd, 140, 35, 0.35, 0.55, sfxBus, 0.003);
+          const n = noiseSource(tEnd, 0.15);
+          if (n) {
+            const lp = ctx.createBiquadFilter();
+            lp.type = 'lowpass'; lp.frequency.value = 700;
+            const g = ctx.createGain();
+            env(g, tEnd, 0.002, 0.3, 0.15);
+            n.connect(lp); lp.connect(g); g.connect(sfxBus);
+          }
           break;
         }
 
         case 'coin': {
           // Rapadura coletada (chime cristalino duplo)
-          const notes = [987, 1318]; // B5 -> E6
-          notes.forEach((freq, idx) => {
-            const delay = idx * 0.06;
-            const o = ctx.createOscillator();
-            const g = ctx.createGain();
-            o.type = 'sine';
-            o.frequency.value = freq;
-            env(g, t + delay, 0.002, 0.28, 0.16);
-            o.connect(g); g.connect(sfxBus);
-            o.start(t + delay); o.stop(t + delay + 0.18);
+          [987, 1318].forEach((freq, idx) => {
+            tone('sine', t + idx * 0.06, freq, freq, 0.16, 0.28, sfxBus, 0.002);
           });
           break;
         }
 
         case 'caju': {
           // Joia de Caju Dourado (arpejo mágico)
-          const notes = [523, 659, 784, 1046]; // C5, E5, G5, C6
-          notes.forEach((freq, idx) => {
-            const delay = idx * 0.05;
-            const o = ctx.createOscillator();
-            const g = ctx.createGain();
-            o.type = 'triangle';
-            o.frequency.value = freq;
-            env(g, t + delay, 0.004, 0.3, 0.2);
-            o.connect(g); g.connect(sfxBus);
+          [523, 659, 784, 1046].forEach((freq, idx) => {
+            const { g } = tone('triangle', t + idx * 0.05, freq, freq, 0.2, 0.3, sfxBus, 0.004);
             if (reverbSend) g.connect(reverbSend);
-            o.start(t + delay); o.stop(t + delay + 0.22);
           });
           break;
         }
 
         case 'checkpoint': {
           // Fanfarra curta de bandeira
-          const notes = [440, 554, 659, 880];
-          notes.forEach((freq, idx) => {
-            const delay = idx * 0.07;
-            const o = ctx.createOscillator();
-            const g = ctx.createGain();
-            o.type = 'sawtooth';
-            o.frequency.value = freq;
-            env(g, t + delay, 0.005, 0.25, 0.25);
-            o.connect(g); g.connect(sfxBus);
-            o.start(t + delay); o.stop(t + delay + 0.28);
+          [440, 554, 659, 880].forEach((freq, idx) => {
+            tone('sawtooth', t + idx * 0.07, freq, freq, 0.25, 0.25, sfxBus, 0.005);
           });
           break;
         }
@@ -596,7 +845,7 @@ const AudioEngine = (() => {
         }
 
         case 'glide': {
-          // Planar com o chapéu
+          // Planar com o chapéu de couro
           const n = noiseSource(t, 0.15);
           if (n) {
             const bp = ctx.createBiquadFilter();
@@ -610,28 +859,15 @@ const AudioEngine = (() => {
 
         case 'spine': {
           // Disparo de espinho do cacto
-          const o = ctx.createOscillator();
-          const g = ctx.createGain();
-          o.type = 'square';
-          o.frequency.setValueAtTime(800, t);
-          o.frequency.exponentialRampToValueAtTime(320, t + 0.08);
-          env(g, t, 0.002, 0.22, 0.08);
-          o.connect(g); g.connect(sfxBus);
-          o.start(t); o.stop(t + 0.09);
+          tone('square', t, 800, 320, 0.08, 0.22, sfxBus, 0.002);
           break;
         }
 
         case 'bee': {
           // BÉÉÉ! do bode furioso
           for (let i = 0; i < 4; i++) {
-            const o = ctx.createOscillator();
-            const g = ctx.createGain();
-            o.type = 'sawtooth';
             const f = 460 + (i % 2) * 50;
-            o.frequency.setValueAtTime(f, t + i * 0.06);
-            env(g, t + i * 0.06, 0.005, 0.25, 0.07);
-            o.connect(g); g.connect(sfxBus);
-            o.start(t + i * 0.06); o.stop(t + i * 0.06 + 0.08);
+            tone('sawtooth', t + i * 0.06, f, f, 0.07, 0.25, sfxBus, 0.005);
           }
           break;
         }
@@ -646,33 +882,19 @@ const AudioEngine = (() => {
           o.frequency.linearRampToValueAtTime(1900, t + 0.45);
           env(g, t, 0.02, 0.25, 0.45);
           o.connect(g); g.connect(sfxBus);
-          o.start(t); o.stop(t + 0.47);
+          o.start(t); o.stop(t + 0.5);
           break;
         }
 
         case 'miasma': {
           // Miasma tenebroso do Papa-Figo
-          const o = ctx.createOscillator();
-          const g = ctx.createGain();
-          o.type = 'sawtooth';
-          o.frequency.setValueAtTime(140, t);
-          o.frequency.exponentialRampToValueAtTime(45, t + 0.35);
-          env(g, t, 0.01, 0.3, 0.35);
-          o.connect(g); g.connect(sfxBus);
-          o.start(t); o.stop(t + 0.37);
+          tone('sawtooth', t, 140, 45, 0.35, 0.3, sfxBus, 0.01);
           break;
         }
 
         case 'bonk': {
           // Colisão na parede / atordoamento
-          const o = ctx.createOscillator();
-          const g = ctx.createGain();
-          o.type = 'triangle';
-          o.frequency.setValueAtTime(110, t);
-          o.frequency.exponentialRampToValueAtTime(35, t + 0.2);
-          env(g, t, 0.003, 0.4, 0.2);
-          o.connect(g); g.connect(sfxBus);
-          o.start(t); o.stop(t + 0.22);
+          tone('triangle', t, 110, 35, 0.2, 0.4, sfxBus, 0.003);
           break;
         }
 
@@ -685,42 +907,164 @@ const AudioEngine = (() => {
           o2.type = 'triangle'; o2.frequency.setValueAtTime(1850, t);
           env(g, t, 0.002, 0.35, 0.2);
           o1.connect(g); o2.connect(g); g.connect(sfxBus);
-          o1.start(t); o2.start(t); o1.stop(t + 0.22); o2.stop(t + 0.22);
+          o1.start(t); o2.start(t); o1.stop(t + 0.24); o2.stop(t + 0.24);
           break;
         }
+
+        case 'leaf': {
+          // Folhagem farfalhando (mandacaru / juazeiro)
+          for (let i = 0; i < 3; i++) {
+            const ti = t + i * 0.045;
+            const n = noiseSource(ti, 0.06);
+            if (!n) break;
+            const hp = ctx.createBiquadFilter();
+            hp.type = 'highpass'; hp.frequency.value = 2500 + i * 600;
+            const g = ctx.createGain();
+            env(g, ti, 0.004, 0.12, 0.06);
+            n.connect(hp); hp.connect(g); g.connect(sfxBus);
+          }
+          break;
+        }
+
+        case 'splash': {
+          // Mergulho no açude
+          const n = noiseSource(t, 0.4);
+          if (n) {
+            const lp = ctx.createBiquadFilter();
+            lp.type = 'lowpass';
+            lp.frequency.setValueAtTime(4000, t);
+            lp.frequency.exponentialRampToValueAtTime(300, t + 0.4);
+            const g = ctx.createGain();
+            env(g, t, 0.005, 0.45, 0.38);
+            n.connect(lp); lp.connect(g); g.connect(sfxBus);
+          }
+          // Bolhas
+          [0.08, 0.15, 0.24].forEach((d, i) => {
+            tone('sine', t + d, 380 + i * 140, 900 + i * 200, 0.05, 0.12, sfxBus, 0.002);
+          });
+          break;
+        }
+
+        case 'geyser': {
+          // Gêiser de vapor subindo
+          const dur = 0.7;
+          const n = noiseSource(t, dur);
+          if (n) {
+            const bp = ctx.createBiquadFilter();
+            bp.type = 'bandpass';
+            bp.frequency.setValueAtTime(300, t);
+            bp.frequency.exponentialRampToValueAtTime(3200, t + dur);
+            bp.Q.value = 1.4;
+            const g = ctx.createGain();
+            g.gain.setValueAtTime(0.0001, t);
+            g.gain.linearRampToValueAtTime(0.4, t + 0.12);
+            g.gain.setValueAtTime(0.4, t + dur * 0.6);
+            g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+            n.connect(bp); bp.connect(g); g.connect(sfxBus);
+            if (reverbSend) g.connect(reverbSend);
+          }
+          tone('sine', t, 90, 60, 0.4, 0.25, sfxBus, 0.02);
+          break;
+        }
+
+        case 'vine': {
+          // Cipó esticando / balanço (boing com vibrato)
+          const o = ctx.createOscillator();
+          const g = ctx.createGain();
+          const lfo = ctx.createOscillator();
+          const lfoG = ctx.createGain();
+          o.type = 'triangle';
+          o.frequency.setValueAtTime(220, t);
+          o.frequency.exponentialRampToValueAtTime(520, t + 0.18);
+          o.frequency.exponentialRampToValueAtTime(380, t + 0.3);
+          lfo.type = 'sine'; lfo.frequency.value = 22;
+          lfoG.gain.value = 25;
+          lfo.connect(lfoG); lfoG.connect(o.frequency);
+          env(g, t, 0.005, 0.3, 0.3);
+          o.connect(g); g.connect(sfxBus);
+          o.start(t); lfo.start(t);
+          o.stop(t + 0.34); lfo.stop(t + 0.34);
+          break;
+        }
+
+        case 'quake': {
+          // Terremoto / pisão do chefe
+          const dur = 0.9;
+          const o = ctx.createOscillator();
+          const g = ctx.createGain();
+          const lfo = ctx.createOscillator();
+          const lfoG = ctx.createGain();
+          o.type = 'sine';
+          o.frequency.setValueAtTime(48, t);
+          o.frequency.exponentialRampToValueAtTime(28, t + dur);
+          lfo.type = 'sine'; lfo.frequency.value = 9;
+          lfoG.gain.value = 0.25;
+          lfo.connect(lfoG); lfoG.connect(g.gain);
+          g.gain.setValueAtTime(0.0001, t);
+          g.gain.linearRampToValueAtTime(0.6, t + 0.03);
+          g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+          o.connect(g); g.connect(sfxBus);
+          o.start(t); lfo.start(t);
+          o.stop(t + dur + 0.05); lfo.stop(t + dur + 0.05);
+
+          const n = noiseSource(t, dur);
+          if (n) {
+            const lp = ctx.createBiquadFilter();
+            lp.type = 'lowpass'; lp.frequency.value = 220;
+            const ng = ctx.createGain();
+            env(ng, t, 0.02, 0.5, dur - 0.02);
+            n.connect(lp); lp.connect(ng); ng.connect(sfxBus);
+          }
+          break;
+        }
+
+        default:
+          break;
       }
     } catch (e) {}
   }
 
+  // ===================== VOLUME / MUTE =====================
   function toggleMute() {
     muted = !muted;
     if (master && ctx) {
       try {
-        master.gain.setValueAtTime(muted ? 0 : masterVolume, ctx.currentTime);
+        const now = ctx.currentTime;
+        master.gain.cancelScheduledValues(now);
+        master.gain.setValueAtTime(muted ? 0 : masterVolume, now);
       } catch (e) {}
     }
     return muted;
   }
 
   function setMasterVolume(v) {
-    masterVolume = Math.max(0, Math.min(1, v));
+    const n = Number(v);
+    masterVolume = Math.max(0, Math.min(1, isFinite(n) ? n : masterVolume));
     if (master && !muted && ctx) {
       try {
         master.gain.setValueAtTime(masterVolume, ctx.currentTime);
       } catch (e) {}
     }
+    return masterVolume;
   }
 
+  // ===================== API PÚBLICA =====================
   const api = {
     init,
     unlock,
     playMusic,
     stopMusic,
+    pauseMusic,
+    resumeMusic,
     playSFX,
     toggleMute,
     setMasterVolume,
+    SONGS,
+    SFX_NAMES,
     get unlocked() { return unlocked; },
-    get muted() { return muted; }
+    get muted() { return muted; },
+    get isPaused() { return paused; },
+    get currentTrack() { return currentState || pendingState; }
   };
 
   if (typeof window !== 'undefined') {
