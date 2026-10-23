@@ -1,5 +1,29 @@
 # CHANGELOG — OXE! 2.0: A Grande Jornada dos Nove Sóis
 
+## [v2.4.0 — Lendas, armas, inimigos mais espertos e música mais macia] — 2026-10-23
+### Lendas do Nordeste (chefes no fim de algumas fases)
+- **Caipora** (matas do Nordeste): corre atrás do Tonho, some numa nuvem de folhas e reaparece atrás dele, joga espinhos. Fases 1-3 e 6-2.
+- **Cabra-Cabriola** (PE/BA): cospe fogo de perto e dá saltos que fazem ondas de choque. Fases 2-3 e 3-4.
+- **Perna Cabeluda** (Recife): pula sozinha atrás do Tonho; a cada 3 pulos dá um pulão que estremece o chão. Fases 3-3 e 5-4.
+- **Cabeça de Cuia** (Piauí, rio Parnaíba): nada escondida no chão, invencível, salta de surpresa, cospe água e fica exposta por pouco tempo. Fases 4-3 e 6-3.
+- **Labatut** (Ceará): gigante de um olho só; arranha de perto, investe correndo e faz chover ossos. Fases 5-3 e 6-4.
+- Cada lenda tem faixa de apresentação, barra de vida, fica mais rápida e brava com metade da vida, e o mastro só libera depois de vencê-la. Uma lenda nunca morre caindo no buraco.
+### Armas e itens
+- **Baleadeira** (15 pedras), **Sanfona** (4 ondas de forró que acertam tudo em volta e apagam projéteis), **Gibão de couro** (aguenta 1 golpe) e **Cuscuz** (+1 coração). O botão ⚡ usa a arma atual; quando a munição acaba, volta ao chicote. A arma aparece no HUD.
+### Inimigos
+- Projéteis inimigos agora machucam (antes atravessavam o Tonho). O chicote rebate projéteis.
+- Inimigos têm mais vida (+1, e +2 do mundo 4 em diante), barra de vida, recuam quando apanham e não morrem com vários golpes no mesmo instante. Ficam mais rápidos a cada mundo.
+- Mais espertos: perseguem o Tonho sem se jogar de penhasco, alguns pulam para escapar do chicote.
+- Espécies novas com movimentos próprios: **escorpião** (para e ferroa), **urubu** (circula, solta ossos e mergulha) e **jacaré** (espreita e dá um bote veloz).
+- Pontos por espécie (de 100 a 400) e por lenda (de 1.500 a 2.500). Animação de derrota (o bicho capota e cai).
+- Um pouco mais difícil desde o começo (mais inimigos por fase).
+### Gráficos e som
+- Inimigos esticam no pulo e amassam na queda; partículas redondas que encolhem; poeira ao correr.
+- Música mais baixa e macia (timbres suaves, triângulo sem chiado), com variação: uma volta oitava abaixo e outra só com ritmo. Novo controle **Volume da música** nas configurações (0% desliga só a música).
+### Correção grave
+- Os chefes dos mundos 4, 5 e 6 travavam o jogo assim que começavam a atacar (erro de "phase" só de leitura). Corrigido.
+- Service Worker `oxe-jogo-v9`.
+
 ## [v2.3.0 — Controles de toque refeitos] — 2026-10-23
 - PULAR e CHICOTE não funcionavam no celular: os botões estavam com `pointer-events:none` no CSS e o código escutava direto neles. Agora cada lado da tela tem uma área de toque invisível, maior que o botão, com multitoque. Dá para correr e pular ao mesmo tempo e deslizar o polegar entre os botões.
 - Layout novo, simples e compacto: ◀ ▶ à esquerda; ▲ PULAR e ⚡ CHICOTE à direita, menores e semitransparentes, para não tapar a fase.

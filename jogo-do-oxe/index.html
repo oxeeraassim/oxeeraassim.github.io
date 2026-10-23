@@ -1039,6 +1039,7 @@
           <span aria-hidden="true">🍬</span>
           <span class="hud-val" id="hudRapaduras">00</span>
         </div>
+        <div class="hud-card" title="Arma atual" id="hudWeapon"><span aria-hidden="true">⚡</span><span class="hud-val"></span></div>
         <div class="hud-card" title="Pontuação">
           <span aria-hidden="true">⭐</span>
           <span class="hud-val score" id="hudScore">00000</span>
@@ -1259,6 +1260,16 @@
           <span class="switch"><input type="checkbox" id="optVibration" checked><span class="slider" onclick="document.getElementById('optVibration').click()"></span></span>
         </div>
 
+        <div class="setting-row">
+          <label class="setting-label" for="optMusicVolume">Volume da música
+            <span class="setting-desc">Os efeitos de som continuam iguais. 0% desliga só a música.</span>
+          </label>
+          <div class="range-wrap">
+            <input type="range" id="optMusicVolume" min="0" max="100" step="10" value="50">
+            <output id="optMusicVolumeVal" for="optMusicVolume">50%</output>
+          </div>
+        </div>
+
         <div class="settings-section">💛 Acessibilidade</div>
 
         <div class="setting-row">
@@ -1347,7 +1358,8 @@
         leftHanded: false,
         vibration: true,
         assistMode: false,
-        reduceShake: false
+        reduceShake: false,
+        musicVolume: 50
       };
 
       function loadSettings() {
@@ -1360,6 +1372,7 @@
           s.reduceShake = true;
         }
         s.touchOpacity = Math.min(100, Math.max(40, parseInt(s.touchOpacity, 10) || 80));
+        s.musicVolume = Math.min(100, Math.max(0, isNaN(parseInt(s.musicVolume, 10)) ? 50 : parseInt(s.musicVolume, 10)));
         if (['sm', 'md', 'lg'].indexOf(s.touchSize) === -1) s.touchSize = 'md';
         return s;
       }
@@ -1381,6 +1394,7 @@
         }
         document.body.classList.toggle('reduce-shake', !!s.reduceShake);
         document.body.classList.toggle('assist-mode', !!s.assistMode);
+        try { if (window.AudioEngine && AudioEngine.setMusicVolume) AudioEngine.setMusicVolume((s.musicVolume != null ? s.musicVolume : 50) / 100 * 0.6); } catch (e) {}
         window.dispatchEvent(new CustomEvent('oxe:settings-changed', { detail: Object.assign({}, s) }));
       }
 
@@ -1393,6 +1407,7 @@
         $('optVibration').checked = !!s.vibration;
         $('optAssistMode').checked = !!s.assistMode;
         $('optReduceShake').checked = !!s.reduceShake;
+        $('optMusicVolume').value = s.musicVolume; $('optMusicVolumeVal').textContent = s.musicVolume + '%';
       }
 
       function readForm() {
@@ -1403,7 +1418,8 @@
           leftHanded: $('optLeftHanded').checked,
           vibration: $('optVibration').checked,
           assistMode: $('optAssistMode').checked,
-          reduceShake: $('optReduceShake').checked
+          reduceShake: $('optReduceShake').checked,
+          musicVolume: parseInt($('optMusicVolume').value, 10)
         };
       }
 
@@ -1454,9 +1470,9 @@
         applySettings(settings);
 
         // Pré-visualização ao vivo
-        ['optTouchOpacity'].forEach(function (id) {
+        ['optTouchOpacity', 'optMusicVolume'].forEach(function (id) {
           $(id).addEventListener('input', function () {
-            $('optTouchOpacityVal').textContent = this.value + '%';
+            $(id + 'Val').textContent = this.value + '%';
             applySettings(readForm());
           });
         });

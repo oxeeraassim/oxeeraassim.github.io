@@ -47,8 +47,8 @@
   var MAX_ENEMIES = 28;
   function enemyBudget(worldIdx, stageIdx) {
     var w = Math.max(0, worldIdx | 0), s = Math.max(0, stageIdx | 0);
-    var min = 8 + w * 2 + s;          // 1-2: 9 · 3-2: 13 · 6-4: 21
-    return { min: min, max: min + (w < 2 ? 4 : 5) };
+    var min = 11 + w * 2 + s;         // v2.4: um pouco mais difícil desde o começo
+    return { min: min, max: min + 5 };
   }
   // Espécies mais brabas só aparecem a partir de certo mundo
   var TOUGH_FROM_WORLD = { cangaceiro_sombra: 2, mula_sem_cabeca: 3, boitata_fogo: 2, lobisomem: 4 };
@@ -205,14 +205,14 @@
   var WORLD_GEN = {
     sertao: {
       weights: { run: 4, updraft: 2, ledge: 2, bode: 1.2, stairs: 1 },
-      ground: ['calango', 'tatu', 'sapo_cururu', 'jararaca', 'cangaceiro_sombra', 'mula_sem_cabeca', 'lobisomem'],
-      flyer: ['carcara', 'marimbondo', 'boitata_fogo'],
+      ground: ['calango', 'tatu', 'sapo_cururu', 'jararaca', 'escorpiao', 'cangaceiro_sombra', 'mula_sem_cabeca', 'lobisomem'],
+      flyer: ['carcara', 'marimbondo', 'urubu', 'boitata_fogo'],
       shooter: 'cacto_atirador', bode: true,
       themes: ['soil', 'stone'], minY: 300, maxY: 460, windStrength: 0.3
     },
     caverna: {
       weights: { run: 4, ledge: 2, stairs: 2, updraft: 1, falling: 0.6 },
-      ground: ['tatu', 'sapo_cururu', 'jararaca', 'cangaceiro_sombra', 'mula_sem_cabeca', 'lobisomem'],
+      ground: ['tatu', 'sapo_cururu', 'jararaca', 'escorpiao', 'cangaceiro_sombra', 'mula_sem_cabeca', 'lobisomem'],
       flyer: ['morcego', 'fulozinha', 'marimbondo', 'boitata_fogo'],
       shooter: 'cacto_atirador', bode: false,
       themes: ['cave', 'crystal'], minY: 300, maxY: 460, darkness: true, crystals: true, windStrength: 0.3
@@ -226,23 +226,23 @@
     },
     mangue: {
       weights: { run: 2, tidePosts: 3, updraft: 1, ledge: 1, vine: 1 },
-      ground: ['caranguejo', 'sapo_cururu', 'jararaca', 'cangaceiro_sombra', 'mula_sem_cabeca', 'lobisomem'],
-      flyer: ['carcara', 'baiacu', 'marimbondo', 'boitata_fogo'],
+      ground: ['caranguejo', 'jacare', 'sapo_cururu', 'jararaca', 'cangaceiro_sombra', 'mula_sem_cabeca', 'lobisomem'],
+      flyer: ['carcara', 'baiacu', 'urubu', 'marimbondo', 'boitata_fogo'],
       shooter: null, bode: false,
       themes: ['sand', 'root'], minY: 300, maxY: 420, tide: true, windStrength: 0.3
     },
     canion: {
       weights: { run: 2, geyser: 3, falling: 2, bode: 1, ledge: 1, updraft: 1 },
-      ground: ['salamandra', 'tatu', 'sapo_cururu', 'jararaca', 'cangaceiro_sombra', 'mula_sem_cabeca', 'lobisomem'],
-      flyer: ['carcara', 'marimbondo', 'boitata_fogo'],
+      ground: ['salamandra', 'tatu', 'escorpiao', 'sapo_cururu', 'jararaca', 'cangaceiro_sombra', 'mula_sem_cabeca', 'lobisomem'],
+      flyer: ['carcara', 'urubu', 'marimbondo', 'boitata_fogo'],
       shooter: null, bode: true,
       themes: ['basalt', 'pumice'], minY: 300, maxY: 460, windStrength: 0.3
     },
     trono: {
       weights: { run: 2, updraft: 1, vine: 1, geyser: 1, falling: 1, bode: 1, wind: 1, ledge: 1, stairs: 1 },
-      ground: ['calango', 'tatu', 'caranguejo', 'salamandra', 'papa_figo',
+      ground: ['calango', 'tatu', 'caranguejo', 'salamandra', 'papa_figo', 'escorpiao', 'jacare',
         'sapo_cururu', 'jararaca', 'cangaceiro_sombra', 'mula_sem_cabeca', 'lobisomem'],
-      flyer: ['morcego', 'carcara', 'fulozinha', 'baiacu', 'marimbondo', 'boitata_fogo'],
+      flyer: ['morcego', 'carcara', 'fulozinha', 'baiacu', 'urubu', 'marimbondo', 'boitata_fogo'],
       shooter: 'cacto_atirador', bode: true,
       themes: ['obsidian', 'gold'], minY: 300, maxY: 460, elite: true, crystals: true, windStrength: 0.35
     }
@@ -305,7 +305,7 @@
       platforms: [], enemies: [], rapaduras: [], cajus: [], asaBrancaStars: [],
       checkpoints: [], updrafts: [], signs: [], vines: [], geysers: [],
       lightCrystals: [], windZones: [],
-      trampolines: [], movingPlatforms: [], hazardWheels: [],
+      trampolines: [], movingPlatforms: [], hazardWheels: [], items: [],
       tideConfig: null, bossType: null, boss: null, bossArena: null,
       flagpolePos: { x: 0, y: 0 }, flagHiddenUntilBoss: false,
       levelW: 5000, levelH: LEVEL_H, respawnX: 80, respawnY: 400,
@@ -461,6 +461,7 @@
       { x: 4700, y: 320 }    // bloco de madeira opcional
     ];
     S.asaBrancaStars = [{ x: 3930, y: 240 }];
+    S.items = [{ type: 'baleadeira', x: 1290, y: 350 }, { type: 'cuscuz', x: 3360, y: 240 }];
     S.checkpoints = [{ x: 1960, y: 460 }, { x: 4260, y: 460 }];
     S.flagpolePos = { x: 5460, y: 220 };
     return S;
@@ -736,6 +737,24 @@
       }
       if (!removed) break;
     }
+    // v2.4: LENDAS do Nordeste no fim de algumas fases (o mastro só libera depois de vencê-las)
+    var LEGENDS_BY_STAGE = { '1-3': 'caipora', '2-3': 'cabra_cabriola', '3-3': 'perna_cabeluda', '4-3': 'cabeca_de_cuia',
+      '5-3': 'labatut', '6-2': 'caipora', '6-3': 'cabeca_de_cuia', '6-4': 'labatut', '3-4': 'cabra_cabriola', '5-4': 'perna_cabeluda' };
+    var lg = !S.isChallenge && LEGENDS_BY_STAGE[cfg.code];
+    if (lg) {
+      S.enemies = S.enemies.filter(function (e) { return e.x < fin.x - 40; });
+      S.enemies.push({ type: lg, x: fin.x + 260, y: fin.y - 110, dir: -1, legend: true });
+    }
+    // v2.4: itens nas fases (arma + proteção/cura)
+    var itemPlats = mains.filter(function (m, k) { return k > 0 && m !== fin && !m.falling && m.w >= 140; });
+    if (itemPlats.length) {
+      var weaponPool = wIdx === 0 ? ['baleadeira'] : ['baleadeira', 'sanfona'];
+      var wp = itemPlats[clamp(Math.floor(itemPlats.length * 0.2), 0, itemPlats.length - 1)];
+      S.items.push({ type: weaponPool[R.int(0, weaponPool.length - 1)], x: Math.round(wp.x + wp.w / 2 - 15), y: wp.y - 70 });
+      var hp = itemPlats[clamp(Math.floor(itemPlats.length * 0.62), 0, itemPlats.length - 1)];
+      S.items.push({ type: R.chance(0.5) ? 'gibao' : 'cuscuz', x: Math.round(hp.x + hp.w / 2 + 20), y: hp.y - 70 });
+      if (lg) { var lp = itemPlats[itemPlats.length - 1]; S.items.push({ type: R.chance(0.5) ? 'sanfona' : 'baleadeira', x: Math.round(lp.x + lp.w / 2 - 15), y: lp.y - 70 }); }
+    }
     // Começo da fase livre de inimigos (o jogador precisa de alguns segundos para se situar)
     S.enemies = S.enemies.filter(function (e) { return e.x > 560; });
     S.enemies.sort(function (a, b) { return a.x - b.x; });
@@ -786,22 +805,22 @@
   }
 
   var ALLOWED_ENEMIES = {
-    sertao:  ['calango', 'tatu', 'cacto_atirador', 'bode_doido', 'carcara',
+    sertao:  ['escorpiao', 'urubu', 'calango', 'tatu', 'cacto_atirador', 'bode_doido', 'carcara',
               'sapo_cururu', 'marimbondo', 'jararaca', 'cangaceiro_sombra', 'mula_sem_cabeca',
               'boitata_fogo', 'lobisomem'],
-    caverna: ['morcego', 'tatu', 'cacto_atirador', 'fulozinha',
+    caverna: ['escorpiao', 'morcego', 'tatu', 'cacto_atirador', 'fulozinha',
               'sapo_cururu', 'marimbondo', 'jararaca', 'cangaceiro_sombra', 'mula_sem_cabeca',
               'boitata_fogo', 'lobisomem'],
     pantano: ['carcara', 'fulozinha', 'papa_figo', 'calango',
               'sapo_cururu', 'marimbondo', 'jararaca', 'cangaceiro_sombra', 'mula_sem_cabeca',
               'boitata_fogo', 'lobisomem'],
-    mangue:  ['caranguejo', 'baiacu', 'carcara',
+    mangue:  ['jacare', 'urubu', 'caranguejo', 'baiacu', 'carcara',
               'sapo_cururu', 'marimbondo', 'jararaca', 'cangaceiro_sombra', 'mula_sem_cabeca',
               'boitata_fogo', 'lobisomem'],
-    canion:  ['salamandra', 'bode_doido', 'carcara', 'tatu',
+    canion:  ['escorpiao', 'urubu', 'salamandra', 'bode_doido', 'carcara', 'tatu',
               'sapo_cururu', 'marimbondo', 'jararaca', 'cangaceiro_sombra', 'mula_sem_cabeca',
               'boitata_fogo', 'lobisomem'],
-    trono:   ['calango', 'tatu', 'caranguejo', 'salamandra', 'papa_figo', 'morcego',
+    trono:   ['escorpiao', 'urubu', 'jacare', 'calango', 'tatu', 'caranguejo', 'salamandra', 'papa_figo', 'morcego',
               'carcara', 'fulozinha', 'baiacu', 'cacto_atirador', 'bode_doido',
               'sapo_cururu', 'marimbondo', 'jararaca', 'cangaceiro_sombra', 'mula_sem_cabeca',
               'boitata_fogo', 'lobisomem']
@@ -839,6 +858,7 @@
     S.flagpolePos = { x: 1260, y: 260 };
     S.flagHiddenUntilBoss = true;
     S.checkpoints = [];
+    S.items = [{ type: 'baleadeira', x: 685, y: 205 }, { type: 'cuscuz', x: 345, y: 300 }];
     addLine(S, 300, 310, 3, 60);
     addLine(S, 640, 220, 3, 60);
     addLine(S, 980, 310, 3, 60);

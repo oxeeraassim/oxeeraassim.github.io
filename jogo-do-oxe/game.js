@@ -98,6 +98,10 @@ let collectedCajus = [false, false, false]; let stageTimerSeconds = 0; let stage
 let hitstopFrames = 0; let screenShake = 0; let bossIntroTimer = 0; let renderAlpha = 1;
 let challengeTimeLeft = 30.0; let challengeScore = 0; let challengeRapaduras = 0; let currentChallengeSeed = '';
 let currentLevel = null; let player = null;
+// v2.4: armas e itens que se pegam nas fases
+let heldWeapon = null; // { type: 'baleadeira' | 'sanfona', ammo }
+let heldArmor = 0;     // gibão de couro: aguenta 1 golpe
+const sanfonaRings = [];
 
 function liveSettings() { try { if (window.OxeSettings && window.OxeSettings.get) return window.OxeSettings.get(); } catch (e) {} return SaveManager.data.settings || {}; }
 function triggerHaptic(ms = 20) { if (liveSettings().vibration !== false && navigator.vibrate) { try { navigator.vibrate(ms); } catch (e) {} } }
@@ -190,7 +194,7 @@ class Particle {
   update() { this.prevX = this.x; this.prevY = this.y; this.x += this.vx; this.y += this.vy; this.vy += this.grav; this.vx *= 0.97; this.life--; }
   draw(ctx, camX, camY) {
     const x = lerp(this.prevX, this.x, renderAlpha) - camX, y = lerp(this.prevY, this.y, renderAlpha) - camY;
-    ctx.globalAlpha = clamp(this.life / this.maxLife, 0, 1); ctx.fillStyle = this.color; ctx.fillRect(x - this.size / 2, y - this.size / 2, this.size, this.size); ctx.globalAlpha = 1;
+    const k = clamp(this.life / this.maxLife, 0, 1); ctx.globalAlpha = k; ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(x, y, Math.max(0.8, this.size * (0.35 + 0.25 * k)), 0, 6.283); ctx.fill(); ctx.globalAlpha = 1; // v2.4: partículas redondas e que encolhem
   }
 }
 function spawnSparks(x, y, n = 8, color = '#FFD43B') { for (let i = 0; i < n; i++) { const a = Math.random() * Math.PI * 2, s = 1.5 + Math.random() * 3.5; particles.push(new Particle(x, y, Math.cos(a) * s, Math.sin(a) * s - 1, color, 18 + Math.random() * 14, 2 + Math.random() * 3, 0.12)); } }
@@ -204,7 +208,7 @@ function spawnFloatingText(text, x, y, color = '#FFF') { floatTexts.push({ text,
 
 // ==================== PROJÉTEIS ====================
 const projectiles = [];
-const PROJ_STYLE = { spine: ['#E9D8A6', 6, 6], leaf: ['#51CF66', 12, 8], miasma: ['#9C36B5', 16, 16], fire: ['#FF6B1A', 14, 14], water: ['#4DABF7', 14, 10], ember: ['#FFA94D', 10, 10], shockwave: ['#FFD8A8', 28, 18] };
+const PROJ_STYLE = { spine: ['#E9D8A6', 6, 6], leaf: ['#51CF66', 12, 8], miasma: ['#9C36B5', 16, 16], fire: ['#FF6B1A', 14, 14], water: ['#4DABF7', 14, 10], ember: ['#FFA94D', 10, 10], shockwave: ['#FFD8A8', 28, 18], pedra: ['#8D8173', 10, 10], bone: ['#F1F3F5', 14, 7], slash: ['rgba(255,255,255,0.9)', 40, 30] };
 class Projectile {
   constructor(x, y, vx, vy, type = 'spine', opts = {}) {
     const st = PROJ_STYLE[type] || PROJ_STYLE.spine;
@@ -221,7 +225,7 @@ class Projectile {
     if (this.type === 'shockwave') { this.y = this.groundY - this.h; if (this.t % 4 === 0) spawnDust(this.x + this.w / 2, this.groundY, 1); }
     if (this.type === 'ember' || this.type === 'fire') if (this.t % 3 === 0) particles.push(new Particle(this.x + this.w / 2, this.y + this.h / 2, 0, -0.5, '#FFD43B', 12, 2, 0));
     if (--this.life <= 0) this.dead = true;
-    if (this.type !== 'shockwave' && (this.type === 'fire' || this.type === 'spine' || this.type === 'ember') && this.gravity > 0) {
+    if (this.type !== 'shockwave' && (this.type === 'fire' || this.type === 'spine' || this.type === 'ember' || this.type === 'pedra' || this.type === 'bone') && this.gravity > 0) {
       for (const p of getPlatforms()) if (checkAABB(this, p)) { this.dead = true; spawnSparks(this.x + this.w / 2, this.y + this.h, 5, this.color); break; }
     }
     if (currentLevel && (this.y > (currentLevel.height || 2000) + 100 || this.x < -200 || this.x > (currentLevel.width || 5000) + 200)) this.dead = true;
@@ -235,6 +239,9 @@ class Projectile {
       case 'miasma': ctx.globalAlpha = 0.85; ctx.beginPath(); ctx.arc(0, 0, this.w / 2 + Math.sin(this.t * 0.3) * 1.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#E599F7'; ctx.beginPath(); ctx.arc(-2, -2, 3, 0, Math.PI * 2); ctx.fill(); break;
       case 'shockwave': ctx.globalAlpha = 0.85; ctx.beginPath(); ctx.moveTo(-this.w / 2, this.h / 2); ctx.quadraticCurveTo(0, -this.h, this.w / 2, this.h / 2); ctx.closePath(); ctx.fill(); ctx.stroke(); break;
       case 'water': ctx.beginPath(); ctx.ellipse(0, 0, this.w / 2, this.h / 2, Math.atan2(this.vy, this.vx), 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#D0EBFF'; ctx.fillRect(-2, -3, 4, 2); break;
+      case 'pedra': ctx.rotate(this.t * 0.4); ctx.beginPath(); ctx.ellipse(0, 0, this.w / 2, this.h / 2 - 1, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#BDB2A5'; ctx.fillRect(-2, -3, 3, 2); break;
+      case 'bone': ctx.rotate(this.t * 0.25); ctx.fillRect(-this.w / 2 + 2, -2, this.w - 4, 4); ctx.strokeRect(-this.w / 2 + 2, -2, this.w - 4, 4); [-1, 1].forEach((k) => { ctx.beginPath(); ctx.arc(k * this.w / 2, -2, 2.6, 0, 7); ctx.arc(k * this.w / 2, 2, 2.6, 0, 7); ctx.fill(); }); break;
+      case 'slash': { const a = 1 - this.life / 12; ctx.globalAlpha = 0.85; ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(0, 0, this.w / 2, -1.2 + a, 1.2 + a); ctx.stroke(); ctx.strokeStyle = '#FFA94D'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, this.w / 2 - 6, -1 + a, 1 + a); ctx.stroke(); break; }
       case 'fire': case 'ember': ctx.beginPath(); ctx.arc(0, 0, this.w / 2, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#FFE066'; ctx.beginPath(); ctx.arc(0, 0, this.w / 4, 0, Math.PI * 2); ctx.fill(); break;
       default: ctx.rotate(Math.atan2(this.vy, this.vx)); ctx.beginPath(); ctx.moveTo(this.w, 0); ctx.lineTo(-this.w / 2, -3); ctx.lineTo(-this.w / 2, 3); ctx.closePath(); ctx.fill(); ctx.stroke();
     }
@@ -274,7 +281,7 @@ class Tonho {
     if (this.asaBrancaTimer > 0) this.asaBrancaTimer--;
     if (keys.jumpJustPressed) { this.jumpBuffer = 10; } else if (this.jumpBuffer > 0) { this.jumpBuffer--; }
     if (this.invuln > 0) this.invuln--; if (this.whipCooldown > 0) this.whipCooldown--; if (this.vineCooldown > 0) this.vineCooldown--;
-    if (keys.whipJustPressed && this.whipCooldown <= 0) this.performWhipAttack();
+    if (keys.whipJustPressed && this.whipCooldown <= 0) this.performAttack();
     if (this.whipTimer > 0) this.whipTimer--;
 
     // ----- Cipó -----
@@ -360,6 +367,18 @@ class Tonho {
     this.hatTilt = lerp(this.hatTilt, clamp(-this.vx * 0.06, -0.3, 0.3) + (this.vy < -2 ? -0.08 : 0), 0.2);
     if (this.landSquash > 0) this.landSquash--;
   }
+  performAttack() {
+    const w = heldWeapon;
+    if (w && w.ammo > 0 && w.type === 'baleadeira') {
+      this.whipCooldown = 15; this.shotAnim = 10; sfx('whip');
+      projectiles.push(new Projectile(this.x + this.w / 2 + this.facing * 18, this.y + 16, this.facing * 8.8, -1.8, 'pedra', { hostile: false, gravity: 0.13, life: 95, damage: 1 }));
+      w.ammo--;
+    } else if (w && w.ammo > 0 && w.type === 'sanfona') {
+      this.whipCooldown = 40; this.shotAnim = 16; w.ammo--; sanfonaBlast(this);
+    } else { this.performWhipAttack(); }
+    if (w && w.ammo <= 0) { heldWeapon = null; spawnFloatingText('Acabou a munição!', this.x + this.w / 2, this.y - 10, '#FFF'); }
+    updateWeaponUI();
+  }
   performWhipAttack() {
     this.whipTimer = 14; this.whipCooldown = 22; this.whipHitSet.clear(); sfx('whip');
     spawnSparks(this.x + this.w / 2 + this.facing * 52, this.y + 18, 8, '#FFD43B');
@@ -368,6 +387,7 @@ class Tonho {
   takeDamage(amount = 1, srcX) {
     if (currentState === GAME_STATE.LEVEL_COMPLETE) return;
     if (this.invuln > 0 || this.dead || this.asaBrancaTimer > 0) return;
+    if (heldArmor > 0) { heldArmor = 0; this.invuln = 90; sfx('clank'); addScreenShake(3); spawnSparks(this.x + this.w / 2, this.y + this.h / 2, 14, '#C68B59'); spawnFloatingText('O GIBÃO AGUENTOU!', this.x + this.w / 2, this.y - 12, '#FFD8A8'); updateWeaponUI(); return; }
     tookDamageThisRun = true; health -= amount; this.invuln = 100; hitstopFrames = 5; addScreenShake(6); triggerHaptic(60); sfx('hurt');
     const away = srcX != null ? (this.x + this.w / 2 < srcX ? -1 : 1) : -this.facing;
     this.vy = -6; this.vx = away * 4; this.onVine = null;
@@ -465,6 +485,20 @@ const ENEMY_DEF = Object.assign({
   boitata_fogo: { w: 40, h: 26, hp: 2, spd: 1.6, color: '#FFD43B', fly: true },
   lobisomem: { w: 40, h: 44, hp: 3, spd: 1.9, color: '#495057' }
 }, (typeof window !== 'undefined' && window.OxeHD && window.OxeHD.ENEMY_DEF_HD) || {});
+// v2.4: LENDAS DO NORDESTE — chefes de meio de mundo (aparecem no fim de algumas fases)
+const LEGEND_DEF = {
+  caipora:        { w: 34, h: 48, hp: 8,  spd: 2.4, color: '#2F9E44', score: 1500, name: 'Caipora', sub: 'Lenda das matas do Nordeste · protetora dos bichos' },
+  cabra_cabriola: { w: 54, h: 46, hp: 9,  spd: 1.3, color: '#5C3D2E', score: 1800, name: 'Cabra-Cabriola', sub: 'Lenda de Pernambuco e da Bahia · cospe fogo' },
+  perna_cabeluda: { w: 42, h: 92, hp: 10, spd: 2.5, color: '#C68B59', score: 2000, name: 'Perna Cabeluda', sub: 'Lenda do Recife · a perna que pula sozinha' },
+  cabeca_de_cuia: { w: 56, h: 52, hp: 9,  spd: 2.2, color: '#E0A872', score: 2000, name: 'Cabeça de Cuia', sub: 'Lenda do Piauí · mora no rio Parnaíba' },
+  labatut:        { w: 60, h: 96, hp: 12, spd: 1.2, color: '#6F4E37', score: 2500, name: 'Labatut', sub: 'Lenda do Ceará · o gigante de um olho só' }
+};
+Object.keys(LEGEND_DEF).forEach((k) => { ENEMY_DEF[k] = Object.assign({ legend: true }, LEGEND_DEF[k]); });
+// Pontos por espécie (as mais difíceis valem mais)
+const ENEMY_SCORE = { calango: 100, tatu: 150, carcara: 150, morcego: 120, cacto_atirador: 200, bode_doido: 300, fulozinha: 200, papa_figo: 250,
+  caranguejo: 150, baiacu: 200, salamandra: 180, sapo_cururu: 150, marimbondo: 150, jararaca: 200, cangaceiro_sombra: 300,
+  mula_sem_cabeca: 350, boitata_fogo: 300, lobisomem: 400, escorpiao: 160, urubu: 180, jacare: 300 };
+let legendIntro = null; // { name, sub, timer }
 class Enemy {
   constructor(a, b, c = "calango", opts = {}) {
     const type = typeof a === "number" ? c : a;
@@ -475,6 +509,22 @@ class Enemy {
     this.vx = -d.spd; this.vy = 0; this.facing = -1; this.dead = false; this.timer = Math.floor(Math.random() * 60); this.hitFlashTimer = 0;
     this.baseX = x; this.baseY = y; this.range = opts.range || 120; this.state = 'patrol'; this.chargeDistance = 0; this.onGround = false; this.t = Math.random() * 100;
     this.rolling = false; this.puffed = false;
+    // v2.4: inimigos mais resistentes e mais rápidos conforme o mundo
+    const wIdx = opts.worldIdx | 0;
+    this.legend = !!d.legend; this.worldIdx = wIdx;
+    if (!this.legend) { this.hp = d.hp + 1 + (wIdx >= 3 ? 1 : 0) + (opts.elite ? 1 : 0); this.speed = d.spd * (1 + wIdx * 0.07); }
+    else { this.hp = d.hp + wIdx; this.name = d.name; this.sub = d.sub; this.st = 'intro'; this.alpha = 1; this.homeX = x; this.homeY = y; }
+    this.maxHp = this.hp; this.hitCd = 0; this.stagger = 0; this.kbx = 0; this.dodged = false;
+    this.scoreValue = d.score || ENEMY_SCORE[type] || 100;
+    if (this.vx) this.vx = -this.speed;
+  }
+  // persegue o jogador quando ele chega perto, sem se jogar de penhascos
+  chase(dx, dy, spd, range = 240) {
+    if (Math.abs(dx) < range && Math.abs(dy) < 70) {
+      const dir = Math.sign(dx) || this.facing;
+      if (this.onGround && !this.groundAhead(dir)) { this.facing = dir; this.vx = 0; return; }
+      this.vx = dir * spd * 1.55; this.walk(spd * 1.55); if (Math.abs(dx) > 12) this.facing = dir;
+    } else this.walk(spd);
   }
   groundAhead(dir) {
     const probe = { x: dir > 0 ? this.x + this.w + 2 : this.x - 4, y: this.y + this.h + 2, w: 2, h: 6 };
@@ -486,7 +536,10 @@ class Enemy {
       if (!checkAABB(this, p)) continue;
       if (this.vy >= 0 && this.y + this.h - this.vy <= p.y + 14) { this.y = p.y - this.h; this.vy = 0; this.onGround = true; }
     }
-    if (currentLevel && this.y > (currentLevel.height || 2000) + 100) this.dead = true;
+    if (currentLevel && this.y > (currentLevel.height || 2000) + 100) {
+      if (this.legend) { this.x = this.homeX; this.y = this.homeY - 60; this.vy = 0; this.vx = 0; spawnLeaves(this.x + this.w / 2, this.y, 10); } // lenda nunca morre caindo
+      else this.dead = true;
+    }
   }
   walk(spd) {
     this.x += this.vx;
@@ -495,15 +548,51 @@ class Enemy {
     if (blocked || (this.onGround && !this.groundAhead(Math.sign(this.vx)))) { this.vx = -this.vx; }
     this.vx = Math.sign(this.vx || -1) * spd; this.facing = Math.sign(this.vx);
   }
+  updateDeath() {
+    this.prevX = this.x; this.prevY = this.y;
+    this.deathVy = (this.deathVy || -6) + 0.45; this.y += this.deathVy; this.x += this.kbx * 0.5;
+    if (--this.deathTimer <= 0) this.remove = true;
+  }
   update() {
     this.prevX = this.x; this.prevY = this.y; if (this.dead) return;
-    this.t++; this.timer++; if (this.hitFlashTimer > 0) this.hitFlashTimer--;
+    this.t++; this.timer++; if (this.hitFlashTimer > 0) this.hitFlashTimer--; if (this.hitCd > 0) this.hitCd--;
+    this.hurtTimer = this.hitFlashTimer;
     const p = player, dx = p ? (p.x + p.w / 2) - (this.x + this.w / 2) : 999, dy = p ? (p.y + p.h / 2) - (this.y + this.h / 2) : 999;
+    // atordoado pelo golpe: recua um pouco e não ataca
+    if (this.stagger > 0) {
+      this.stagger--;
+      if (!this.fly) { this.physics(); this.x += this.kbx; for (const pl of getPlatforms()) if (!pl.oneWay && checkAABB(this, pl) && pl.y < this.y + this.h - 10) { this.x -= this.kbx; this.kbx = 0; } }
+      else this.x += this.kbx;
+      this.kbx *= 0.82; return;
+    }
+    if (this.legend) { this.updateLegend(dx, dy); return; }
+    // esquiva: alguns pulam quando o chicote vem
+    if (!this.fly && this.onGround && p && p.whipTimer > 9 && !this.dodged && this.type !== 'cacto_atirador' && this.type !== 'bode_doido' &&
+        Math.abs(dx) < 120 && Math.abs(dy) < 50) {
+      this.dodged = true; if (Math.random() < 0.18 + this.worldIdx * 0.07) { this.vy = -7.5; this.onGround = false; }
+    }
+    if (p && p.whipTimer === 0) this.dodged = false;
     switch (this.type) {
-      case 'calango': this.physics(); this.walk(this.speed + (Math.sin(this.t * 0.05) > 0.7 ? 1.5 : 0)); break;
-      case 'tatu': this.physics(); this.rolling = Math.abs(dx) < 160 && Math.abs(dy) < 40; this.walk(this.rolling ? 3 : this.speed); break;
-      case 'caranguejo': this.physics(); this.walk(this.speed * (Math.sin(this.t * 0.04) > 0 ? 1 : 1.8)); break;
-      case 'salamandra': this.physics(); this.walk(this.speed);
+      case 'calango': this.physics(); this.chase(dx, dy, this.speed + (Math.sin(this.t * 0.05) > 0.7 ? 1.2 : 0), 200); break;
+      case 'tatu': this.physics(); this.rolling = Math.abs(dx) < 160 && Math.abs(dy) < 40; if (this.rolling) this.chase(dx, dy, 2.2, 160); else this.walk(this.speed); break;
+      case 'caranguejo': this.physics(); this.chase(dx, dy, this.speed * (Math.sin(this.t * 0.04) > 0 ? 1 : 1.8), 220); break;
+      case 'escorpiao': this.physics();
+        if (this.st === 'sting') { this.vx = 0; if (this.timer - this.stT === 18) { sfx('whip'); projectiles.push(new Projectile(this.x + this.w / 2 + this.facing * 34, this.y + this.h / 2 - 4, 0, 0, 'slash', { life: 9, w: 40, h: 30 })); } if (this.timer - this.stT > 50) this.st = null; }
+        else if (Math.abs(dx) < 75 && Math.abs(dy) < 40 && this.onGround) { this.st = 'sting'; this.stT = this.timer; this.facing = Math.sign(dx) || this.facing; }
+        else this.chase(dx, dy, this.speed, 210); break;
+      case 'urubu':
+        if (this.st === 'swoop') { this.x += this.vx; this.y += this.vy; this.vy -= 0.16; if (this.y <= this.baseY) { this.y = this.baseY; this.st = null; } }
+        else {
+          this.x = this.baseX + Math.cos(this.t * 0.018) * this.range; this.y = this.baseY + Math.sin(this.t * 0.036) * 18; this.facing = -Math.sin(this.t * 0.018) >= 0 ? 1 : -1;
+          if (Math.abs(dx) < 40 && dy > 40 && this.timer % 70 === 0) { sfx('spine'); projectiles.push(new Projectile(this.x + this.w / 2, this.y + this.h, 0, 1, 'bone', { gravity: 0.25 })); }
+          if (Math.abs(dx) < 150 && dy > 60 && dy < 260 && this.timer % 160 === 0) { this.st = 'swoop'; this.vy = 5.5; this.vx = Math.sign(dx) * 2.4; this.baseX = this.x - Math.cos(this.t * 0.018) * this.range; }
+        } break;
+      case 'jacare': this.physics();
+        if (this.st === 'lunge') { this.vx = this.facing * 6.2; this.walk(6.2); if (this.timer - this.stT > 36) { this.st = 'rest'; this.stT = this.timer; } }
+        else if (this.st === 'rest') { this.vx = 0; if (this.timer - this.stT > 70) this.st = null; }
+        else if (Math.abs(dx) < 220 && Math.abs(dy) < 50 && this.onGround) { this.facing = Math.sign(dx) || this.facing; if (this.groundAhead(this.facing)) { this.st = 'lunge'; this.stT = this.timer; sfx('bossRoar'); } }
+        else this.walk(this.speed * 0.6); break;
+      case 'salamandra': this.physics(); this.chase(dx, dy, this.speed, 180);
         if (this.timer % 140 === 0 && Math.abs(dx) < 380) { sfx('fire'); projectiles.push(new Projectile(this.x + this.w / 2, this.y + 4, Math.sign(dx) * 2.5, -5, 'ember', { gravity: 0.2 })); } break;
       case 'papa_figo': this.physics(); this.walk(Math.abs(dx) < 220 ? 1.8 : this.speed); if (Math.abs(dx) < 220) { this.vx = Math.sign(dx) * 1.8; this.facing = Math.sign(dx); } break;
       case 'carcara':
@@ -552,20 +641,110 @@ class Enemy {
       this.vx = 0; if (this.timer > (this.stunTime || 120)) { this.state = 'patrol'; this.facing *= -1; this.vx = this.facing * this.speed; }
     }
   }
-  canBeStomped() { return !(this.type === 'cacto_atirador' || (this.type === 'baiacu' && this.puffed) || (this.type === 'tatu' && this.rolling)); }
+  updateLegend(dx, dy) {
+    const T = this.type, near = Math.abs(dx) < 460 && Math.abs(dy) < 220;
+    if (this.st === 'intro') { this.physics(); if (near) { this.st = 'fight'; this.timer = 0; legendIntro = { name: this.name, sub: this.sub, timer: 170 }; sfx('bossRoar'); addScreenShake(5); } return; }
+    const dir = Math.sign(dx) || this.facing;
+    const shoot = (vx, vy, type, o) => projectiles.push(new Projectile(this.x + this.w / 2, this.y + this.h * 0.35, vx, vy, type, o || {}));
+    const wave = () => { const gy = this.y + this.h; projectiles.push(new Projectile(this.x - 10, gy, -4.6, 0, 'shockwave', { groundY: gy, life: 150 })); projectiles.push(new Projectile(this.x + this.w + 10, gy, 4.6, 0, 'shockwave', { groundY: gy, life: 150 })); sfx('quake'); addScreenShake(6); spawnDust(this.x + this.w / 2, gy, 12); };
+    const angry = this.hp <= this.maxHp / 2;
+    if (T === 'caipora') {
+      this.physics();
+      if (this.st === 'vanish') { this.alpha = Math.max(0, this.alpha - 0.06); if (this.alpha <= 0) {
+          const tx = player.x - player.facing * 170; const probe = { x: tx, y: player.y + player.h + 2, w: this.w, h: 8 };
+          if (getPlatforms().some((pl) => !pl.oneWay && checkAABB(probe, pl))) { this.x = tx; this.y = player.y + player.h - this.h - 2; }
+          spawnLeaves(this.x + this.w / 2, this.y + this.h / 2, 12); this.st = 'appear'; this.vy = 0; } }
+      else if (this.st === 'appear') { this.alpha = Math.min(1, this.alpha + 0.08); if (this.alpha >= 1) { this.st = 'fight'; this.timer = 0; } }
+      else {
+        this.chase(dx, dy, this.speed * (angry ? 1.25 : 1), 600);
+        if (this.timer % (angry ? 80 : 110) === 40) { sfx('leaf'); for (let i = -1; i <= 1; i++) shoot(dir * 3.4, -5 + i * 1.3, 'spine', { gravity: 0.2 }); }
+        if (this.timer > 190) { this.st = 'vanish'; sfx('whistle'); }
+      }
+    } else if (T === 'cabra_cabriola') {
+      this.physics();
+      if (this.st === 'breath') { this.vx = 0; if (this.timer % 5 === 0 && this.timer < 46) { sfx('fire'); shoot(this.facing * (4 + Math.random()), -0.6 + Math.random() * 1.2, 'fire', { life: 55 }); } if (this.timer > 70) { this.st = 'fight'; this.timer = 0; } }
+      else if (this.st === 'leap') { this.x += this.vx; if (this.onGround && this.timer > 8) { wave(); this.st = 'fight'; this.timer = 0; this.stagger = 30; } }
+      else {
+        this.chase(dx, dy, this.speed, 600);
+        if (this.timer > (angry ? 90 : 130) && this.onGround) {
+          this.facing = dir; this.timer = 0;
+          if (Math.abs(dx) < 260) { this.st = 'breath'; } else { this.st = 'leap'; this.vy = -11; this.vx = clamp(dx / 45, -5, 5); this.onGround = false; sfx('jump'); }
+        }
+      }
+    } else if (T === 'perna_cabeluda') {
+      this.physics();
+      if (!this.onGround) { this.x += this.vx; for (const pl of getPlatforms()) if (!pl.oneWay && checkAABB(this, pl) && pl.y < this.y + this.h - 12) { this.x -= this.vx; this.vx = -this.vx * 0.5; } }
+      if (this.onGround && this.wasAir) { if (this.bigHop) wave(); else { spawnDust(this.x + this.w / 2, this.y + this.h, 6); addScreenShake(2); } this.bigHop = false; this.vx = 0; }
+      this.wasAir = !this.onGround;
+      if (this.onGround && this.timer > (angry ? 34 : 50)) {
+        this.timer = 0; this.facing = dir; this.hops = (this.hops || 0) + 1;
+        const big = this.hops % 3 === 0;
+        const ahead = this.groundAhead(dir) || big;
+        this.vy = big ? -13 : -8.5; this.vx = ahead ? clamp(dx / (big ? 52 : 40), -4.5, 4.5) : 0; this.bigHop = big; this.onGround = false; sfx('jump');
+      }
+    } else if (T === 'cabeca_de_cuia') {
+      if (this.st === 'hidden') {
+        this.physics(); this.alpha = 0.45; this.chase(dx, dy, this.speed, 700);
+        if (this.timer > (angry ? 60 : 90) && Math.abs(dx) < 140) { this.st = 'pop'; this.timer = 0; this.vy = -11.5; this.vx = this.groundAhead(dir) ? dir * 2.6 : 0; this.onGround = false; this.alpha = 1; sfx('splash'); spawnBurst(this.x + this.w / 2, this.y + this.h, '#74C0FC', 14); }
+      } else if (this.st === 'pop') {
+        this.physics(); this.x += this.vx;
+        if (this.timer === 18) { for (let i = -1; i <= 1; i++) shoot(dir * 3.2 + i * 0.8, -2.5, 'water', { gravity: 0.12 }); }
+        if (this.onGround && this.timer > 10) { this.st = 'exposed'; this.timer = 0; this.vx = 0; }
+      } else if (this.st === 'exposed') {
+        this.physics(); this.facing = dir;
+        if (this.timer % 40 === 20) shoot(dir * 3.8, -3, 'water', { gravity: 0.12 });
+        if (this.timer > (angry ? 80 : 110)) { this.st = 'hidden'; this.timer = 0; sfx('splash'); }
+      } else { this.st = 'hidden'; this.timer = 0; }
+    } else if (T === 'labatut') {
+      this.physics();
+      if (this.st === 'slash') { this.vx = 0; if (this.timer === 22) { sfx('whip'); addScreenShake(3); projectiles.push(new Projectile(this.x + this.w / 2 + this.facing * 58, this.y + this.h * 0.45, 0, 0, 'slash', { life: 12, w: 80, h: 70, damage: 1 })); } if (this.timer > 50) { this.st = 'fight'; this.timer = 0; } }
+      else if (this.st === 'charge') { this.vx = this.facing * (angry ? 6.6 : 5.6); const bx = this.x; this.walk(Math.abs(this.vx)); if (this.timer % 4 === 0) spawnDust(this.x + this.w / 2, this.y + this.h, 2);
+        if (this.timer > 60 || Math.sign(this.vx) !== this.facing || Math.abs(this.x - bx) < 1) { this.st = 'fight'; this.timer = 0; this.stagger = 40; addScreenShake(4); } }
+      else {
+        this.chase(dx, dy, this.speed * (angry ? 1.3 : 1), 700);
+        if (Math.abs(dx) < 110 && Math.abs(dy) < 80 && this.timer > 30) { this.st = 'slash'; this.timer = 0; this.facing = dir; }
+        else if (this.timer > (angry ? 130 : 180) && this.groundAhead(dir)) { this.st = 'charge'; this.timer = 0; this.facing = dir; sfx('bossRoar'); }
+        if (this.timer % 150 === 75) { sfx('quake'); for (let i = 0; i < 3; i++) projectiles.push(new Projectile(player.x + (i - 1) * 120, -20, 0, 2, 'bone', { gravity: 0.22 })); }
+      }
+    }
+  }
+  canBeStomped() { if (this.legend) return !(this.type === 'cabeca_de_cuia' && this.st === 'hidden') && this.st !== 'intro' && this.alpha > 0.5;
+    return !(this.type === 'cacto_atirador' || (this.type === 'baiacu' && this.puffed) || (this.type === 'tatu' && this.rolling)); }
   takeHit(dmg = 1, dir = 1) { return this.hit(dmg, this.x - dir * 10); }
+  drawHpPips(ctx, x, y) {
+    if (this.dead || this.legend || this.hp >= this.maxHp) return;
+    const n = this.maxHp, pw = 7, gap = 2, tw = n * pw + (n - 1) * gap, sx = x + this.w / 2 - tw / 2, sy = y - 16;
+    for (let i = 0; i < n; i++) { ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fillRect(sx + i * (pw + gap) - 1, sy - 1, pw + 2, 6); ctx.fillStyle = i < this.hp ? '#FF6B6B' : '#495057'; ctx.fillRect(sx + i * (pw + gap), sy, pw, 4); }
+  }
   hit(dmg = 1, fromX) {
-    if (this.dead) return false;
-    if (this.type === 'tatu' && this.rolling && dmg < 2) { spawnSparks(this.x + this.w / 2, this.y, 4, '#ADB5BD'); sfx('clank'); return false; }
-    this.hp -= dmg; this.hitFlashTimer = 8; sfx('hit'); hitstopFrames = Math.max(hitstopFrames, 3);
-    if (fromX !== undefined) this.x += Math.sign(this.x + this.w / 2 - fromX) * 6;
-    if (this.hp <= 0) { this.dead = true; score += 100; spawnSparks(this.x + this.w / 2, this.y + this.h / 2, 12, this.color); spawnFloatingText('+100', this.x + this.w / 2, this.y, '#FFD43B'); }
+    if (this.dead || this.hitCd > 0) return false;
+    if (this.type === 'tatu' && this.rolling && dmg < 2) { spawnSparks(this.x + this.w / 2, this.y, 4, '#ADB5BD'); sfx('clank'); this.hitCd = 10; return false; }
+    if (this.legend && (this.st === 'intro' || (this.type === 'cabeca_de_cuia' && this.st === 'hidden') || this.alpha < 0.5)) { spawnSparks(this.x + this.w / 2, this.y + 8, 5, '#ADB5BD'); sfx('clank'); this.hitCd = 10; return false; }
+    this.hp -= dmg; this.hitFlashTimer = 10; this.hitCd = this.legend ? 22 : 16; sfx('hit'); hitstopFrames = Math.max(hitstopFrames, 3);
+    const kdir = fromX !== undefined ? (Math.sign(this.x + this.w / 2 - fromX) || 1) : -this.facing;
+    this.kbx = kdir * (this.legend ? 2.5 : 4); this.stagger = this.legend ? 10 : 18;
+    if (!this.fly && this.onGround && !this.legend) this.vy = -3.5;
+    spawnSparks(this.x + this.w / 2, this.y + this.h / 2, 6, '#FFF');
+    if (this.hp <= 0) {
+      this.dead = true; this.deathTimer = this.legend ? 70 : 40; this.deathVy = -6.5; addScore(this.scoreValue);
+      spawnSparks(this.x + this.w / 2, this.y + this.h / 2, this.legend ? 30 : 14, this.color);
+      spawnFloatingText('+' + this.scoreValue, this.x + this.w / 2, this.y, this.legend ? '#FFE066' : '#FFD43B');
+      if (this.legend) { sfx('bossdefeat'); addScreenShake(8); spawnFloatingText('LENDA VENCIDA!', this.x + this.w / 2, this.y - 26, '#FFF'); }
+    }
     return true;
   }
   draw(ctx, camX, camY) {
-    if (this.dead) return;
+    if (this.dead && !(this.deathTimer > 0)) return;
+    const ix = lerp(this.prevX, this.x, renderAlpha) - camX, iy = lerp(this.prevY, this.y, renderAlpha) - camY;
+    if (ix + this.w < -120 || ix > VIEW_W + 120) return;
+    if (this.legend) { drawLegend(ctx, this, ix, iy); this.drawHpPips(ctx, ix, iy); return; }
     if (typeof window !== 'undefined' && window.OxeHD && window.OxeHD.drawEnemyHD) {
+      // v2.4: estica ao pular e amassa ao cair (animação mais viva)
+      const st = (!this.fly && !this.dead) ? clamp(-this.vy * 0.025, -0.14, 0.16) : 0;
+      if (st) { const fx = ix + this.w / 2, fy = iy + this.h; ctx.save(); ctx.translate(fx, fy); ctx.scale(1 - st * 0.6, 1 + st); ctx.translate(-fx, -fy); }
       window.OxeHD.drawEnemyHD(ctx, camX, camY, this, renderAlpha, frameCount);
+      if (st) ctx.restore();
+      this.drawHpPips(ctx, ix, iy);
       return;
     }
     const x = lerp(this.prevX, this.x, renderAlpha) - camX, y = lerp(this.prevY, this.y, renderAlpha) - camY, w = this.w, h = this.h;
@@ -618,6 +797,86 @@ class Enemy {
   }
 }
 
+// ==================== DESENHO DAS LENDAS (v2.4) ====================
+function drawLegend(ctx, e, x, y) {
+  const w = e.w, h = e.h, t = e.t || 0, cx = x + w / 2, by = y + h, flash = e.hitFlashTimer > 0 && Math.floor(e.hitFlashTimer / 2) % 2 === 0;
+  const O = '#1A1A1A';
+  // sombra
+  if (!e.dead) { ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.beginPath(); ctx.ellipse(cx, by + 1, w * 0.6, 6, 0, 0, Math.PI * 2); ctx.fill(); }
+  ctx.save();
+  ctx.translate(cx, by); ctx.scale(1.35, 1.35); // mesma escala visual dos inimigos HD
+  if (e.dead) { ctx.globalAlpha = clamp(e.deathTimer / 40, 0, 1); ctx.rotate((70 - e.deathTimer) * 0.08 * (e.kbx >= 0 ? 1 : -1)); }
+  ctx.globalAlpha *= clamp(e.alpha == null ? 1 : e.alpha, 0, 1);
+  ctx.scale(e.facing >= 0 ? 1 : -1, 1);
+  ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.strokeStyle = O; ctx.lineWidth = 2.5;
+  const F = (c) => flash ? '#FFFFFF' : c;
+  const blob = (bx, bY, rx, ry, col, rot = 0) => { ctx.beginPath(); ctx.ellipse(bx, bY, rx, ry, rot, 0, Math.PI * 2); ctx.fillStyle = F(col); ctx.fill(); ctx.stroke(); };
+  const eye = (ex, ey, r, iris = '#1A1A1A', glow) => { ctx.save(); if (glow) { ctx.shadowColor = glow; ctx.shadowBlur = 10; } ctx.fillStyle = '#FFF'; ctx.beginPath(); ctx.arc(ex, ey, r, 0, Math.PI * 2); ctx.fill(); ctx.restore(); ctx.lineWidth = 1.5; ctx.stroke(); ctx.lineWidth = 2.5; ctx.fillStyle = iris; ctx.beginPath(); ctx.arc(ex + r * 0.3, ey, r * 0.5, 0, Math.PI * 2); ctx.fill(); };
+  const run = Math.abs(e.vx) > 0.3 && e.onGround ? Math.sin(t * 0.35) : 0;
+  switch (e.type) {
+    case 'caipora': {
+      // pés virados para trás (marca da lenda)
+      [[-6, run], [6, -run]].forEach(([lx, ph]) => { ctx.save(); ctx.translate(lx, -14); ctx.rotate(ph * 0.4); ctx.fillStyle = F('#5A8F3A'); ctx.fillRect(-3, 0, 6, 12); ctx.strokeRect(-3, 0, 6, 12); blob(-5, 12, 7, 3.5, '#4A7A30'); ctx.restore(); });
+      ctx.fillStyle = F('#7A4A1E'); ctx.beginPath(); ctx.moveTo(-12, -14); ctx.lineTo(12, -14); ctx.lineTo(9, -30); ctx.lineTo(-9, -30); ctx.closePath(); ctx.fill(); ctx.stroke();
+      for (let i = -10; i <= 10; i += 5) { ctx.fillStyle = F(i % 2 ? '#2F9E44' : '#51CF66'); ctx.beginPath(); ctx.ellipse(i, -13, 3, 7, 0, 0, Math.PI * 2); ctx.fill(); }
+      blob(0, -36, 9, 9, '#6BAA4A');
+      ctx.save(); ctx.translate(0, -40); for (let i = 0; i < 7; i++) { const a = -Math.PI + i * (Math.PI / 6); const l = 10 + Math.sin(t * 0.3 + i) * 3; ctx.fillStyle = F(i % 2 ? '#FF6B1A' : '#FFD43B'); ctx.beginPath(); ctx.moveTo(Math.cos(a) * 6, Math.sin(a) * 6); ctx.lineTo(Math.cos(a) * (6 + l), Math.sin(a) * (6 + l) - 3); ctx.lineTo(Math.cos(a + 0.4) * 6, Math.sin(a + 0.4) * 6); ctx.fill(); } ctx.restore();
+      eye(4, -37, 3, '#C92A2A');
+      ctx.strokeStyle = '#5C3D2E'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(12, -8); ctx.lineTo(16, -46); ctx.stroke(); ctx.fillStyle = F('#FFD43B'); ctx.beginPath(); ctx.arc(16, -48, 3.5, 0, Math.PI * 2); ctx.fill();
+      break; }
+    case 'cabra_cabriola': {
+      const bob = run * 2;
+      [[-18, run], [-8, -run], [10, run], [20, -run]].forEach(([lx, ph]) => { ctx.fillStyle = F('#3B2414'); ctx.fillRect(lx - 3, -16 + ph * 2, 6, 16 - ph * 2); ctx.strokeRect(lx - 3, -16 + ph * 2, 6, 16 - ph * 2); ctx.fillStyle = '#111'; ctx.fillRect(lx - 3, -3, 6, 3); });
+      blob(-2, -24 + bob, 24, 12, '#4A3020');
+      ctx.fillStyle = F('#2B1A10'); for (let i = -20; i < 16; i += 6) { ctx.beginPath(); ctx.moveTo(i, -34 + bob); ctx.lineTo(i + 3, -42 + bob - (i % 4)); ctx.lineTo(i + 6, -34 + bob); ctx.fill(); }
+      blob(22, -34 + bob, 11, 9, '#5C3D2E', -0.3);
+      ctx.strokeStyle = F('#D9C9A3'); ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(18, -42 + bob); ctx.quadraticCurveTo(8, -58 + bob, 2, -46 + bob); ctx.stroke(); ctx.beginPath(); ctx.moveTo(24, -42 + bob); ctx.quadraticCurveTo(20, -60 + bob, 10, -52 + bob); ctx.stroke();
+      ctx.strokeStyle = O; ctx.lineWidth = 2.5;
+      ctx.fillStyle = '#FF3B30'; ctx.save(); ctx.shadowColor = '#FF3B30'; ctx.shadowBlur = 8; ctx.beginPath(); ctx.arc(25, -37 + bob, 2.6, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+      ctx.fillStyle = F('#D9C9A3'); ctx.beginPath(); ctx.moveTo(26, -27 + bob); ctx.lineTo(29, -18 + bob); ctx.lineTo(23, -26 + bob); ctx.fill();
+      if (e.st === 'breath') { ctx.save(); ctx.globalCompositeOperation = 'lighter'; for (let i = 0; i < 5; i++) { ctx.fillStyle = i % 2 ? 'rgba(255,140,40,0.7)' : 'rgba(255,220,80,0.7)'; ctx.beginPath(); ctx.arc(36 + i * 7 + Math.sin(t + i) * 2, -30 + bob + Math.cos(t * 0.7 + i) * 3, 6 - i * 0.6, 0, Math.PI * 2); ctx.fill(); } ctx.restore(); }
+      break; }
+    case 'perna_cabeluda': {
+      const sq = e.onGround ? 0 : -4;
+      ctx.fillStyle = F('#1C4E80'); ctx.beginPath(); ctx.moveTo(-17, -h); ctx.lineTo(17, -h); ctx.lineTo(19, -h + 22); ctx.lineTo(-19, -h + 22); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = F('#E7F5FF'); for (let i = -14; i < 16; i += 8) ctx.fillRect(i, -h + 18, 4, 3);
+      ctx.fillStyle = F('#C68B59'); ctx.beginPath(); ctx.moveTo(-15, -h + 22); ctx.quadraticCurveTo(-18, -h * 0.5, -10, -22 + sq); ctx.lineTo(10, -22 + sq); ctx.quadraticCurveTo(16, -h * 0.5, 15, -h + 22); ctx.closePath(); ctx.fill(); ctx.stroke();
+      blob(0, -h * 0.48, 10, 8, '#B87A4A');
+      ctx.strokeStyle = '#3B2414'; ctx.lineWidth = 1.6; for (let i = 0; i < 16; i++) { const hy = -h + 30 + (i * 37 % (h - 54)), hx = -12 + (i * 53 % 24); ctx.beginPath(); ctx.moveTo(hx, hy); ctx.quadraticCurveTo(hx + 3, hy - 3, hx + 1 + Math.sin(t * 0.2 + i), hy - 7); ctx.stroke(); }
+      ctx.strokeStyle = O; ctx.lineWidth = 2.5;
+      blob(8, -10, 20, 10, '#D9A066'); for (let i = 0; i < 5; i++) blob(24 + (i < 2 ? 0 : 1), -14 + i * 4, 4 - i * 0.4, 3, '#E0A872');
+      break; }
+    case 'cabeca_de_cuia': {
+      const hidden = e.st === 'hidden';
+      if (hidden) { ctx.save(); ctx.beginPath(); ctx.rect(-60, -200, 120, 200 - 30); ctx.clip(); }
+      if (!hidden) { ctx.fillStyle = F('#8D5A3B'); ctx.fillRect(-8, -18, 7, 18); ctx.fillRect(3, -18, 7, 18); ctx.strokeRect(-8, -18, 7, 18); ctx.strokeRect(3, -18, 7, 18); blob(0, -22, 13, 9, '#A0522D'); }
+      const hy = hidden ? -20 : -36;
+      ctx.fillStyle = F('#111'); ctx.beginPath(); ctx.moveTo(-26, hy - 4); ctx.quadraticCurveTo(-34, hy + 22, -24, hy + 30); ctx.lineTo(-10, hy + 8); ctx.closePath(); ctx.fill();
+      blob(0, hy - 6, 26, 22, '#E0A872');
+      ctx.fillStyle = F('#111'); ctx.beginPath(); ctx.ellipse(-6, hy - 20, 22, 10, -0.2, Math.PI, Math.PI * 2.05); ctx.fill();
+      eye(8, hy - 8, 5, '#1A1A1A'); eye(-6, hy - 8, 4.5, '#1A1A1A');
+      ctx.beginPath(); ctx.arc(2, hy + 4, 7, 0.1, Math.PI - 0.1); ctx.stroke();
+      if (hidden) { ctx.restore(); ctx.strokeStyle = 'rgba(160,220,255,0.8)'; ctx.lineWidth = 2; for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.ellipse(0, -30, 20 + i * 9 + (t % 20), 4 + i * 1.5, 0, 0, Math.PI * 2); ctx.stroke(); } }
+      break; }
+    case 'labatut': {
+      const sw = run;
+      [[-12, sw], [12, -sw]].forEach(([lx, ph]) => { ctx.fillStyle = F('#3B2A20'); ctx.fillRect(lx - 7, -30, 14, 30 - Math.abs(ph) * 2); ctx.strokeRect(lx - 7, -30, 14, 30); blob(lx + 4, -2, 11, 4, '#2B1A10'); });
+      ctx.fillStyle = F('#5C4033'); ctx.beginPath(); ctx.moveTo(-26, -30); ctx.lineTo(26, -30); ctx.lineTo(22, -76); ctx.lineTo(-20, -78); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = F('#3B2A20'); for (let i = -22; i < 24; i += 9) ctx.fillRect(i, -34, 5, 6);
+      const armA = e.st === 'slash' ? -1.6 + Math.min(e.timer, 22) * 0.12 : Math.sin(t * 0.08) * 0.2;
+      ctx.save(); ctx.translate(18, -70); ctx.rotate(armA); ctx.fillStyle = F('#8D6E63'); ctx.fillRect(-5, 0, 10, 34); ctx.strokeRect(-5, 0, 10, 34);
+      ctx.strokeStyle = F('#F1F3F5'); ctx.lineWidth = 3; for (let k = -1; k <= 1; k++) { ctx.beginPath(); ctx.moveTo(k * 3, 34); ctx.lineTo(k * 5 + 4, 48); ctx.stroke(); } ctx.restore();
+      ctx.strokeStyle = O; ctx.lineWidth = 2.5;
+      blob(2, -84, 17, 15, '#8D6E63');
+      ctx.fillStyle = F('#212529'); ctx.beginPath(); ctx.moveTo(-16, -90); ctx.quadraticCurveTo(-8, -106, 12, -100); ctx.quadraticCurveTo(22, -96, 18, -86); ctx.lineTo(-18, -70); ctx.closePath(); ctx.fill();
+      eye(8, -86, 7.5, '#C92A2A', angryGlow(e));
+      ctx.fillStyle = '#FFF'; ctx.beginPath(); ctx.moveTo(4, -74); ctx.lineTo(7, -69); ctx.lineTo(10, -74); ctx.fill(); ctx.beginPath(); ctx.moveTo(12, -74); ctx.lineTo(15, -69); ctx.lineTo(17, -74); ctx.fill();
+      break; }
+  }
+  ctx.restore();
+}
+function angryGlow(e) { return e.hp <= e.maxHp / 2 ? '#FF3B30' : null; }
+
 // ==================== CHEFÕES ====================
 const ARENA = { left: 40, right: 1360, width: 1400 };
 class BossBase {
@@ -626,7 +885,9 @@ class BossBase {
     this.vx = 0; this.vy = 0; this.facing = -1; this.state = 'idle'; this.timer = 90; this.onGround = false; this.dead = false; this.invuln = 0; this.hitFlashTimer = 0; this.t = 0;
     this.gravityOn = true; this.deathTimer = 0; this.isBoss = true; this.attackCount = 0;
   }
-  get phase() { const r = this.hp / this.maxHp; return r > 0.67 ? 1 : (r > 0.34 ? 2 : 3); }
+  // v2.4: os chefes dos mundos 4, 5 e 6 gravavam 'phase' e o jogo travava (propriedade só de leitura)
+  get phase() { if (this._phase != null) return this._phase; const r = this.hp / this.maxHp; return r > 0.67 ? 1 : (r > 0.34 ? 2 : 3); }
+  set phase(v) { this._phase = v; }
   get groundY() { let gy = CANVAS_H - 40; for (const p of getPlatforms()) if (p.w > 300 && p.y > 300) gy = Math.min(gy, p.y); return gy; }
   playerDX() { return player ? (player.x + player.w / 2) - (this.x + this.w / 2) : 0; }
   // Colisão vertical separada
@@ -1058,7 +1319,7 @@ function drawBossGuide(ctx, boss, camX, camY) {
     for (let i = fxTexts.length - 1; i >= 0; i--) { const t = fxTexts[i]; t.y -= 0.8; if (--t.life <= 0) fxTexts.splice(i, 1); }
   }
   function drawFx(ctx, camX, camY) {
-    fxParts.forEach((p) => { ctx.globalAlpha = Math.min(1, p.life / 30); ctx.fillStyle = p.color; ctx.fillRect(p.x - camX, p.y - camY, p.s, p.s); });
+    fxParts.forEach((p) => { ctx.globalAlpha = Math.min(1, p.life / 30); ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x - camX, p.y - camY, p.s * 0.6, 0, 6.283); ctx.fill(); });
     ctx.globalAlpha = 1; ctx.font = 'bold 18px sans-serif'; ctx.textAlign = 'center';
     fxTexts.forEach((t) => {
       ctx.globalAlpha = Math.min(1, t.life / 25); ctx.lineWidth = 3; ctx.strokeStyle = '#2a1400';
@@ -1177,6 +1438,73 @@ function drawBossGuide(ctx, boss, camX, camY) {
     }
   }
 
+  // ===================== ITENS: BALEADEIRA, SANFONA, GIBÃO, CUSCUZ (v2.4) =====================
+  const ITEM_INFO = {
+    baleadeira: { label: 'BALEADEIRA! Atire pedras com ⚡', ammo: 15 },
+    sanfona: { label: 'SANFONA! Onda de forró com ⚡', ammo: 4 },
+    gibao: { label: 'GIBÃO DE COURO! Aguenta 1 golpe' },
+    cuscuz: { label: 'CUSCUZ! +1 coração' }
+  };
+  function giveItem(type) {
+    const info = ITEM_INFO[type] || {};
+    if (type === 'baleadeira' || type === 'sanfona') {
+      if (heldWeapon && heldWeapon.type === type) heldWeapon.ammo = Math.min(heldWeapon.ammo + info.ammo, info.ammo * 2);
+      else heldWeapon = { type, ammo: info.ammo };
+    } else if (type === 'gibao') heldArmor = 1;
+    else if (type === 'cuscuz') health = Math.min(maxHealth, health + 1);
+    updateWeaponUI(); updateHUD();
+  }
+  function updateWeaponUI() {
+    const w = heldWeapon, el = $('hudWeapon'), btn = $('btnWhip');
+    const ico = w ? (w.type === 'baleadeira' ? '🪨' : '🪗') : '⚡', name = w ? (w.type === 'baleadeira' ? 'BALEADEIRA' : 'SANFONA') : 'CHICOTE';
+    if (el) el.innerHTML = `<span aria-hidden="true">${ico}</span><span class="hud-val">${w ? '×' + w.ammo : ''}</span>${heldArmor ? '<span title="Gibão de couro">🦺</span>' : ''}`;
+    if (btn) { const html = `${ico}<span class="lbl">${w ? '×' + w.ammo : name}</span>`; if (btn._h !== html) { btn._h = html; btn.innerHTML = html; } }
+  }
+  function sanfonaBlast(p) {
+    const cx = p.x + p.w / 2, cy = p.y + p.h / 2, R = 190;
+    sanfonaRings.push({ x: cx, y: cy, r: 12, life: 34 });
+    sfx('checkpoint'); addScreenShake(4); triggerHaptic(30);
+    const L = currentLevel; if (!L) return;
+    L.enemies.forEach((e) => { if (!e.dead && Math.hypot(e.x + e.w / 2 - cx, e.y + e.h / 2 - cy) < R) e.hit(2, cx); });
+    if (L.boss && !L.boss.dead && Math.hypot(L.boss.x + L.boss.w / 2 - cx, L.boss.y + L.boss.h / 2 - cy) < R + 40) L.boss.takeHit(1);
+    for (const pr of projectiles) if (pr.hostile && pr.type !== 'shockwave' && Math.hypot(pr.x - cx, pr.y - cy) < R) { pr.dead = true; spawnSparks(pr.x, pr.y, 3, '#FFE066'); }
+  }
+  class PowerItem {
+    constructor(x, y, type) { this.x = x; this.y = y; this.w = 30; this.h = 30; this.type = type; this.t = Math.random() * 6; this.collected = false; }
+    update() {
+      if (this.collected) return; this.t += 0.06;
+      if (player && !player.dead && checkAABB(this, playerBox())) {
+        this.collected = true; giveItem(this.type); sfx('powerup'); addScore(250);
+        spawnBurst(this.x + 15, this.y + 15, '#FFE066', 18); floatText(this.x + 15, this.y - 6, (ITEM_INFO[this.type] || {}).label || 'ITEM!', '#FFF3BF');
+      }
+    }
+    draw(ctx, cx, cy) {
+      if (this.collected) return;
+      const x = this.x - cx + 15, y = this.y - cy + 15 + Math.sin(this.t * 2) * 4;
+      ctx.save();
+      const g = ctx.createRadialGradient(x, y, 2, x, y, 26); g.addColorStop(0, 'rgba(255,240,180,0.85)'); g.addColorStop(1, 'rgba(255,200,80,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, 26, 0, 7); ctx.fill();
+      ctx.lineWidth = 2; ctx.strokeStyle = '#1A1A1A'; ctx.lineJoin = 'round';
+      if (this.type === 'baleadeira') {
+        ctx.strokeStyle = '#6B3E1E'; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(x, y + 13); ctx.lineTo(x, y); ctx.lineTo(x - 9, y - 11); ctx.moveTo(x, y); ctx.lineTo(x + 9, y - 11); ctx.stroke();
+        ctx.strokeStyle = '#C92A2A'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x - 9, y - 11); ctx.quadraticCurveTo(x, y - 2 + Math.sin(this.t * 3) * 2, x + 9, y - 11); ctx.stroke();
+      } else if (this.type === 'sanfona') {
+        ctx.fillStyle = '#C92A2A'; ctx.fillRect(x - 13, y - 9, 8, 18); ctx.strokeRect(x - 13, y - 9, 8, 18); ctx.fillStyle = '#1C4E80'; ctx.fillRect(x + 5, y - 9, 8, 18); ctx.strokeRect(x + 5, y - 9, 8, 18);
+        ctx.fillStyle = '#F8F0E3'; const sq = Math.sin(this.t * 3) * 2; for (let i = 0; i < 4; i++) { ctx.fillRect(x - 5 + i * 2.5, y - 8 + sq * 0.3, 2, 16 - sq * 0.6); }
+        ctx.fillStyle = '#FFF'; for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.arc(x + 9, y - 5 + i * 5, 1.4, 0, 7); ctx.fill(); }
+      } else if (this.type === 'gibao') {
+        ctx.fillStyle = '#A0522D'; ctx.beginPath(); ctx.moveTo(x - 12, y - 10); ctx.lineTo(x - 4, y - 13); ctx.lineTo(x, y - 6); ctx.lineTo(x + 4, y - 13); ctx.lineTo(x + 12, y - 10); ctx.lineTo(x + 10, y + 12); ctx.lineTo(x - 10, y + 12); ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#FFD43B'; for (let i = -1; i <= 1; i++) { ctx.beginPath(); ctx.arc(x + i * 5, y + 3, 1.6, 0, 7); ctx.fill(); }
+      } else {
+        ctx.fillStyle = '#F8F0E3'; ctx.beginPath(); ctx.ellipse(x, y + 9, 15, 4, 0, 0, 7); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#FFD43B'; ctx.beginPath(); ctx.moveTo(x - 11, y + 8); ctx.quadraticCurveTo(x - 10, y - 10, x, y - 11); ctx.quadraticCurveTo(x + 10, y - 10, x + 11, y + 8); ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#FAB005'; for (let i = 0; i < 5; i++) ctx.fillRect(x - 7 + i * 3, y - 2 + (i % 2) * 4, 2, 2);
+        ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = 1.5; for (let i = -1; i <= 1; i++) { ctx.beginPath(); ctx.moveTo(x + i * 5, y - 14); ctx.quadraticCurveTo(x + i * 5 + 3, y - 18 - Math.sin(this.t * 2 + i) * 2, x + i * 5, y - 22); ctx.stroke(); }
+      }
+      ctx.restore();
+    }
+  }
+
   // ===================== MECÂNICAS DE BIOMA =====================
   function updateBiome() {
     const L = currentLevel; if (!L || !player) return;
@@ -1251,6 +1579,7 @@ function drawBossGuide(ctx, boss, camX, camY) {
       cajus: arr(spec.cajus || spec.goldenCajus).map((c, i) => new GoldenCaju(c.x, c.y, c.index != null ? c.index : i)),
       stars: arr(spec.asaBrancaStars || spec.stars || spec.asaBrancas).map((s) => new AsaBrancaStar(s.x, s.y)),
       checkpoints: arr(spec.checkpoints || spec.campfires).map((c) => new CampfireCheckpoint(c.x, c.y)),
+      items: arr(spec.items).map((it) => new PowerItem(it.x, it.y, it.type)),
       enemies: [], boss: null,
       signs: arr(spec.signs).map((s) => Object.assign({}, s)), vines: arr(spec.vines).map((s) => Object.assign({}, s)),
       geysers: arr(spec.geysers).map((s) => Object.assign({}, s)), lightCrystals: arr(spec.lightCrystals).map((s) => Object.assign({}, s)),
@@ -1266,7 +1595,7 @@ function drawBossGuide(ctx, boss, camX, camY) {
     L.spawn = { x: sp.x, y: sp.y }; L.checkpoint = { x: sp.x, y: sp.y };
     const fl = spec.flagpolePos || spec.flag || spec.flagpole || spec.goal;
     if (fl) { L.flagpole = new Flagpole(fl.x, fl.y); L.flag = L.flagpole; L.flagX = fl.x; }
-    arr(spec.enemies).forEach((e) => { try { L.enemies.push(new Enemy(e.x, e.y, e.type, e)); } catch (err) { console.warn('Enemy', err); } });
+    arr(spec.enemies).forEach((e) => { try { L.enemies.push(new Enemy(e.x, e.y, e.type, Object.assign({ worldIdx: L.worldIdx }, e))); } catch (err) { console.warn('Enemy', err); } });
     const bt = spec.bossType || (spec.boss && spec.boss.type);
     if (bt) {
       const b = spec.boss || {}; const bx = b.x != null ? b.x : 980, by = b.y != null ? b.y : 360;
@@ -1287,7 +1616,8 @@ function drawBossGuide(ctx, boss, camX, camY) {
   function resetRunState(fresh) {
     maxHealth = (getSettings().assistMode || getSettings().assist) ? 5 : 3; health = maxHealth; tookDamageThisRun = false;
     collectedCajus = [false, false, false];
-    if (fresh) { score = 0; rapaduras = 0; lives = 3; }
+    if (fresh) { score = 0; rapaduras = 0; lives = 3; heldWeapon = null; heldArmor = 0; }
+    sanfonaRings.length = 0; legendIntro = null; setTimeout(updateWeaponUI, 0);
     if (Array.isArray(projectiles)) projectiles.length = 0;
     fxParts.length = 0; fxTexts.length = 0; celebrateTimer = 0; lightBoost = 0;
   }
@@ -1508,7 +1838,9 @@ function drawBossGuide(ctx, boss, camX, camY) {
     if ($('hudStageName') && currentLevel) $('hudStageName').textContent = currentLevel.isChallenge ? 'DESAFIO DIÁRIO' : `${currentLevel.code} · ${currentLevel.name}`;
     const bb = $('bossBarContainer');
     if (bb) {
-      const b = currentLevel && currentLevel.boss; const on = !!(b && !b.dead && b.hp > 0 && currentState !== GAME_STATE.LEVEL_COMPLETE);
+      let b = currentLevel && currentLevel.boss;
+      if (!b && currentLevel && player) b = currentLevel.enemies.find((e) => e.legend && !e.dead && e.st !== 'intro' && Math.abs(e.x - player.x) < 800);
+      const on = !!(b && !b.dead && b.hp > 0 && currentState !== GAME_STATE.LEVEL_COMPLETE);
       bb.style.display = on ? 'block' : 'none';
       if (on) { $('bossHpFill').style.width = Math.max(0, b.hp / (b.maxHp || b.hp) * 100) + '%'; $('bossName').textContent = b.name || 'Chefão'; }
     }
@@ -1663,7 +1995,7 @@ function drawBossGuide(ctx, boss, camX, camY) {
     updateBiome();
     const wb = player.whipTimer > 0 && player.getWhipBox ? player.getWhipBox() : null;
     L.enemies.forEach((e) => {
-      if (e.dead) return;
+      if (e.dead) { if (e.deathTimer > 0) e.updateDeath(); else e.remove = true; return; }
       if (e.update) e.update(player, L);
       if (wb && !player.whipHitSet.has(e) && checkAABB(wb, e)) { player.whipHitSet.add(e); e.hit(1, player.x); }
       if (!e.dead && !player.dead && checkAABB(player, e)) {
@@ -1689,9 +2021,28 @@ function drawBossGuide(ctx, boss, camX, camY) {
         try { AudioEngine.playMusic("victory"); } catch (e) {}
       }
     }
-    if (Array.isArray(projectiles)) { for (let i = projectiles.length - 1; i >= 0; i--) { const pr = projectiles[i]; if (pr.update) pr.update(L); if (pr.dead || pr.remove) projectiles.splice(i, 1); } }
+    // v2.4: projéteis inimigos agora machucam o Tonho (antes passavam direto) e o chicote rebate
+    if (Array.isArray(projectiles)) { for (let i = projectiles.length - 1; i >= 0; i--) {
+      const pr = projectiles[i]; if (pr.update) pr.update(L);
+      if (!pr.dead && pr.hostile) {
+        if (wb && pr.type !== 'shockwave' && pr.type !== 'slash' && checkAABB(wb, pr)) { pr.dead = true; spawnSparks(pr.x + pr.w / 2, pr.y + pr.h / 2, 6, '#FFE066'); addScore(10); sfx('metal'); }
+        else if (!player.dead && checkAABB(pr, player)) { player.takeDamage(pr.damage || 1, pr.x + pr.w / 2); if (pr.type !== 'shockwave' && pr.type !== 'slash') pr.dead = true; }
+      } else if (!pr.dead && !pr.hostile) {
+        for (const e of L.enemies) { if (!e.dead && checkAABB(pr, e)) { e.hit(pr.damage || 1, pr.x); pr.dead = true; spawnSparks(pr.x, pr.y, 5, '#D9C9A3'); break; } }
+        if (!pr.dead && L.boss && !L.boss.dead && checkAABB(pr, L.boss)) { L.boss.takeHit(1); pr.dead = true; }
+      }
+      if (pr.dead || pr.remove) projectiles.splice(i, 1);
+    } }
+    L.items.forEach((it) => it.update());
+    for (let i = sanfonaRings.length - 1; i >= 0; i--) { const r = sanfonaRings[i]; r.r += 9; if (--r.life <= 0) sanfonaRings.splice(i, 1); }
+    if (legendIntro && --legendIntro.timer <= 0) legendIntro = null;
+    if (player.onGround && Math.abs(player.vx) > 3.5 && frameCount % 9 === 0) spawnDust(player.x + player.w / 2 - player.facing * 8, player.y + player.h, 1);
     L.rapaduras.forEach((r) => r.update()); L.cajus.forEach((c) => c.update()); L.stars.forEach((s) => s.update()); L.checkpoints.forEach((c) => c.update());
-    if (L.flagpole && (!L.boss || L.boss.dead || L.boss.hp <= 0)) L.flagpole.update();
+    const legendAlive = L.enemies.find((e) => e.legend && !e.dead);
+    if (L.flagpole && (!L.boss || L.boss.dead || L.boss.hp <= 0)) {
+      if (legendAlive && checkAABB(L.flagpole, playerBox())) { if (!L._flagWarn || frameCount - L._flagWarn > 120) { L._flagWarn = frameCount; floatText(L.flagpole.x, L.flagpole.y + 40, 'Vença a lenda primeiro!', '#FFE066'); } }
+      else if (!legendAlive) L.flagpole.update();
+    }
     if (bossIntroTimer > 0) bossIntroTimer--;
     if (player.invulnTimer > 0 && !player.invulnerable) player.invulnTimer--;
     if (!player.dead && (player.y > L.levelH + 150 || health <= 0)) player.die();
@@ -1767,6 +2118,7 @@ function drawBossGuide(ctx, boss, camX, camY) {
     L.cajus.forEach((c) => { if (!c.collected && HD && HD.drawCollectibleHD) HD.drawCollectibleHD(ctx, camX, camY, c, 'caju', frameCount); else draw(c); });
     L.stars.forEach((s) => { if (!s.collected && HD && HD.drawCollectibleHD) HD.drawCollectibleHD(ctx, camX, camY, s, 'star', frameCount); else draw(s); });
     L.checkpoints.forEach((c) => { if (HD && HD.drawCollectibleHD) HD.drawCollectibleHD(ctx, camX, camY, c, 'checkpoint', frameCount); else draw(c); });
+    L.items.forEach(draw);
     if (L.flagpole && (!L.boss || L.boss.dead || L.boss.hp <= 0)) {
       if (HD && HD.drawCollectibleHD) HD.drawCollectibleHD(ctx, camX, camY, L.flagpole, 'flagpole', frameCount);
       else draw(L.flagpole);
@@ -1774,10 +2126,20 @@ function drawBossGuide(ctx, boss, camX, camY) {
     L.enemies.forEach(draw);
     if (L.boss) { draw(L.boss); if (bossIntroTimer <= 0) drawBossGuide(ctx, L.boss, camX, camY); }
     if (Array.isArray(projectiles)) projectiles.forEach(draw);
+    if (heldArmor && !player.dead) { const ax = lerp(player.prevX, player.x, alpha) - camX + player.w / 2, ay = lerp(player.prevY, player.y, alpha) - camY + player.h / 2; ctx.save(); ctx.strokeStyle = 'rgba(214,150,90,' + (0.45 + Math.sin(frameCount * 0.12) * 0.2) + ')'; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(ax, ay, 26, 34, 0, 0, 7); ctx.stroke(); ctx.restore(); }
     draw(player);
+    sanfonaRings.forEach((r) => { ctx.save(); ctx.globalAlpha = r.life / 34; ctx.strokeStyle = '#FFE066'; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(r.x - camX, r.y - camY, r.r, 0, 7); ctx.stroke(); ctx.fillStyle = '#FFF3BF'; ctx.font = 'bold 20px sans-serif'; for (let k = 0; k < 6; k++) { const a = k * 1.047 + r.r * 0.01; ctx.fillText(k % 2 ? '♪' : '♫', r.x - camX + Math.cos(a) * r.r - 6, r.y - camY + Math.sin(a) * r.r + 6); } ctx.restore(); });
     if (typeof particles !== 'undefined' && Array.isArray(particles)) particles.forEach(draw);
     if (typeof drawFx === 'function') drawFx(ctx, camX, camY);
     if (typeof drawDarkness === 'function') drawDarkness(ctx, camX, camY, L);
+    if (legendIntro) {
+      const a = Math.min(1, legendIntro.timer / 25, (170 - legendIntro.timer) / 15);
+      ctx.save(); ctx.globalAlpha = Math.max(0, a);
+      const bY = Math.round(H * 0.3); ctx.translate(0, bY - 70); ctx.fillStyle = 'rgba(20,10,0,0.72)'; ctx.fillRect(0, 70, W, 74); ctx.fillStyle = '#FFD43B'; ctx.fillRect(0, 70, W, 2); ctx.fillRect(0, 142, W, 2);
+      ctx.textAlign = 'center'; ctx.fillStyle = '#FFE8A3'; ctx.font = 'bold 13px sans-serif'; ctx.fillText('⚠ UMA LENDA APARECEU!', W / 2, 90);
+      ctx.fillStyle = '#FFFFFF'; ctx.font = 'bold 28px Georgia, serif'; ctx.fillText(legendIntro.name.toUpperCase(), W / 2, 118);
+      ctx.fillStyle = '#FFD8A8'; ctx.font = 'italic 14px Georgia, serif'; ctx.fillText(legendIntro.sub, W / 2, 137); ctx.restore();
+    }
     if (L.boss && bossIntroTimer > 0) {
       const a = Math.min(1, bossIntroTimer / 30);
       ctx.save(); ctx.globalAlpha = a;
@@ -1854,6 +2216,7 @@ function drawBossGuide(ctx, boss, camX, camY) {
     getEnemies: () => currentLevel ? currentLevel.enemies : [],
     getBoss: () => currentLevel ? currentLevel.boss : null,
     getProjectiles: () => projectiles,
+    getParticles: () => particles, getFx: () => fxParts,
     getShake: () => screenShake, getView: () => ({ x: view.x, y: view.y }), isUnlocked, starsOf, openMap,
     SaveManager, GAME_STATE,
     loadLevel: (idx) => startGame(idx),

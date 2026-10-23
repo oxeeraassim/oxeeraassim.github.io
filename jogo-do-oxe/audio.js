@@ -19,7 +19,9 @@ const AudioEngine = (() => {
   let master = null, musicBus = null, sfxBus = null, comp = null, reverb = null, reverbSend = null;
   let noiseBuffer = null;
   let muted = false;
-  let masterVolume = 0.8, musicVolume = 0.55, sfxVolume = 0.85;
+  // v2.4: música mais baixa e macia (seguidores acharam irritante); volume ajustável nas configurações
+  let masterVolume = 0.8, musicVolume = 0.3, sfxVolume = 0.85;
+  try { const sv = JSON.parse(localStorage.getItem('oxe2_settings') || '{}'); if (typeof sv.musicVolume === 'number') musicVolume = Math.max(0, Math.min(1, sv.musicVolume / 100 * 0.6)); } catch (e) {}
   let unlocked = false;
 
   function createImpulse(duration = 1.4, decay = 2.2) {
@@ -251,9 +253,9 @@ const AudioEngine = (() => {
         const f = Math.min(base * r, 6200);
         const o = ctx.createOscillator();
         const g = ctx.createGain();
-        o.type = i === 0 ? 'sine' : 'square';
+        o.type = 'sine';
         o.frequency.value = f;
-        g.gain.value = i === 0 ? 0.6 : 0.12;
+        g.gain.value = i === 0 ? 0.45 : 0.06;
         o.connect(g); g.connect(out);
         o.start(t); o.stop(t + dur + 0.04);
       });
@@ -275,16 +277,16 @@ const AudioEngine = (() => {
 
       const lp = ctx.createBiquadFilter();
       lp.type = 'lowpass';
-      lp.frequency.value = Math.min(freq * 6 * bright, 5500);
+      lp.frequency.value = Math.min(freq * 3.2 * bright, 2600);
 
       const oscDetunes = [-7, 0, 7];
       oscDetunes.forEach((cents, i) => {
         const o = ctx.createOscillator();
         const g = ctx.createGain();
-        o.type = i === 1 ? 'sawtooth' : 'triangle';
+        o.type = i === 1 ? 'triangle' : 'sine';
         o.frequency.value = freq;
         o.detune.value = cents;
-        g.gain.value = i === 1 ? 0.45 : 0.28;
+        g.gain.value = i === 1 ? 0.5 : 0.32;
         o.connect(g); g.connect(lp);
         o.start(t); o.stop(t + d + 0.05);
       });
@@ -625,9 +627,11 @@ const AudioEngine = (() => {
 
       // 4. Melodia
       const melEv = s.mel.map.get(s.nextStep % s.mel.length);
-      if (melEv) {
-        const freq = midiToFreq((s.song.root || 48) + melEv.note);
-        sanfona(stepTime, freq, melEv.len * s.stepDur * 0.9, 0.5, dest, s.song.bright || 1);
+      const loopN = Math.floor(s.nextStep / s.mel.length);
+      if (melEv && loopN % 4 !== 3) { // v2.4: varia a repetição (uma volta em 4 só com ritmo e baixo)
+        const oct = loopN % 2 === 1 ? -12 : 0;
+        const freq = midiToFreq((s.song.root || 48) + melEv.note + oct);
+        sanfona(stepTime, freq, melEv.len * s.stepDur * 0.9, oct ? 0.38 : 0.45, dest, s.song.bright || 1);
       }
 
       s.nextStep++;
@@ -1037,6 +1041,13 @@ const AudioEngine = (() => {
     return muted;
   }
 
+  function setMusicVolume(v01) {
+    const n = Number(v01);
+    musicVolume = Math.max(0, Math.min(1, isFinite(n) ? n : musicVolume));
+    if (musicBus && ctx) { try { musicBus.gain.setTargetAtTime(musicVolume, ctx.currentTime, 0.05); } catch (e) {} }
+    return musicVolume;
+  }
+
   function setMasterVolume(v) {
     const n = Number(v);
     masterVolume = Math.max(0, Math.min(1, isFinite(n) ? n : masterVolume));
@@ -1059,6 +1070,7 @@ const AudioEngine = (() => {
     playSFX,
     toggleMute,
     setMasterVolume,
+    setMusicVolume,
     SONGS,
     SFX_NAMES,
     get unlocked() { return unlocked; },

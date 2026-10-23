@@ -1,7 +1,7 @@
 # TESTES — Oxe, era assim? 2
 
-> Gerado automaticamente por `test_oxe2_real.js` em 2026-10-23T18:43:50.382Z (Node v22.22.0).
-> Arquivos REAIS carregados de `/tmp/claude-0/-home-claude/f0d99e40-5a8c-505a-9a5e-dfa00bcbece7/scratchpad/jogo` via `vm.runInContext`. Duração: 9803 ms.
+> Gerado automaticamente por `test_oxe2_real.js` em 2026-10-23T19:06:51.420Z (Node v22.22.0).
+> Arquivos REAIS carregados de `/tmp/claude-0/-home-claude/f0d99e40-5a8c-505a-9a5e-dfa00bcbece7/scratchpad/jogo` via `vm.runInContext`. Duração: 13787 ms.
 
 **Resultado: 12/12 aprovados.**
 
@@ -33,10 +33,10 @@
     "game.js"
   ],
   "loaded": {
-    "audio.js": "36251 bytes",
-    "levels.js": "42536 bytes",
+    "audio.js": "37043 bytes",
+    "levels.js": "44441 bytes",
     "graphics_hd.js": "74532 bytes",
-    "game.js": "136409 bytes"
+    "game.js": "170401 bytes"
   },
   "swListeners": [
     "install",
@@ -56,7 +56,7 @@
     "OxeLevels": true,
     "__OXE_TEST__": true
   },
-  "idsNoHtml": 85,
+  "idsNoHtml": 88,
   "idsPedidosAusentes": [],
   "stateAposBoot": 0
 }
@@ -574,8 +574,8 @@
   "especiesRenderizadas": 18,
   "inimigosFase1_1": 13,
   "minInimigosPorFase": 13,
-  "maxInimigosPorFase": 23,
-  "mediaInimigosPorFase": 17.3,
+  "maxInimigosPorFase": 24,
+  "mediaInimigosPorFase": 19.5,
   "totalZabumbas30Fases": 37,
   "totalPlataformasMoveis": 28,
   "totalRodasMandacaru": 49,
