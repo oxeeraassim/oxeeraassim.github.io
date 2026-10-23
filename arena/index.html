@@ -8,19 +8,50 @@
 <style>
 :root{--bg:#e9e3d6;--card:#fbf8f1;--ink:#1f2a44;--rule:#c8433a;--accent:#a8521f;--gold:#d49b35;--dark:#1a120b;--ok:#2f7d4f}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-html,body{height:100%}
-body{background:var(--dark);font-family:'Literata',Georgia,serif;color:var(--ink);display:flex;flex-direction:column;align-items:center;margin:0;padding:0;width:100%;min-height:100vh;min-height:100dvh;overflow-x:hidden}
-#app{width:100%;max-width:480px;min-height:100%;background:var(--bg);position:relative;overflow:hidden;display:flex;flex-direction:column}
-.screen{display:none;flex-direction:column;flex:1;min-height:100vh}
-.screen.on{display:flex}
-button{font-family:inherit;cursor:pointer;border:none}
-.mono{font-family:'Courier Prime',monospace}
-.slab{font-family:'Zilla Slab',serif}
-
-
-/* Proteção WebView e Game Feel */
-html,body{height:100%; overscroll-behavior:none; touch-action:none;}
-#app{width:100%;max-width:480px;height:100dvh;min-height:100dvh;background:var(--bg);position:relative;overflow:hidden;display:flex;flex-direction:column;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);}
+html, body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  touch-action: manipulation;
+  -webkit-text-size-adjust: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+body {
+  background: var(--dark);
+  font-family: 'Literata', Georgia, serif;
+  color: var(--ink);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+#app {
+  width: 100%;
+  max-width: 480px;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--bg);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
+  padding: 0 0 calc(30px + env(safe-area-inset-bottom));
+}
+.screen {
+  display: none;
+  flex-direction: column;
+  flex: 1 0 auto;
+  width: 100%;
+  padding-bottom: 40px;
+}
+.screen.on { display: flex; }
+button { font-family: inherit; cursor: pointer; border: none; }
+.mono { font-family: 'Courier Prime', monospace; }
+.slab { font-family: 'Zilla Slab', serif; }
 .shake{animation:shake .25s ease-in-out;}
 @keyframes shake{0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-6px)} 40%,80%{transform:translateX(6px)}}
 .war-bar{background:#110b06;color:#ffd166;font-family:'Courier Prime',monospace;font-size:.68rem;padding:4px 10px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #3d2a1b;overflow:hidden;white-space:nowrap;}
