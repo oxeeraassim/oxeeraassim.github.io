@@ -286,6 +286,26 @@ button { font-family: inherit; cursor: pointer; border: none; }
           </select>
         </div>
       </div>
+
+      <!-- FOTO NO BONECO (OPCIONAL) -->
+      <div style="border-top:1px dashed #d8cfbd; margin-top:8px; padding-top:8px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px;">
+          <span style="font-family:'Courier Prime',monospace; font-size:.68rem; font-weight:700; color:#5c4033;">📸 SUA FOTO NO BONECO</span>
+          <span id="photoPreviewBadge" style="width:26px; height:26px; border-radius:50%; background:#1c1109; border:1.5px solid #d49b35; display:inline-flex; align-items:center; justify-content:center; overflow:hidden; font-size:.85rem;">👤</span>
+        </div>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <label for="inputBonecoPhoto" style="flex:1; background:#1f2a44; color:#fff; padding:6px 10px; border-radius:5px; text-align:center; font-family:'Courier Prime',monospace; font-size:.7rem; font-weight:700; cursor:pointer;">
+            📷 Escolher Foto
+          </label>
+          <input type="file" id="inputBonecoPhoto" accept="image/*" onchange="handleBonecoPhotoUpload(event)" style="display:none;">
+          <button type="button" id="btnRemoverFoto" onclick="removeBonecoPhoto()" style="background:#8c2d19; color:#fff; border:none; padding:6px 10px; border-radius:5px; font-family:'Courier Prime',monospace; font-size:.7rem; cursor:pointer; display:none;">
+            🗑️ Remover
+          </button>
+        </div>
+        <div style="font-size:.62rem; color:#857563; margin-top:4px; font-family:'Courier Prime',monospace;">
+          Dica: sua foto aparece na cara do seu boneco na corda e nos duelos!
+        </div>
+      </div>
     </div>
 
     <!-- SELETOR DE DIFICULDADE -->
@@ -619,7 +639,64 @@ function initHome(){
   if ($('selDificuldade')) $('selDificuldade').value = S.dif;
   const av = getAvatarDisplay(S.avatar);
   if ($('avatarPreviewBadge')) $('avatarPreviewBadge').textContent = av.full;
+  refreshPhotoPreview();
 }
+
+function handleBonecoPhotoUpload(e) {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(evt) {
+    const tempImg = new Image();
+    tempImg.onload = function() {
+      const oc = document.createElement('canvas');
+      oc.width = 128; oc.height = 128;
+      const ox = oc.getContext('2d');
+      const side = Math.min(tempImg.width, tempImg.height);
+      const sx = (tempImg.width - side) / 2;
+      const sy = Math.max(0, (tempImg.height - side) * 0.35);
+      ox.drawImage(tempImg, sx, sy, side, side, 0, 0, 128, 128);
+      const dataUrl = oc.toDataURL('image/jpeg', 0.85);
+      localStorage.setItem('oxe_arena_photo', dataUrl);
+      photo = new Image();
+      photo.onload = function() {
+        refreshPhotoPreview();
+        toast('Foto do boneco atualizada!');
+      };
+      photo.src = dataUrl;
+    };
+    tempImg.src = evt.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeBonecoPhoto() {
+  localStorage.removeItem('oxe_arena_photo');
+  photo = null;
+  refreshPhotoPreview();
+  toast('Foto removida!');
+}
+
+function refreshPhotoPreview() {
+  const badge = $('photoPreviewBadge');
+  const btnRem = $('btnRemoverFoto');
+  if (photo && photo.src) {
+    if (badge) {
+      badge.style.backgroundImage = 'url(' + photo.src + ')';
+      badge.style.backgroundSize = 'cover';
+      badge.style.backgroundPosition = 'center';
+      badge.textContent = '';
+    }
+    if (btnRem) btnRem.style.display = 'inline-block';
+  } else {
+    if (badge) {
+      badge.style.backgroundImage = 'none';
+      badge.textContent = '👤';
+    }
+    if (btnRem) btnRem.style.display = 'none';
+  }
+}
+
 function patente(){let p=PATENTES[0],n=null;for(let i=0;i<PATENTES.length;i++){if(S.xp>=PATENTES[i][0]){p=PATENTES[i];n=PATENTES[i+1]||null}}return{p,n}}
 function refreshHome(){
   const tot=Object.values(S.stars).reduce((a,b)=>a+b,0);
@@ -937,7 +1014,7 @@ function startCabocloValente() {
   if (typeof initAudio === 'function') initAudio();
   B = {
     arena: -1,
-    a: { nome: 'Sertão Bravio', mode: 'cabo', sky: ['#2b140b', '#000'] },
+    a: { nome: 'Sertão Bravio', scene: 'sertao', sky: ['#2b140b', '#7a2e14', '#e07a38'], mode: 'cabo' },
     mode: 'cabo',
     isCaboclo: true,
     qs: shuffle([...Q]),
@@ -961,7 +1038,7 @@ function startCronometroInsano() {
   if (typeof initAudio === 'function') initAudio();
   B = {
     arena: -1,
-    a: { nome: 'Relógio do Sertão', mode: 'corrida', sky: ['#1c180e', '#000'] },
+    a: { nome: 'Relógio do Sertão', scene: 'sertao', sky: ['#1c180e', '#5a2512', '#b8642a'], mode: 'corrida' },
     mode: 'corrida',
     isCronometro: true,
     cronoLeft: 60,
@@ -1231,7 +1308,18 @@ const scene={
   }
 };
 
-function sky(cols){const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,cols[0]);g.addColorStop(.6,cols[1]);g.addColorStop(1,cols[2]);ctx.fillStyle=g;ctx.fillRect(0,0,W,H)}
+function sky(cols){
+  if(!cols || !Array.isArray(cols) || cols.length === 0) cols = ['#2b1b5a', '#c2602b', '#f2b45a'];
+  const c0 = cols[0] || '#2b1b5a';
+  const c1 = cols[1] || cols[0] || '#c2602b';
+  const c2 = cols[2] || cols[1] || cols[0] || '#f2b45a';
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, c0);
+  g.addColorStop(0.6, c1);
+  g.addColorStop(1, c2);
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+}
 function hills(y,col,amp,freq,off){ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(0,H);for(let x=0;x<=W;x+=8)ctx.lineTo(x,y+Math.sin(x*freq+off)*amp+Math.sin(x*freq*2.3+off)*amp*.4);ctx.lineTo(W,H);ctx.fill()}
 function mandacaru(x,y,s,c='#2f6b3a'){ctx.save();ctx.translate(x,y);ctx.scale(s,s);ctx.fillStyle=c;const R=(a,b,w,h)=>{ctx.beginPath();ctx.roundRect(a,b,w,h,w/2);ctx.fill()};R(-6,-70,12,70);R(-22,-50,10,26);R(-22,-30,20,9);R(10,-58,10,30);R(4,-34,16,9);ctx.restore()}
 function casario(y,cols){let x=-10,i=0;while(x<W){const w=34+((i*17)%18),h=34+((i*23)%26);ctx.fillStyle=cols[i%cols.length];ctx.fillRect(x,y-h,w,h);ctx.fillStyle='#7a2e14';ctx.beginPath();ctx.moveTo(x-2,y-h);ctx.lineTo(x+w/2,y-h-10);ctx.lineTo(x+w+2,y-h);ctx.fill();ctx.fillStyle='rgba(255,255,255,.85)';ctx.fillRect(x+6,y-h+8,7,10);ctx.fillRect(x+w-13,y-h+8,7,10);ctx.fillStyle='#3b2416';ctx.fillRect(x+w/2-4,y-14,8,14);x+=w;i++}}
@@ -1310,22 +1398,85 @@ function boneco(x,y,{enemy=false,mood='idle',lean=0,hat=0,s=1,label=''}={}){
   // cabeça
   const HY=-50,R=17;
   ctx.save();ctx.beginPath();ctx.arc(0,HY,R,0,7);ctx.clip();
-  if(!enemy&&photo&&photo.complete){ctx.save();if(enemy)ctx.scale(-1,1);ctx.drawImage(photo,-R,HY-R,R*2,R*2);ctx.restore()}
-  else{const fg=ctx.createRadialGradient(4,HY-4,3,0,HY,R);fg.addColorStop(0,enemy?'#f2b3a4':'#f4cfa6');fg.addColorStop(1,enemy?'#c46b5a':'#c98a55');ctx.fillStyle=fg;ctx.fillRect(-R,HY-R,R*2,R*2);
-    if(mood==='panic'){[0,9].forEach(e=>{ctx.fillStyle='#fff';ctx.beginPath();ctx.ellipse(e,HY-3,5,6.5,0,0,7);ctx.fill();ctx.fillStyle='#111';ctx.beginPath();ctx.arc(e+1,HY-3,1.8,0,7);ctx.fill()});ctx.fillStyle='#4a0e0e';ctx.beginPath();ctx.ellipse(5,HY+8,4.5,5.5,0,0,7);ctx.fill()}
-    else if(mood==='win'){ctx.strokeStyle='#222';ctx.lineWidth=2;[0,9].forEach(e=>{ctx.beginPath();ctx.arc(e,HY-2,3,Math.PI,0);ctx.stroke()});ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(4,HY+4,6,0,Math.PI);ctx.fill()}
-    else{[0,9].forEach(e=>{ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(e,HY-2,3.4,0,7);ctx.fill();ctx.fillStyle='#111';ctx.beginPath();ctx.arc(e+1,HY-2,1.8,0,7);ctx.fill()});ctx.strokeStyle='#3a1d0a';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-5,HY-8);ctx.lineTo(2,HY-6);ctx.moveTo(14,HY-8);ctx.lineTo(7,HY-6);ctx.stroke();ctx.fillStyle='#fff';ctx.fillRect(0,HY+5,9,4)}}
+  if(!enemy&&photo&&photo.complete){
+    ctx.save();
+    if(enemy)ctx.scale(-1,1);
+    const pw = photo.naturalWidth || photo.width || 1;
+    const ph = photo.naturalHeight || photo.height || 1;
+    const side = Math.min(pw, ph);
+    const sx = (pw - side) / 2;
+    const sy = Math.max(0, (ph - side) * 0.35); // Enquadramento central no rosto
+    ctx.drawImage(photo, sx, sy, side, side, -R, HY-R, R*2, R*2);
+    ctx.restore();
+  }
+  else{
+    const fg=ctx.createRadialGradient(4,HY-4,3,0,HY,R);
+    fg.addColorStop(0,enemy?'#f2b3a4':'#f4cfa6');
+    fg.addColorStop(1,enemy?'#c46b5a':'#c98a55');
+    ctx.fillStyle=fg;ctx.fillRect(-R,HY-R,R*2,R*2);
+    if(mood==='panic'){
+      [0,9].forEach(e=>{ctx.fillStyle='#fff';ctx.beginPath();ctx.ellipse(e,HY-3,5,6.5,0,0,7);ctx.fill();ctx.fillStyle='#111';ctx.beginPath();ctx.arc(e+1,HY-3,1.8,0,7);ctx.fill()});
+      ctx.fillStyle='#4a0e0e';ctx.beginPath();ctx.ellipse(5,HY+8,4.5,5.5,0,0,7);ctx.fill();
+    }
+    else if(mood==='win'){
+      ctx.strokeStyle='#222';ctx.lineWidth=2;[0,9].forEach(e=>{ctx.beginPath();ctx.arc(e,HY-2,3,Math.PI,0);ctx.stroke()});
+      ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(4,HY+4,6,0,Math.PI);ctx.fill();
+    }
+    else{
+      [0,9].forEach(e=>{ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(e,HY-2,3.4,0,7);ctx.fill();ctx.fillStyle='#111';ctx.beginPath();ctx.arc(e+1,HY-2,1.8,0,7);ctx.fill()});
+      ctx.strokeStyle='#3a1d0a';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-5,HY-8);ctx.lineTo(2,HY-6);ctx.moveTo(14,HY-8);ctx.lineTo(7,HY-6);ctx.stroke();
+      ctx.fillStyle='#fff';ctx.fillRect(0,HY+5,9,4);
+    }
+    // Adereço do avatar se for jogador (óculos ou flor)
+    if(!enemy && S && S.avatar){
+      if(S.avatar.adereco === 'oculos'){
+        ctx.strokeStyle='#1a120b'; ctx.lineWidth=1.6;
+        ctx.beginPath(); ctx.arc(0, HY-2, 4.2, 0, 7); ctx.arc(9, HY-2, 4.2, 0, 7); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(4.2, HY-2); ctx.lineTo(4.8, HY-2); ctx.stroke();
+      } else if(S.avatar.adereco === 'flor'){
+        ctx.fillStyle='#ec4899'; ctx.beginPath(); ctx.arc(-11, HY-10, 3.2, 0, 7); ctx.fill();
+        ctx.fillStyle='#fbbf24'; ctx.beginPath(); ctx.arc(-11, HY-10, 1.2, 0, 7); ctx.fill();
+      }
+    }
+    // Adereço do rival
+    if(enemy){
+      if(B && B.isOxedle){
+        ctx.fillStyle='#1c1917'; ctx.fillRect(-2, HY-5, 14, 5);
+        ctx.strokeStyle='#f59e0b'; ctx.lineWidth=1; ctx.strokeRect(-2, HY-5, 14, 5);
+      } else if(B && B.isCaboclo){
+        ctx.fillStyle='#991b1b'; ctx.fillRect(-R, HY-9, R*2, 4);
+      }
+    }
+  }
   if(mood==='soot'){ctx.fillStyle='rgba(20,20,20,.75)';ctx.fillRect(-R,HY-R,R*2,R*2)}
   ctx.restore();
   ctx.strokeStyle=enemy?'#e07a6c':'#e8c46a';ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,HY,R,0,7);ctx.stroke();
   if(mood==='idle'&&t%24<12){ctx.fillStyle='#7cc7f2';ctx.beginPath();ctx.ellipse(-13,HY-6+(t%12)*.6,1.8,3,.4,0,7);ctx.fill()}
-  // chapéu de couro (meia-lua)
+  
+  // chapéu de couro e variantes sertanejas
   ctx.save();ctx.translate(0,HY-10-hat);if(hat)ctx.rotate(Math.sin(t*.4)*.5);
-  ctx.fillStyle='#2e1508';ctx.beginPath();ctx.ellipse(0,1,22,5,0,0,7);ctx.fill();
-  const hg=ctx.createLinearGradient(0,-20,0,2);hg.addColorStop(0,enemy?'#7a2a20':'#c27a2c');hg.addColorStop(1,enemy?'#3d0f0a':'#6b3512');
-  ctx.fillStyle=hg;ctx.strokeStyle='#f0d27a';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(0,1,19,Math.PI,0);ctx.quadraticCurveTo(0,-3,-19,1);ctx.fill();ctx.stroke();
-  ctx.setLineDash([2,2]);ctx.beginPath();ctx.arc(0,1,15.5,Math.PI+.2,-.2);ctx.stroke();ctx.setLineDash([]);
-  ctx.fillStyle='#f0d27a';[-9,0,9].forEach((sx,k)=>{ctx.beginPath();ctx.arc(sx,k===1?-11:-8,k===1?3.2:2.4,0,7);ctx.fill()});
+  const chap = (!enemy && S && S.avatar && S.avatar.chapeu) ? S.avatar.chapeu : 'couro';
+  if(chap === 'palha' && !enemy){
+    ctx.fillStyle='#d9a74a'; ctx.beginPath(); ctx.ellipse(0, 1, 23, 6, 0, 0, 7); ctx.fill();
+    ctx.fillStyle='#f5cc76'; ctx.beginPath(); ctx.arc(0, 1, 15, Math.PI, 0); ctx.fill();
+    ctx.strokeStyle='#996d24'; ctx.lineWidth=1.2; ctx.stroke();
+  } else if(chap === 'boina' && !enemy){
+    ctx.fillStyle='#1e293b'; ctx.beginPath(); ctx.ellipse(2, -3, 19, 9, -.2, 0, 7); ctx.fill();
+    ctx.fillStyle='#0f172a'; ctx.beginPath(); ctx.arc(0, -11, 2, 0, 7); ctx.fill();
+  } else if(chap === 'males' && !enemy){
+    ctx.fillStyle='#f8fafc'; ctx.beginPath(); ctx.ellipse(0, -4, 18, 12, 0, 0, 7); ctx.fill();
+    ctx.strokeStyle='#cbd5e1'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(-16, -2); ctx.quadraticCurveTo(0, -10, 16, -2); ctx.stroke();
+    ctx.fillStyle='#f59e0b'; ctx.beginPath(); ctx.arc(0, -6, 2.5, 0, 7); ctx.fill();
+  } else {
+    ctx.fillStyle='#2e1508';ctx.beginPath();ctx.ellipse(0,1,22,5,0,0,7);ctx.fill();
+    const hg=ctx.createLinearGradient(0,-20,0,2);hg.addColorStop(0,enemy?'#7a2a20':'#c27a2c');hg.addColorStop(1,enemy?'#3d0f0a':'#6b3512');
+    ctx.fillStyle=hg;ctx.strokeStyle='#f0d27a';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(0,1,19,Math.PI,0);ctx.quadraticCurveTo(0,-3,-19,1);ctx.fill();ctx.stroke();
+    ctx.setLineDash([2,2]);ctx.beginPath();ctx.arc(0,1,15.5,Math.PI+.2,-.2);ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle='#f0d27a';[-9,0,9].forEach((sx,k)=>{ctx.beginPath();ctx.arc(sx,k===1?-11:-8,k===1?3.2:2.4,0,7);ctx.fill()});
+    if(!enemy && S && S.avatar && S.avatar.adereco === 'estrela'){
+      ctx.fillStyle='#fbbf24'; ctx.beginPath(); ctx.arc(0, -8, 3.5, 0, 7); ctx.fill();
+    }
+  }
   ctx.restore();
   if(label){ctx.save();if(enemy)ctx.scale(-1,1);ctx.font='700 9px "Courier Prime"';const w=ctx.measureText(label).width+12;ctx.fillStyle='rgba(15,10,6,.85)';ctx.beginPath();ctx.roundRect(-w/2,HY-46-hat,w,14,7);ctx.fill();ctx.fillStyle=enemy?'#ffb3a8':'#ffe08a';ctx.textAlign='center';ctx.fillText(label,0,HY-36-hat);ctx.restore()}
   ctx.restore();
@@ -1403,7 +1554,7 @@ function loop(){
   t++;
   if($('battle').classList.contains('on')&&B){
     ctx.save();if(shake>0){ctx.translate((Math.random()-.5)*shake,(Math.random()-.5)*shake);shake*=.85;if(shake<.5)shake=0}
-    background();drawMode();
+    try { background(); drawMode(); } catch(err) { console.warn('Render error safely handled:', err); }
     for(let i=parts.length-1;i>=0;i--){const p=parts[i];p.x+=p.vx;p.y+=p.vy;p.vy+=p.k==='dust'?-.02:.22;p.l-=.02;if(p.l<=0){parts.splice(i,1);continue}
       ctx.globalAlpha=p.l;ctx.fillStyle=p.c;if(p.k==='coin'){ctx.save();ctx.translate(p.x,p.y);ctx.scale(Math.cos(t*.2+p.rot),1);ctx.beginPath();ctx.arc(0,0,p.r+1,0,7);ctx.fill();ctx.restore()}else{ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,7);ctx.fill()}ctx.globalAlpha=1}
     ctx.restore();
@@ -1653,7 +1804,7 @@ function startOxedle() {
   // Objeto B 100% compatível com a engine de batalha do jogo
   B = {
     arena: -99,
-    a: { uf: 'NE', nome: '🌵 Oxedle: Desafio do Dia', sub: 'Palpite Diário das 06h', mode: 'cabo' },
+    a: { uf: 'NE', nome: '🌵 Oxedle: Desafio do Dia', sub: 'Cabo de guerra contra o Guardião das 06h', scene: 'sertao', sky: ['#2e153b', '#b84a2b', '#f5be6b'], mode: 'cabo' },
     mode: 'cabo',
     qs: qList,
     r: 0,
