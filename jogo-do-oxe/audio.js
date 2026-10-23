@@ -607,6 +607,87 @@ const AudioEngine = (() => {
           }
           break;
         }
+
+        case 'spine': {
+          // Disparo de espinho do cacto
+          const o = ctx.createOscillator();
+          const g = ctx.createGain();
+          o.type = 'square';
+          o.frequency.setValueAtTime(800, t);
+          o.frequency.exponentialRampToValueAtTime(320, t + 0.08);
+          env(g, t, 0.002, 0.22, 0.08);
+          o.connect(g); g.connect(sfxBus);
+          o.start(t); o.stop(t + 0.09);
+          break;
+        }
+
+        case 'bee': {
+          // BÉÉÉ! do bode furioso
+          for (let i = 0; i < 4; i++) {
+            const o = ctx.createOscillator();
+            const g = ctx.createGain();
+            o.type = 'sawtooth';
+            const f = 460 + (i % 2) * 50;
+            o.frequency.setValueAtTime(f, t + i * 0.06);
+            env(g, t + i * 0.06, 0.005, 0.25, 0.07);
+            o.connect(g); g.connect(sfxBus);
+            o.start(t + i * 0.06); o.stop(t + i * 0.06 + 0.08);
+          }
+          break;
+        }
+
+        case 'whistle': {
+          // Assovio cortante da Comadre Fulozinha
+          const o = ctx.createOscillator();
+          const g = ctx.createGain();
+          o.type = 'sine';
+          o.frequency.setValueAtTime(1700, t);
+          o.frequency.linearRampToValueAtTime(2400, t + 0.25);
+          o.frequency.linearRampToValueAtTime(1900, t + 0.45);
+          env(g, t, 0.02, 0.25, 0.45);
+          o.connect(g); g.connect(sfxBus);
+          o.start(t); o.stop(t + 0.47);
+          break;
+        }
+
+        case 'miasma': {
+          // Miasma tenebroso do Papa-Figo
+          const o = ctx.createOscillator();
+          const g = ctx.createGain();
+          o.type = 'sawtooth';
+          o.frequency.setValueAtTime(140, t);
+          o.frequency.exponentialRampToValueAtTime(45, t + 0.35);
+          env(g, t, 0.01, 0.3, 0.35);
+          o.connect(g); g.connect(sfxBus);
+          o.start(t); o.stop(t + 0.37);
+          break;
+        }
+
+        case 'bonk': {
+          // Colisão na parede / atordoamento
+          const o = ctx.createOscillator();
+          const g = ctx.createGain();
+          o.type = 'triangle';
+          o.frequency.setValueAtTime(110, t);
+          o.frequency.exponentialRampToValueAtTime(35, t + 0.2);
+          env(g, t, 0.003, 0.4, 0.2);
+          o.connect(g); g.connect(sfxBus);
+          o.start(t); o.stop(t + 0.22);
+          break;
+        }
+
+        case 'metal': {
+          // Escudo blindado metálico
+          const o1 = ctx.createOscillator();
+          const o2 = ctx.createOscillator();
+          const g = ctx.createGain();
+          o1.type = 'square'; o1.frequency.setValueAtTime(1200, t);
+          o2.type = 'triangle'; o2.frequency.setValueAtTime(1850, t);
+          env(g, t, 0.002, 0.35, 0.2);
+          o1.connect(g); o2.connect(g); g.connect(sfxBus);
+          o1.start(t); o2.start(t); o1.stop(t + 0.22); o2.stop(t + 0.22);
+          break;
+        }
       }
     } catch (e) {}
   }

@@ -476,13 +476,48 @@
       display: none;
     }
 
+    .world-tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .world-tab {
+      padding: 8px 18px;
+      background: rgba(44, 24, 16, 0.85);
+      border: 2px solid rgba(245, 159, 0, 0.4);
+      border-radius: 99px;
+      color: #E9ECEF;
+      font-size: 0.9rem;
+      font-weight: 800;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: 'Cinzel', serif;
+    }
+
+    .world-tab:hover {
+      background: rgba(70, 38, 26, 0.95);
+      border-color: var(--oxe-gold);
+      transform: translateY(-2px);
+    }
+
+    .world-tab.active {
+      background: linear-gradient(180deg, #F59F00 0%, #D9480F 100%);
+      border-color: #FFD43B;
+      color: #FFF;
+      box-shadow: 0 4px 14px rgba(217, 72, 15, 0.5);
+    }
+
     .world-title {
       font-family: 'Cinzel', serif;
-      font-size: 1.6rem;
+      font-size: 1.5rem;
       font-weight: 900;
       color: var(--oxe-gold);
       margin-bottom: 16px;
       letter-spacing: 1px;
+      text-align: center;
     }
 
     .level-grid {
@@ -714,32 +749,20 @@
       </div>
     </div>
 
-    <!-- TELA 2: MAPA DOS MUNDOS -->
+    <!-- TELA 2: MAPA DOS MUNDOS (3 MUNDOS • 12 FASES ÉPICAS) -->
     <div class="screen-overlay" id="worldMapScreen">
-      <div class="hero-badge">🗺️ MAPA DO SERTÃO</div>
-      <h2 class="world-title" id="worldTitleText">Mundo 1: O Sertão dos Cactos Encantados</h2>
+      <div class="hero-badge">🗺️ MAPA DO SERTÃO • 12 FASES</div>
+
+      <div class="world-tabs" id="worldTabs">
+        <button class="world-tab active" onclick="switchWorldMap(0)">🌵 Mundo 1</button>
+        <button class="world-tab" onclick="switchWorldMap(1)">🦇 Mundo 2</button>
+        <button class="world-tab" onclick="switchWorldMap(2)">☀️ Mundo 3</button>
+      </div>
+
+      <h2 class="world-title" id="worldTitleText">Mundo 1: O Sertão dos Mandacarus</h2>
 
       <div class="level-grid" id="levelGrid">
-        <div class="level-card" onclick="selectLevel(0)">
-          <div class="level-num">1-1</div>
-          <div class="level-stars">★★★</div>
-          <span style="font-size:0.75rem; color:#ADB5BD;">Mandacaru</span>
-        </div>
-        <div class="level-card" onclick="selectLevel(1)">
-          <div class="level-num">1-2</div>
-          <div class="level-stars">★★★</div>
-          <span style="font-size:0.75rem; color:#ADB5BD;">Tatu-Bola</span>
-        </div>
-        <div class="level-card" onclick="selectLevel(2)">
-          <div class="level-num">1-3</div>
-          <div class="level-stars">★★★</div>
-          <span style="font-size:0.75rem; color:#ADB5BD;">Ruínas</span>
-        </div>
-        <div class="level-card" onclick="selectLevel(3)" style="border-color:#FA5252;">
-          <div class="level-num" style="color:#FA5252;">👑 1-4</div>
-          <div class="level-stars">★★★</div>
-          <span style="font-size:0.75rem; color:#FA5252; font-weight:800;">CHEFÃO</span>
-        </div>
+        <!-- Renderizado dinamicamente via switchWorldMap() -->
       </div>
 
       <button class="menu-btn sec" id="btnCloseMap">
