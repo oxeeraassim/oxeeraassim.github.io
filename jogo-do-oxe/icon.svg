@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <radialGradient id="sunGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFE066"/>
+      <stop offset="40%" stop-color="#F59F00"/>
+      <stop offset="100%" stop-color="#E8590C" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#2C1810"/>
+      <stop offset="100%" stop-color="#0B0806"/>
+    </linearGradient>
+    <linearGradient id="hatGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#C25E00"/>
+      <stop offset="50%" stop-color="#8F3B00"/>
+      <stop offset="100%" stop-color="#5C2500"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="8" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background Squircle -->
+  <rect x="16" y="16" width="480" height="480" rx="100" fill="url(#bgGrad)" stroke="#F59F00" stroke-width="8"/>
+
+  <!-- Glowing Sun Rays -->
+  <circle cx="256" cy="220" r="160" fill="url(#sunGlow)"/>
+
+  <!-- Sun Circle -->
+  <circle cx="256" cy="220" r="85" fill="#FFD43B" filter="url(#glow)"/>
+
+  <!-- Leather Hat (Chapéu de Couro Sertanejo) -->
+  <path d="M190 240 Q256 160 322 240 Z" fill="url(#hatGrad)" stroke="#FFD43B" stroke-width="4"/>
+  <!-- Hat Brim -->
+  <ellipse cx="256" cy="250" rx="130" ry="28" fill="#8F3B00" stroke="#FFE066" stroke-width="4"/>
+  <!-- Silver Stars on Hat -->
+  <circle cx="220" cy="235" r="5" fill="#FFF9DB"/>
+  <circle cx="256" cy="232" r="6" fill="#FFF9DB"/>
+  <circle cx="292" cy="235" r="5" fill="#FFF9DB"/>
+
+  <!-- Title Text -->
+  <text x="256" y="370" font-family="'Cinzel', serif, Georgia" font-weight="900" font-size="64" fill="#FFD43B" text-anchor="middle" filter="url(#glow)" letter-spacing="4">OXE!</text>
+  <text x="256" y="420" font-family="'Outfit', sans-serif" font-weight="800" font-size="24" fill="#FFA94D" text-anchor="middle" letter-spacing="3">O JOGO 2D</text>
+</svg>
