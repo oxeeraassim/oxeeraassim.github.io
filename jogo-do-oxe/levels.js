@@ -570,11 +570,11 @@
     var BUD = enemyBudget(wIdx, cfg.stageIdx);
     if (!S.isChallenge) BUD = { min: Math.round(BUD.min * 1.5), max: Math.round(BUD.max * 1.5) }; // fases maiores, mais bichos
     if (S.isChallenge) BUD = { min: 10, max: 16 };
-    // v3.2: com dois personagens fica mais difícil: 50% mais bichos e mais obstáculos
-    if (S.duo) BUD = { min: Math.round(BUD.min * 1.5), max: Math.round(BUD.max * 1.5) + 2 };
     // v3.3: 12% a 20% menos bichos por fase (mais leve no começo, a subida continua)
     var EZ = 1 - Math.min(0.20, 0.12 + 0.012 * Math.max(0, wIdx | 0));
     BUD = { min: Math.max(3, Math.round(BUD.min * EZ)), max: Math.max(4, Math.round(BUD.max * EZ)) };
+    // v4.1: com dois personagens (dupla sertaneja), a fase tem +70% de inimigos e perigos redobrados
+    if (S.duo) BUD = { min: Math.round(BUD.min * 1.7), max: Math.round(BUD.max * 1.7) + 3 };
     var shooter = (G.shooter && okE(G.shooter)) ? G.shooter : null;
     var useBode = !!G.bode && okE('bode_doido');
     var themeA = G.themes[0], themeB = G.themes[1] || G.themes[0];

@@ -410,14 +410,15 @@
     }
     .touch-btn.active { transform: scale(0.9); background: rgba(232, 89, 12, 0.6); border-color: #FFD43B; }
 
-    #dpadLeft, #dpadRight {
-      bottom: calc(var(--safe-bottom) + 18px);
-      width: calc(66px * var(--touch-scale));
-      height: calc(66px * var(--touch-scale));
-      font-size: calc(26px * var(--touch-scale));
+    #dpadLeft, #dpadRight, #dpadUp, #dpadDown {
+      width: calc(62px * var(--touch-scale));
+      height: calc(62px * var(--touch-scale));
+      font-size: calc(22px * var(--touch-scale));
     }
-    #dpadLeft  { left: calc(var(--safe-left) + 18px); }
-    #dpadRight { left: calc(var(--safe-left) + 18px + 80px * var(--touch-scale)); }
+    #dpadLeft  { left: calc(var(--safe-left) + 10px); bottom: calc(var(--safe-bottom) + 52px * var(--touch-scale)); }
+    #dpadRight { left: calc(var(--safe-left) + 10px + 98px * var(--touch-scale)); bottom: calc(var(--safe-bottom) + 52px * var(--touch-scale)); }
+    #dpadUp    { left: calc(var(--safe-left) + 10px + 49px * var(--touch-scale)); bottom: calc(var(--safe-bottom) + 98px * var(--touch-scale)); }
+    #dpadDown  { left: calc(var(--safe-left) + 10px + 49px * var(--touch-scale)); bottom: calc(var(--safe-bottom) + 6px); }
 
     #btnJump {
       right: calc(var(--safe-right) + 18px);
@@ -442,13 +443,18 @@
     /* Modo canhoto: pular/chicote à esquerda e setas à direita */
     #touchControls.left-handed #dpadZone { left: auto; right: 0; }
     #touchControls.left-handed #actionZone { right: auto; left: 0; }
-    #touchControls.left-handed #dpadLeft { left: auto; right: calc(var(--safe-right) + 18px + 80px * var(--touch-scale)); }
-    #touchControls.left-handed #dpadRight { left: auto; right: calc(var(--safe-right) + 18px); }
+    #touchControls.left-handed #dpadLeft  { left: auto; right: calc(var(--safe-right) + 10px + 98px * var(--touch-scale)); }
+    #touchControls.left-handed #dpadRight { left: auto; right: calc(var(--safe-right) + 10px); }
+    #touchControls.left-handed #dpadUp    { left: auto; right: calc(var(--safe-right) + 10px + 49px * var(--touch-scale)); }
+    #touchControls.left-handed #dpadDown  { left: auto; right: calc(var(--safe-right) + 10px + 49px * var(--touch-scale)); }
     #touchControls.left-handed #btnJump { right: auto; left: calc(var(--safe-left) + 18px); }
     #touchControls.left-handed #btnWhip { right: auto; left: calc(var(--safe-left) + 18px + 88px * var(--touch-scale)); }
 
     @media (max-height: 380px) {
-      #dpadLeft, #dpadRight, #btnJump { bottom: calc(var(--safe-bottom) + 10px); }
+      #dpadLeft, #dpadRight { bottom: calc(var(--safe-bottom) + 40px * var(--touch-scale)); }
+      #dpadUp { bottom: calc(var(--safe-bottom) + 78px * var(--touch-scale)); }
+      #dpadDown { bottom: calc(var(--safe-bottom) + 4px); }
+      #btnJump { bottom: calc(var(--safe-bottom) + 10px); }
       #btnWhip { bottom: calc(var(--safe-bottom) + 16px); }
     }
 
@@ -708,8 +714,135 @@
       flex-wrap: wrap;
       justify-content: center;
       gap: 14px;
-      max-width: 620px;
+      max-width: 680px;
       margin-bottom: 20px;
+    }
+    .level-btn {
+      width: 130px;
+      min-height: 104px;
+      background: linear-gradient(145deg, rgba(46, 24, 15, 0.94), rgba(28, 14, 8, 0.96));
+      border: 2px solid rgba(255, 212, 59, 0.45);
+      border-radius: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 8px;
+      gap: 6px;
+      cursor: pointer;
+      color: #FFF9DB;
+      font-family: var(--font-title);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+      transition: all 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+      position: relative;
+      touch-action: manipulation;
+    }
+    .level-btn:hover:not(:disabled) {
+      transform: translateY(-5px) scale(1.04);
+      border-color: #FFD43B;
+      box-shadow: 0 8px 24px rgba(245, 159, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+      background: linear-gradient(145deg, rgba(68, 36, 22, 0.96), rgba(42, 20, 12, 0.98));
+    }
+    .level-btn:active:not(:disabled) {
+      transform: scale(0.96);
+    }
+    .level-btn.boss {
+      border-color: #FF6B6B;
+      background: linear-gradient(145deg, rgba(60, 15, 20, 0.94), rgba(30, 8, 10, 0.96));
+      box-shadow: 0 4px 14px rgba(250, 82, 82, 0.35);
+    }
+    .level-btn.boss:hover:not(:disabled) {
+      border-color: #FFA8A8;
+      box-shadow: 0 8px 24px rgba(250, 82, 82, 0.6);
+    }
+    .level-btn.locked {
+      opacity: 0.38;
+      border-color: #495057;
+      background: rgba(20, 14, 12, 0.85);
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+    .lvl-code {
+      font-size: 1.45rem;
+      font-weight: 900;
+      color: #FFD43B;
+      letter-spacing: 0.5px;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+    }
+    .level-btn.boss .lvl-code { color: #FF8787; }
+    .lvl-name {
+      font-size: 0.76rem;
+      font-weight: 700;
+      color: #F8F9FA;
+      text-align: center;
+      line-height: 1.25;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .lvl-stars {
+      font-size: 0.85rem;
+      letter-spacing: 2px;
+      color: #FFD43B;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+    }
+    .lvl-badge {
+      font-size: 0.62rem;
+      font-weight: 900;
+      letter-spacing: 0.5px;
+      padding: 2px 7px;
+      border-radius: 99px;
+      text-transform: uppercase;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+      margin-bottom: 2px;
+      white-space: nowrap;
+    }
+    .lvl-badge.maze { background: #1971C2; color: #E7F5FF; border: 1px solid #74C0FC; }
+    .lvl-badge.race { background: #D9480F; color: #FFF9DB; border: 1px solid #FFA94D; }
+    .lvl-badge.brawl { background: #C92A2A; color: #FFE3E3; border: 1px solid #FFA8A8; }
+    .lvl-badge.fly { background: #0CA678; color: #E6FCF5; border: 1px solid #63E6BE; }
+    .lvl-badge.mine { background: #6741D9; color: #F3F0FF; border: 1px solid #B197FC; }
+    .lvl-badge.boss { background: #A61E4D; color: #FFF0F6; border: 1px solid #F783AC; }
+    .lvl-badge.duo { background: #364FC7; color: #EDF2FF; border: 1px solid #91A7FF; }
+    .lvl-badge.norm { background: rgba(0,0,0,0.45); color: #FFE8A3; border: 1px solid rgba(255,212,59,0.3); }
+
+    .title-roster {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      justify-content: center;
+      margin: 2px 0 16px;
+      font-size: 0.78rem;
+      font-weight: 800;
+      color: #FFE066;
+      background: rgba(30, 16, 10, 0.75);
+      border: 1px solid rgba(245, 159, 0, 0.35);
+      border-radius: 99px;
+      padding: 5px 14px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    .title-roster span {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 6px;
+      border-radius: 99px;
+      background: rgba(255,255,255,0.06);
+    }
+
+    .world-summary {
+      font-family: var(--font-title);
+      font-size: 0.88rem;
+      font-weight: 800;
+      color: #FFE066;
+      background: rgba(26, 18, 11, 0.82);
+      border: 1.5px solid rgba(255, 212, 59, 0.38);
+      border-radius: 99px;
+      padding: 6px 18px;
+      margin-bottom: 14px;
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
     }
     .level-card {
       width: 100px;
@@ -1106,8 +1239,10 @@
     <!-- ==================== CONTROLES TOUCH "DE CONSOLE" ==================== -->
     <div id="touchControls" class="size-md" aria-hidden="true">
       <div class="touch-zone" id="dpadZone">
+        <div class="touch-btn" id="dpadUp" data-action="up">▲</div>
         <div class="touch-btn" id="dpadLeft" data-action="left">◀</div>
         <div class="touch-btn" id="dpadRight" data-action="right">▶</div>
+        <div class="touch-btn" id="dpadDown" data-action="down">▼</div>
       </div>
 
       <div class="touch-zone" id="actionZone">
@@ -1121,15 +1256,24 @@
 
     <!-- ==================== TELA 1: TÍTULO ==================== -->
     <div class="screen-overlay" id="titleScreen">
-      <div class="hero-badge">🌵 UMA AVENTURA ÉPICA NO SERTÃO</div>
+      <div class="hero-badge">🌵 CORDEL DOS NOVE SÓIS • EDIÇÃO ESPECIAL • 56 FASES</div>
       <h1 class="game-logo">OXE! <span class="ver">2.0</span></h1>
       <div class="game-sub">A Grande Jornada dos Nove Sóis</div>
+
+      <div class="title-roster">
+        <span>🤠 Tonho</span>
+        <span>👒 Dandara</span>
+        <span>🪗 Cícero</span>
+        <span>🪓 Severino</span>
+        <span>⭐ Maria Bonita</span>
+        <span>🐐 Bode Toddy</span>
+      </div>
 
       <button class="menu-btn" id="btnStartGame" type="button">
         <span>▶</span> INICIAR JORNADA
       </button>
       <button class="menu-btn sec" id="btnOpenMap" type="button">
-        <span>🗺️</span> MAPA DOS MUNDOS
+        <span>🗺️</span> MAPA DOS MUNDOS (8 MUNDOS)
       </button>
       <button class="menu-btn sec gold" id="btnStartChallenge" type="button">
         <span>⚡</span> DESAFIO SERTANEJO DO DIA (30s)
@@ -1142,14 +1286,14 @@
       </button>
 
       <div class="controls-hint desktop-only">
-        🎮 <strong>Controles:</strong> <span class="key-badge">←</span> <span class="key-badge">→</span> ou <span class="key-badge">A</span> <span class="key-badge">D</span> para Correr • <span class="key-badge">Espaço</span> para Pular (segure no ar para <strong>Planar com o Chapéu</strong>) • <span class="key-badge">J</span> ou <span class="key-badge">X</span> para <strong>Chicote de Caroá</strong> • <span class="key-badge">S</span> ou <span class="key-badge">↓</span> para <strong>Pisão de Pedra</strong> • <span class="key-badge">Esc</span> ou <span class="key-badge">P</span> para Pausar.
+        🎮 <strong>Controles:</strong> <span class="key-badge">←</span> <span class="key-badge">→</span> ou <span class="key-badge">A</span> <span class="key-badge">D</span> para Correr • <span class="key-badge">Espaço</span> para Pular / Turbo (segure no ar para <strong>Planar</strong>) • <span class="key-badge">J</span> ou <span class="key-badge">X</span> para <strong>Chicote</strong> • <span class="key-badge">S</span> ou <span class="key-badge">↓</span> para <strong>Pisão</strong> • <span class="key-badge">Esc</span> ou <span class="key-badge">P</span> para Pausar.
       </div>
       <div class="controls-hint touch-only">
-        👆 <strong>Toque:</strong> use ◀ ▶ para correr (dá para deslizar o polegar). Segure <strong>PULAR</strong> no ar para planar e use <strong>⚡ Chicote</strong> para atacar. Ajuste tamanho e lado em ⚙️.
+        👆 <strong>Toque:</strong> use D-Pad (◀ ▶ ▲ ▼) para mover. No Pac-Oxe use <strong>PULAR</strong> para Turbo e <strong>⚡ Chicote</strong> para atordoar ou devorar fantasmas. Ajuste em ⚙️.
       </div>
     </div>
 
-    <!-- ==================== TELA 2: MAPA DOS MUNDOS (6 MUNDOS • 30 FASES) ==================== -->
+    <!-- ==================== TELA 2: MAPA DOS MUNDOS (8 MUNDOS • 56 FASES) ==================== -->
     <div class="screen-overlay" id="worldMapScreen">
       <div class="hero-badge">🗺️ MAPA DO SERTÃO • 7 MUNDOS + ★ ESPECIAL • 56 FASES</div>
 
@@ -1160,9 +1304,12 @@
         <button class="world-tab" type="button" role="tab" onclick="switchWorldMap(3)">🦀 Mundo 4</button>
         <button class="world-tab" type="button" role="tab" onclick="switchWorldMap(4)">🌋 Mundo 5</button>
         <button class="world-tab" type="button" role="tab" onclick="switchWorldMap(5)">☀️ Mundo 6</button>
+        <button class="world-tab" type="button" role="tab" onclick="switchWorldMap(6)">🌾 Mundo 7</button>
+        <button class="world-tab special" type="button" role="tab" onclick="switchWorldMap(7)">🎆 Mundo ★</button>
       </div>
 
       <h2 class="world-title" id="worldTitleText">Mundo 1: O Sertão dos Mandacarus</h2>
+      <div class="world-summary" id="worldSummaryText">⭐ Estrelas: 0 / 21 • Bioma: SERTÃO • Mecânica: CORRENTES DE AR</div>
 
       <div class="level-grid" id="levelGrid">
         <!-- Renderizado dinamicamente via switchWorldMap() -->

@@ -354,22 +354,31 @@ const TouchController = {
   center(id) { const el = document.getElementById(id); if (!el) return null; const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; },
   pick(zid, x, y) {
     if (zid === 'dpadZone') {
-      const L = this.center('dpadLeft'), R = this.center('dpadRight'); if (!L || !R) return null;
-      const mid = (L.x + R.x) / 2; const leftSide = L.x < R.x ? x < mid : x >= mid;
-      return leftSide ? 'left' : 'right';
+      const candidates = [];
+      const u = this.center('dpadUp'), d = this.center('dpadDown'), l = this.center('dpadLeft'), r = this.center('dpadRight');
+      if (l) candidates.push({ id: 'left', dist: Math.hypot(x - l.x, y - l.y) });
+      if (r) candidates.push({ id: 'right', dist: Math.hypot(x - r.x, y - r.y) });
+      if (u) candidates.push({ id: 'up', dist: Math.hypot(x - u.x, y - u.y) });
+      if (d) candidates.push({ id: 'down', dist: Math.hypot(x - d.x, y - d.y) });
+      if (candidates.length) {
+        candidates.sort((a, b) => a.dist - b.dist);
+        return candidates[0].id;
+      }
+      return 'left';
     }
     const J = this.center('btnJump'), W = this.center('btnWhip'); if (!J) return 'jump';
     if (!W) return 'jump';
     return Math.hypot(x - W.x, y - W.y) < Math.hypot(x - J.x, y - J.y) * 0.9 ? 'whip' : 'jump';
   },
   apply(isPress) {
-    const on = { left: false, right: false, jump: false, whip: false };
+    const on = { left: false, right: false, up: false, down: false, jump: false, whip: false };
     this.fingers.forEach((f) => { if (f.action) on[f.action] = true; });
     keys.left = on.left && !on.right; keys.right = on.right && !on.left;
+    keys.up = on.up && !on.down; keys.down = on.down && !on.up;
     const wasJump = keys.jump, wasWhip = keys.whip;
     setJump(on.jump); setWhip(on.whip);
     if (isPress && ((on.jump && !wasJump) || (on.whip && !wasWhip))) triggerHaptic(10);
-    [['dpadLeft', keys.left], ['dpadRight', keys.right], ['btnJump', on.jump], ['btnWhip', on.whip]].forEach(([id, a]) => { const el = document.getElementById(id); if (el) el.classList.toggle('active', a); });
+    [['dpadLeft', keys.left], ['dpadRight', keys.right], ['dpadUp', keys.up], ['dpadDown', keys.down], ['btnJump', on.jump], ['btnWhip', on.whip]].forEach(([id, a]) => { const el = document.getElementById(id); if (el) el.classList.toggle('active', !!a); });
   },
   reset() { this.fingers.clear(); this.apply(false); }
 };
@@ -653,8 +662,8 @@ class Tonho {
   }
   // v4.0: caixas de ataque corpo-a-corpo ampliadas para coice, ciscar, chifrada, bengala, peixeira e corda
   getWhipBox() {
-    if (currentLevel && currentLevel.specialMode === 'brawlstars') {
-      return { x: this.x - 48, y: this.y - 36, w: this.w + 96, h: this.h + 72 };
+    if (currentLevel && (currentLevel.specialMode === 'brawlstars' || currentLevel.specialMode === 'pacman')) {
+      return { x: this.x - 48, y: this.y - 40, w: this.w + 96, h: this.h + 80 };
     }
     if (this.meleeWeapon === 'patada' || this.meleeWeapon === 'jegue_coice' || this.meleeWeapon === 'coice_bode') {
       return { x: this.x - 46, y: this.y + this.h * 0.2, w: this.w + 92, h: this.h * 0.8 };
@@ -673,11 +682,11 @@ class Tonho {
   setMount(on, mountType = 'jegue') {
     if (on && !this.mount) {
       const mKind = typeof on === 'string' ? on : (mountType || 'jegue');
-      this.mount = { t: 0, hp: 3, maxHp: 3, type: mKind, kind: mKind };
+      this.mount = { t: 0, hp: 2, maxHp: 2, type: mKind, kind: mKind };
       this.y -= 14; this.h = 58; this.x -= 4; this.w = 36;
     } else if (on && this.mount) {
       const mKind = typeof on === 'string' ? on : (mountType || this.mount.type || 'jegue');
-      this.mount.type = mKind; this.mount.kind = mKind; this.mount.hp = 3; this.mount.maxHp = 3;
+      this.mount.type = mKind; this.mount.kind = mKind; this.mount.hp = 2; this.mount.maxHp = 2;
     } else if (!on && this.mount) {
       const wasToddy = this.mount.type === 'bode_toddy';
       this.mount = null; this.y += 14; this.h = 44; this.x += 4; this.w = 28;
@@ -709,22 +718,51 @@ class Tonho {
 
     // ----- MODO ESPECIAL 1: PAC-OXE (1-4) E MODO ESPECIAL 4: BRAWL STARS (4-4, 6-4, 8-4) -----
     if ((sm === 'pacman' || sm === 'brawlstars') && this === player) {
-      const spd = sm === 'pacman' ? 5.0 : (4.6 + (this.powerCubes || 0) * 0.2 + (this.dash > 0 ? 4.5 : 0));
+      if (sm === 'pacman') {
+        if (this.turboCooldown > 0) this.turboCooldown--;
+        if (keys.jumpJustPressed && this.dash <= 0 && (!this.turboCooldown || this.turboCooldown <= 0)) {
+          this.dash = 24; this.turboCooldown = 70; sfx('whoosh');
+          spawnDust(this.x + this.w / 2, this.y + this.h, 8);
+          spawnFloatingText('⚡ TURBO DISPARADA!', this.x + this.w / 2, this.y - 14, '#FFE066');
+        }
+      }
+      const spd = (sm === 'pacman' ? (5.0 + (this.dash > 0 ? 3.6 : 0)) : (4.6 + (this.powerCubes || 0) * 0.2 + (this.dash > 0 ? 4.5 : 0)));
       if (this.dash > 0) this.dash--;
       let tx = 0, ty = 0;
       if (keys.left && !keys.right) { tx = -spd; this.facing = -1; }
       else if (keys.right && !keys.left) { tx = spd; this.facing = 1; }
-      if (keys.up || keys.jump) ty = -spd;
+      if (keys.up) ty = -spd;
       else if (keys.down) ty = spd;
+      else if (keys.jump && sm !== 'pacman') ty = -spd;
       if (tx !== 0 && ty !== 0) { tx *= 0.74; ty *= 0.74; }
       this.vx = lerp(this.vx, tx, 0.45);
       this.vy = lerp(this.vy, ty, 0.45);
       this.onGround = true;
       const plats = getPlatforms();
       this.x += this.vx;
-      for (const p of plats) { if (p.oneWay || p.y >= (L.levelH || 540) - 36 || !checkAABB(this, p)) continue; if (this.vx > 0) this.x = p.x - this.w; else if (this.vx < 0) this.x = p.x + p.w; this.vx = 0; }
+      let hitH = false;
+      for (const p of plats) { if (p.oneWay || p.y >= (L.levelH || 540) - 36 || !checkAABB(this, p)) continue; if (this.vx > 0) this.x = p.x - this.w; else if (this.vx < 0) this.x = p.x + p.w; this.vx = 0; hitH = true; }
       this.y += this.vy;
-      for (const p of plats) { if (p.oneWay || !checkAABB(this, p)) continue; if (this.vy > 0) this.y = p.y - this.h; else if (this.vy < 0) this.y = p.y + p.h; this.vy = 0; }
+      let hitV = false;
+      for (const p of plats) { if (p.oneWay || !checkAABB(this, p)) continue; if (this.vy > 0) this.y = p.y - this.h; else if (this.vy < 0) this.y = p.y + p.h; this.vy = 0; hitV = true; }
+      // Corner-slip suave para corredores de labirinto no Pac-Oxe
+      if (sm === 'pacman') {
+        if (hitH && Math.abs(tx) > 0.1 && Math.abs(ty) < 0.1) {
+          const testUp = { x: this.x + Math.sign(tx) * 4, y: this.y - 10, w: this.w, h: this.h };
+          const testDown = { x: this.x + Math.sign(tx) * 4, y: this.y + 10, w: this.w, h: this.h };
+          const upBlocked = plats.some(p => !p.oneWay && checkAABB(testUp, p));
+          const downBlocked = plats.some(p => !p.oneWay && checkAABB(testDown, p));
+          if (!upBlocked && downBlocked) this.y -= 3.2;
+          else if (!downBlocked && upBlocked) this.y += 3.2;
+        } else if (hitV && Math.abs(ty) > 0.1 && Math.abs(tx) < 0.1) {
+          const testLeft = { x: this.x - 10, y: this.y + Math.sign(ty) * 4, w: this.w, h: this.h };
+          const testRight = { x: this.x + 10, y: this.y + Math.sign(ty) * 4, w: this.w, h: this.h };
+          const leftBlocked = plats.some(p => !p.oneWay && checkAABB(testLeft, p));
+          const rightBlocked = plats.some(p => !p.oneWay && checkAABB(testRight, p));
+          if (!leftBlocked && rightBlocked) this.x -= 3.2;
+          else if (!rightBlocked && leftBlocked) this.x += 3.2;
+        }
+      }
       if (sm === 'pacman') {
         if (this.x < 8) this.x = L.levelW - this.w - 12;
         else if (this.x + this.w > L.levelW - 8) this.x = 12;
@@ -1251,21 +1289,31 @@ class Tonho {
     if (this.invuln > 0 || this.dead || this.asaBrancaTimer > 0 || this.dash > 0 || unionTimer > 0) return;
     // O parceiro controlado pelo computador não perde coração: fica tonto um pouco
     if (this !== player) { if (this.dazed <= 0) { this.dazed = 80; this.invuln = 140; this.vy = -5; this.vx = (srcX != null && this.x + this.w / 2 < srcX ? -1 : 1) * 3; sfx('bonk'); } return; }
-    // v4.0: Jegue e Bode Toddy têm 3 corações próprios (mostrados acima da montaria) antes de correrem!
+    // v4.1: Montaria não dá imunidade total. O jogador e a montaria tomam dano real!
     if (this.mount) {
       const wasType = this.mount.type || 'jegue';
       const mName = wasType === 'bode_toddy' ? 'O BODE TODDY' : 'O JEGUE';
-      if (--this.mount.hp > 0) {
-        this.invuln = 75; sfx('bonk'); addScreenShake(3);
-        spawnFloatingText(`${mName} AGUENTOU! (${this.mount.hp}/${this.mount.maxHp || 3} ❤️)`, this.x + this.w / 2, this.y - 14, '#FFE8A3');
-        this.vy = -5; this.vx = (srcX != null && this.x + this.w / 2 < srcX ? -1 : 1) * 3;
-        return;
+      tookDamageThisRun = true;
+      health -= 1;
+      this.invuln = 70;
+      hitstopFrames = 5;
+      addScreenShake(6);
+      triggerHaptic(60);
+      sfx('hurt');
+      spawnSparks(this.x + this.w / 2, this.y + this.h / 2, 12, '#FA5252');
+      const away = srcX != null ? (this.x + this.w / 2 < srcX ? -1 : 1) : -this.facing;
+      this.vy = -6; this.vx = away * 4;
+      if (--this.mount.hp <= 0) {
+        this.setMount(false);
+        spawnDust(this.x + this.w / 2, this.y + this.h, 12);
+        spawnFloatingText(`DERRUBADO! ${mName} CORREU!`, this.x + this.w / 2, this.y - 16, '#FF6B6B');
+        if (typeof fleeJegue === 'function') fleeJegue(this, wasType);
+        updateWeaponUI();
+      } else {
+        sfx('bonk');
+        spawnFloatingText(`${mName} LEVOU GOLPE! (${this.mount.hp}/${this.mount.maxHp || 2} ❤️)`, this.x + this.w / 2, this.y - 14, '#FFE8A3');
       }
-      this.setMount(false); spawnDust(this.x + this.w / 2, this.y + this.h, 10);
-      spawnFloatingText(`${mName} DESGARROU!`, this.x + this.w / 2, this.y - 14, '#FFE8A3');
-      if (typeof fleeJegue === 'function') fleeJegue(this, wasType);
-      updateWeaponUI();
-      this.invuln = 80;
+      if (health <= 0) this.die();
       return;
     }
     if (heldArmor > 0) { heldArmor = 0; this.invuln = 90; sfx('clank'); addScreenShake(3); spawnSparks(this.x + this.w / 2, this.y + this.h / 2, 14, '#C68B59'); spawnFloatingText('O GIBÃO AGUENTOU!', this.x + this.w / 2, this.y - 12, '#FFD8A8'); updateWeaponUI(); return; }
@@ -1475,6 +1523,12 @@ class Enemy {
       this.name = d.name; this.sub = d.sub; this.st = 'intro'; this.alpha = 1; this.homeX = x; this.homeY = y;
     }
     if (this.isBrawlBoss) { this.w = Math.round(this.w * 1.25); this.h = Math.round(this.h * 1.25); this.scoreValue = 1500; }
+    // v4.1: com 2 personagens (dupla sertaneja), a fase fica mais desafiadora (+vida e velocidade)
+    const isDuoActive = (currentLevel && (currentLevel.duo || currentLevel.partner)) || (typeof companion !== 'undefined' && companion && !companion.dead);
+    if (isDuoActive && !this.isPacGhost) {
+      this.hp = Math.round(this.hp * 1.35) + 1;
+      this.speed = (this.speed || 1) * 1.18;
+    }
     this.maxHp = this.hp; this.hitCd = 0; this.stagger = 0; this.kbx = 0; this.dodged = false;
     this.scoreValue = this.scoreValue || d.score || ENEMY_SCORE[type] || 100;
     if (this.vx) this.vx = -this.speed;
@@ -1529,7 +1583,13 @@ class Enemy {
       return;
     }
     this.hurtTimer = this.hitFlashTimer;
-    const p = player, dx = p ? (p.x + p.w / 2) - (this.x + this.w / 2) : 999, dy = p ? (p.y + p.h / 2) - (this.y + this.h / 2) : 999;
+    let p = player;
+    if (typeof companion !== 'undefined' && companion && !companion.dead) {
+      const dPlayer = Math.hypot((player.x + player.w / 2) - (this.x + this.w / 2), (player.y + player.h / 2) - (this.y + this.h / 2));
+      const dComp = Math.hypot((companion.x + companion.w / 2) - (this.x + this.w / 2), (companion.y + companion.h / 2) - (this.y + this.h / 2));
+      if (dComp < dPlayer) p = companion;
+    }
+    const dx = p ? (p.x + p.w / 2) - (this.x + this.w / 2) : 999, dy = p ? (p.y + p.h / 2) - (this.y + this.h / 2) : 999;
 
     // ----- MODO ESPECIAL PAC-OXE (1-4): Fantasmas do labirinto -----
     if (this.isPacGhost || (currentLevel && currentLevel.specialMode === 'pacman')) {
@@ -3900,7 +3960,7 @@ function drawBossGuide(ctx, boss, camX, camY) {
     showScreen('challengeResultScreen', true);
   }
 
-  // ===================== MAPA DE 6 MUNDOS =====================
+  // ===================== MAPA DOS MUNDOS (8 MUNDOS • 56 FASES) =====================
   window.switchWorldMap = function (worldIdx) {
     const WS = window.OxeLevels.WORLDS;
     mapWorld = Math.max(0, Math.min(WS.length - 1, worldIdx | 0));
@@ -3909,15 +3969,47 @@ function drawBossGuide(ctx, boss, camX, camY) {
     const tabs = $('worldTabs');
     if (tabs) {
       tabs.innerHTML = '';
-      WS.forEach((w, i) => { const b = document.createElement('button'); b.className = 'world-tab' + (i === mapWorld ? ' active' : '') + (w.special ? ' special' : ''); b.textContent = w.special ? '★' : i + 1; b.title = w.name; b.disabled = !isUnlocked(i * SPW); b.onclick = () => window.switchWorldMap(i); tabs.appendChild(b); });
+      const tabIcons = ['🌵', '🦇', '🌿', '🦀', '🌋', '☀️', '🌾', '🎆'];
+      WS.forEach((w, i) => {
+        const b = document.createElement('button');
+        b.className = 'world-tab' + (i === mapWorld ? ' active' : '') + (w.special ? ' special' : '');
+        const ico = tabIcons[i] || '🌵';
+        b.textContent = w.special ? `${ico} ★ Especial` : `${ico} M${i + 1}`;
+        b.title = w.name;
+        b.disabled = !isUnlocked(i * SPW);
+        b.onclick = () => window.switchWorldMap(i);
+        tabs.appendChild(b);
+      });
     }
     const grid = $('levelGrid'); if (!grid) return; grid.innerHTML = '';
+    let totalWorldStars = 0;
     for (let s = 0; s < SPW; s++) {
       const idx = mapWorld * SPW + s, st = W.stages[s], un = isUnlocked(idx), stars = starsOf(idx);
-      const b = document.createElement('button'); b.className = 'level-btn' + (un ? '' : ' locked') + (s === SPW - 1 ? ' boss' : '') + (DUO_STAGES[st.code] ? ' duo' : '');
-      b.innerHTML = un ? `<div class="lvl-code">${st.code}</div><div class="lvl-name">${st.name}</div><div class="lvl-stars">${'⭐'.repeat(stars)}${'☆'.repeat(3 - stars)}</div>` : `<div class="lvl-code">🔒</div><div class="lvl-name">${st.code}</div>`;
-      b.disabled = !un; if (un) b.onclick = () => { sfx('select'); startGame(idx); };
+      totalWorldStars += stars;
+      const b = document.createElement('button');
+      let badgeHtml = '';
+      let badgeClass = 'norm';
+      if (st.code === '1-4') { badgeHtml = '🌀 LABIRINTO'; badgeClass = 'maze'; }
+      else if (st.code === '2-4') { badgeHtml = '⛏️ MINAS'; badgeClass = 'mine'; }
+      else if (st.code === '3-4') { badgeHtml = '🫏 CORRIDA 3D'; badgeClass = 'race'; }
+      else if (st.code === '4-4' || st.code === '6-4' || st.code === '8-4' || st.code === '★-4') { badgeHtml = '💥 BRAWL'; badgeClass = 'brawl'; }
+      else if (st.code === '5-4') { badgeHtml = '🦅 VOO LIVRE'; badgeClass = 'fly'; }
+      else if (st.code === '7-4') { badgeHtml = '🥊 RINGUE'; badgeClass = 'brawl'; }
+      else if (s === SPW - 1) { badgeHtml = '👑 CHEFE'; badgeClass = 'boss'; }
+      else if (DUO_STAGES[st.code]) { badgeHtml = '👧 DUPLA'; badgeClass = 'duo'; }
+      else { badgeHtml = '🌵 FASE'; badgeClass = 'norm'; }
+
+      b.className = 'level-btn' + (un ? '' : ' locked') + (s === SPW - 1 ? ' boss' : '') + (DUO_STAGES[st.code] ? ' duo' : '') + ' badge-' + badgeClass;
+      b.innerHTML = un
+        ? `<span class="lvl-badge ${badgeClass}">${badgeHtml}</span><div class="lvl-code">${st.code}</div><div class="lvl-name">${st.name}</div><div class="lvl-stars">${'⭐'.repeat(stars)}${'☆'.repeat(3 - stars)}</div>`
+        : `<div class="lvl-code">🔒</div><div class="lvl-name">${st.code}</div>`;
+      b.disabled = !un;
+      if (un) b.onclick = () => { sfx('select'); startGame(idx); };
       grid.appendChild(b);
+    }
+    const summary = $('worldSummaryText');
+    if (summary) {
+      summary.innerHTML = `⭐ <b>${totalWorldStars} / ${SPW * 3}</b> Estrelas Coletadas • Bioma: <em>${W.biome || W.name}</em>`;
     }
   };
   function openMap() {
@@ -4008,13 +4100,28 @@ function drawBossGuide(ctx, boss, camX, camY) {
       if (e.update) e.update(player, L);
       if (wb && !player.whipHitSet.has(e) && checkAABB(wb, e)) {
         player.whipHitSet.add(e);
-        let dmg = (player.whipDamage || 1) + (player.brawlPower || 0) + (unionTimer > 0 ? 1 : 0);
-        // Estalo certeiro na ponta do chicote (últimos 40% do alcance) causa Dano 2!
-        if (player.meleeWeapon === 'chicote') {
-          const dist = Math.abs((e.x + e.w / 2) - (player.x + player.w / 2));
-          if (dist >= 46) { dmg += 1; spawnSparks(e.x + e.w / 2, e.y + e.h / 2, 10, '#FFD43B'); spawnFloatingText('ESTALO! ×2', e.x + e.w / 2, e.y - 16, '#FFD43B'); }
+        if (L.specialMode === 'pacman') {
+          if (e.scaredTimer > 0) {
+            addScore(400); sfx('caju'); addUnionProgress(10);
+            spawnBurst(e.x + e.w / 2, e.y + e.h / 2, '#4DABF7', 18);
+            spawnFloatingText('👻 CHICOTADA NO FANTASMA! +400', e.x + e.w / 2, e.y - 14, '#4DABF7');
+            e.x = L.levelW * 0.5 + (Math.random() - 0.5) * 120;
+            e.y = L.levelH * 0.45;
+            e.scaredTimer = 0; e.stagger = 90;
+          } else {
+            e.stagger = 130; sfx('bonk'); addScreenShake(2);
+            spawnSparks(e.x + e.w / 2, e.y + e.h / 2, 8, '#FFD43B');
+            spawnFloatingText('⚡ ATORDOOU O FANTASMA!', e.x + e.w / 2, e.y - 14, '#FFD43B');
+          }
+        } else {
+          let dmg = (player.whipDamage || 1) + (player.brawlPower || 0) + (unionTimer > 0 ? 1 : 0);
+          // Estalo certeiro na ponta do chicote (últimos 40% do alcance) causa Dano 2!
+          if (player.meleeWeapon === 'chicote') {
+            const dist = Math.abs((e.x + e.w / 2) - (player.x + player.w / 2));
+            if (dist >= 46) { dmg += 1; spawnSparks(e.x + e.w / 2, e.y + e.h / 2, 10, '#FFD43B'); spawnFloatingText('ESTALO! ×2', e.x + e.w / 2, e.y - 16, '#FFD43B'); }
+          }
+          e.hit(dmg, player.x, player.meleeWeapon);
         }
-        e.hit(dmg, player.x, player.meleeWeapon);
       }
       if (cwb && !companion.whipHitSet.has(e) && checkAABB(cwb, e)) { companion.whipHitSet.add(e); e.hit((companion.whipDamage || 1) + (unionTimer > 0 ? 1 : 0), companion.x, companion.meleeWeapon); }
       const harmless = e.state === "stunned" || e.stagger > 0 || e.bubbleTimer > 0 || (e.type === 'alamoa' && e.ghost);
@@ -4035,11 +4142,11 @@ function drawBossGuide(ctx, boss, camX, camY) {
           // v2.5: pisão tira 2 de vida, dá pontos na hora e faz combo se emendar pisões sem tocar o chão
           player.bounce(-9.5); if (e.hit(2 + (player.brawlPower || 0), player.x, 'pisao')) { stompCombo++; const pts = 50 * stompCombo; addScore(pts); spawnFloatingText(stompCombo > 1 ? `COMBO ×${stompCombo} +${pts}` : `+${pts}`, e.x + e.w / 2, e.y - 14, stompCombo > 1 ? '#FFE066' : '#FFFFFF'); } sfx("stomp");
         }
-        // Montado no Jegue ou Bode Toddy correndo: atropela bichos!
-        else if (player.mount && Math.abs(player.vx) > 4.4 && (player.mount.type === 'bode_toddy' || (e.h <= 26 && e.hp <= 2)) && !e.legend && !harmless) {
+        // Montado no Jegue ou Bode Toddy: atropela SOMENTE durante o DASH/INVESTIDA ativo!
+        else if (player.mount && player.dash > 0 && (player.mount.type === 'bode_toddy' || (e.h <= 26 && e.hp <= 2)) && !e.legend && !harmless) {
           if (e.hit(player.mount.type === 'bode_toddy' ? 2 : 1, player.x, 'pisao')) {
             sfx('stomp');
-            spawnFloatingText(player.mount.type === 'bode_toddy' ? '🐐 CHIFRADA!' : '🫏 COICE!', e.x + e.w / 2, e.y - 10, '#FFE8A3');
+            spawnFloatingText(player.mount.type === 'bode_toddy' ? '🐐 INVESTIDA DO BODE!' : '🫏 TROPEL DO JEGUE!', e.x + e.w / 2, e.y - 10, '#FFE8A3');
           }
         }
         else if (!harmless) { player.takeDamage(1, e.x + e.w / 2); }
