@@ -954,27 +954,105 @@
 
   function drawCraftBlock(ctx, x, y, w, h, kind, hp, t) {
     ctx.save();
-    ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(x + 5, y + 6, w, h);
-    var base = kind === 'tnt' ? '#e03131' : (kind === 'diamond_ore' ? '#70757a' : (kind === 'gold_ore' ? '#7a7267' : '#a06a38'));
-    ctx.fillStyle = shade(base, -0.35); ctx.fillRect(x + 4, y + 4, w, h);
+    // Sombra volumétrica do bloco cúbico
+    ctx.fillStyle = 'rgba(0,0,0,0.38)'; ctx.fillRect(x + 5, y + 6, w, h);
+    
+    // Cores base e materiais de bloco
+    var base = '#70757a';
+    if (kind === 'tnt') base = '#e03131';
+    else if (kind === 'diamond_ore') base = '#495057';
+    else if (kind === 'gold_ore') base = '#5c4a3a';
+    else if (kind === 'redstone_ore') base = '#3d2020';
+    else if (kind === 'chest') base = '#8b5a2b';
+    else if (kind === 'wood_crate') base = '#a06a38';
+    else if (kind === 'stone_ore') base = '#6c757d';
+
+    // Face lateral 3D (profundidade isométrica para sensação de volume voxel)
+    var d3 = 4;
+    ctx.fillStyle = shade(base, -0.4); ctx.fillRect(x + d3, y + d3, w, h);
+    // Face principal
     ctx.fillStyle = base; ctx.fillRect(x, y, w, h);
+    // Borda chanfrada de iluminação no topo e esquerda
+    ctx.fillStyle = shade(base, 0.25);
+    ctx.fillRect(x, y, w, 2.5);
+    ctx.fillRect(x, y, 2.5, h);
+
     if (kind === 'tnt') {
-      ctx.fillStyle = '#f8f9fa'; ctx.fillRect(x, y + 9, w, 13);
-      ctx.fillStyle = '#111'; ctx.font = 'bold 10px monospace'; ctx.textAlign = 'center';
+      // Dinamite em feixe com cordas de sisal e faixa branca central
+      ctx.fillStyle = '#f8f9fa'; ctx.fillRect(x, y + 8, w, 14);
+      ctx.fillStyle = '#1e120a'; ctx.fillRect(x, y + 6, w, 1.8);
+      ctx.fillRect(x, y + 23, w, 1.8);
+      ctx.fillStyle = '#111'; ctx.font = '900 11px monospace'; ctx.textAlign = 'center';
       ctx.fillText('TNT', x + w / 2, y + 19);
-    } else if (kind === 'diamond_ore' || kind === 'gold_ore') {
-      var oreCol = kind === 'diamond_ore' ? '#3bc9db' : '#ffd43b';
-      ctx.fillStyle = oreCol;
-      ctx.fillRect(x + 5, y + 5, 6, 6); ctx.fillRect(x + 19, y + 8, 7, 5);
-      ctx.fillRect(x + 8, y + 19, 7, 6); ctx.fillRect(x + 18, y + 18, 6, 6);
-    } else {
+      // Pavio queimando no topo
+      var sparkX = x + w / 2, sparkY = y - 4;
+      ctx.strokeStyle = '#3e2723'; ctx.lineWidth = 1.8;
+      ctx.beginPath(); ctx.moveTo(sparkX, y); ctx.quadraticCurveTo(sparkX + 3, y - 2, sparkX, sparkY); ctx.stroke();
+      ctx.fillStyle = (Math.floor(t / 4) % 2 === 0) ? '#ffd43b' : '#ff6b6b';
+      ctx.beginPath(); ctx.arc(sparkX, sparkY, 3, 0, Math.PI * 2); ctx.fill();
+    } else if (kind === 'diamond_ore') {
+      // Cristais de Diamante Cyan cintilantes com partículas e reflexo
+      var diaGlow = 0.75 + Math.sin(t * 0.12) * 0.25;
+      ctx.fillStyle = `rgba(59,201,219,${diaGlow})`;
+      // Pockets de gemas quadradas
+      ctx.fillRect(x + 5, y + 5, 7, 7); ctx.fillRect(x + 19, y + 7, 8, 6);
+      ctx.fillRect(x + 7, y + 18, 7, 7); ctx.fillRect(x + 18, y + 19, 7, 7);
+      // Núcleo branco brilhante de reflexo
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(x + 7, y + 7, 3, 3); ctx.fillRect(x + 21, y + 9, 3, 2.5);
+      ctx.fillRect(x + 9, y + 20, 3, 3);
+    } else if (kind === 'gold_ore') {
+      // Pepitas de Ouro do Sertão com brilho pulsante
+      var gPhase = (t % 30 < 8);
+      ctx.fillStyle = gPhase ? '#fff3bf' : '#ffd43b';
+      ctx.fillRect(x + 6, y + 6, 7, 6); ctx.fillRect(x + 18, y + 7, 8, 6);
+      ctx.fillRect(x + 7, y + 19, 8, 6); ctx.fillRect(x + 19, y + 18, 6, 7);
+      ctx.fillStyle = '#fab005';
+      ctx.fillRect(x + 8, y + 8, 3, 3); ctx.fillRect(x + 20, y + 20, 3, 3);
+    } else if (kind === 'redstone_ore') {
+      // Veios reluzentes de Redstone escarlate
+      var rGlow = 0.7 + Math.sin(t * 0.15) * 0.3;
+      ctx.fillStyle = `rgba(255,107,107,${rGlow})`;
+      ctx.fillRect(x + 6, y + 6, 6, 6); ctx.fillRect(x + 19, y + 6, 7, 5);
+      ctx.fillRect(x + 12, y + 13, 8, 6); ctx.fillRect(x + 6, y + 20, 6, 6);
+      ctx.fillRect(x + 19, y + 19, 7, 7);
+      ctx.fillStyle = '#ff8787'; ctx.fillRect(x + 14, y + 15, 4, 3);
+    } else if (kind === 'chest') {
+      // Baú de Tesouro do Sertão com cantoneiras de ferro e fecho dourado
+      ctx.strokeStyle = '#3e2723'; ctx.lineWidth = 2;
+      ctx.strokeRect(x + 2, y + 2, w - 4, h - 4);
+      // Cantoneiras metálicas
+      ctx.fillStyle = '#495057';
+      ctx.fillRect(x + 2, y + 2, 5, 5); ctx.fillRect(x + w - 7, y + 2, 5, 5);
+      ctx.fillRect(x + 2, y + h - 7, 5, 5); ctx.fillRect(x + w - 7, y + h - 7, 5, 5);
+      // Fechadura dourada central
+      ctx.fillStyle = '#ffd43b'; ctx.fillRect(x + w / 2 - 4, y + h / 2 - 3, 8, 7);
+      ctx.fillStyle = '#111'; ctx.fillRect(x + w / 2 - 1.5, y + h / 2, 3, 3);
+    } else if (kind === 'wood_crate') {
+      // Caixa de tábuas de madeira reforçada com X central
       ctx.strokeStyle = '#5c3a1e'; ctx.lineWidth = 2;
-      ctx.strokeRect(x + 4, y + 4, w - 8, h - 8);
+      ctx.strokeRect(x + 3, y + 3, w - 6, h - 6);
+      ctx.beginPath();
+      ctx.moveTo(x + 4, y + 4); ctx.lineTo(x + w - 4, y + h - 4);
+      ctx.moveTo(x + w - 4, y + 4); ctx.lineTo(x + 4, y + h - 4);
+      ctx.stroke();
+    } else {
+      // Bloco de Pedra Arenito de Cariri
+      ctx.fillStyle = 'rgba(0,0,0,0.18)';
+      ctx.fillRect(x + 5, y + 6, 5, 5); ctx.fillRect(x + 18, y + 11, 7, 5);
+      ctx.fillRect(x + 8, y + 20, 6, 6); ctx.fillRect(x + 20, y + 21, 5, 5);
     }
-    if (hp === 1) {
-      ctx.strokeStyle = '#111'; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.moveTo(x + 6, y + 4); ctx.lineTo(x + 16, y + 16); ctx.lineTo(x + 26, y + 28); ctx.stroke();
+
+    // Rachaduras quando o bloco leva dano
+    if (hp <= 1) {
+      ctx.strokeStyle = 'rgba(0,0,0,0.85)'; ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.moveTo(x + 5, y + 3); ctx.lineTo(x + 14, y + 14); ctx.lineTo(x + 12, y + 22); ctx.lineTo(x + 27, y + 29);
+      ctx.moveTo(x + 14, y + 14); ctx.lineTo(x + 26, y + 8);
+      ctx.stroke();
     }
+
+    // Contorno pixel art forte estilo xilogravura cordel
     ctx.strokeStyle = '#1e120a'; ctx.lineWidth = 2; ctx.strokeRect(x, y, w, h);
     ctx.restore();
   }
@@ -1486,20 +1564,93 @@
     if (G._oxeSpecialMode === 'minecraft' && !enemy.dead) {
       ctx.save();
       ctx.translate(cx, by);
-      ctx.scale(S * dir, S);
-      ctx.fillStyle = shade(col, -0.25);
-      ctx.fillRect(-w * 0.36 + 3, -h * 0.86 + 3, w * 0.72, h * 0.72);
-      ctx.fillStyle = col;
-      ctx.fillRect(-w * 0.36, -h * 0.86, w * 0.72, h * 0.72);
-      ctx.strokeStyle = OUT; ctx.lineWidth = 1.5;
-      ctx.strokeRect(-w * 0.36, -h * 0.86, w * 0.72, h * 0.72);
-      ctx.fillStyle = '#111';
-      ctx.fillRect(w * 0.06, -h * 0.68, 4, 4);
-      ctx.fillRect(w * 0.22, -h * 0.68, 4, 4);
-      ctx.fillRect(w * 0.1, -h * 0.48, 8, 5);
-      ctx.fillStyle = shade(col, -0.35);
-      ctx.fillRect(-w * 0.25, -h * 0.14, 6, h * 0.14);
-      ctx.fillRect(w * 0.12, -h * 0.14, 6, h * 0.14);
+      var isCreeper = !!(enemy.isCreeper || enemy.type === 'bode_doido');
+      var isSkeleton = !!(enemy.isSkeleton || enemy.type === 'cangaceiro_sombra');
+      var isSpider = !!(enemy.isSpider || enemy.type === 'escorpiao');
+      var hissFlash = enemy.hissTimer > 0 && (Math.floor(t / 3) % 2 === 0);
+
+      var scaleFactor = S * (enemy.hissTimer > 0 ? 1.25 : 1);
+      ctx.scale(scaleFactor * dir, scaleFactor);
+      ctx.strokeStyle = OUT; ctx.lineWidth = 1.4;
+
+      if (isCreeper) {
+        // CREEPER-CACTO DO SERTÃO (Cúbico verde com manchas camufladas e rosto carrancudo)
+        var crColor = hissFlash ? '#ffffff' : '#2b8a3e';
+        // Cabeça quadrada
+        ctx.fillStyle = shade(crColor, -0.2); ctx.fillRect(-7, -29, 14, 14);
+        ctx.fillStyle = crColor; ctx.fillRect(-8, -30, 16, 15); ctx.strokeRect(-8, -30, 16, 15);
+        if (!hissFlash) {
+          // Manchas pixeladas de textura
+          ctx.fillStyle = '#237032'; ctx.fillRect(-5, -28, 4, 4); ctx.fillRect(2, -22, 4, 4);
+          // Rosto carrancudo clássico do Creeper
+          ctx.fillStyle = '#111';
+          ctx.fillRect(-6, -26, 4, 4); ctx.fillRect(2, -26, 4, 4); // Olhos
+          ctx.fillRect(-3, -22, 6, 4); // Nariz
+          ctx.fillRect(-5, -18, 3, 4); ctx.fillRect(2, -18, 3, 4); // Bigode/boca
+        }
+        // Corpo cilíndrico-quadrado
+        ctx.fillStyle = crColor; ctx.fillRect(-6, -15, 12, 11); ctx.strokeRect(-6, -15, 12, 11);
+        // 4 patas curtas quadradas
+        var legAnim = Math.sin(t * 0.35) * 2;
+        ctx.fillStyle = shade(crColor, -0.3);
+        ctx.fillRect(-7, -4 + legAnim, 4, 4); ctx.fillRect(-2, -4 - legAnim, 4, 4);
+        ctx.fillRect(3, -4 + legAnim, 4, 4);
+      } else if (isSkeleton) {
+        // ESQUELETO CANGACEIRO (Crânio de osso, chapéu de couro meia-lua e arco)
+        // Crânio branco
+        ctx.fillStyle = '#dee2e6'; ctx.fillRect(-7, -28, 14, 13); ctx.strokeRect(-7, -28, 14, 13);
+        ctx.fillStyle = '#111';
+        ctx.fillRect(-5, -24, 3, 4); ctx.fillRect(2, -24, 3, 4); // Órbitas oculares
+        ctx.fillRect(-2, -19, 4, 2); // Dentes
+        // Chapéu de cangaceiro na cabeça do esqueleto!
+        ctx.fillStyle = '#8a4f22';
+        ctx.fillRect(-10, -32, 20, 4); ctx.strokeRect(-10, -32, 20, 4);
+        ctx.fillRect(-6, -37, 12, 5); ctx.strokeRect(-6, -37, 12, 5);
+        ctx.fillStyle = '#ffd43b'; ctx.fillRect(-1, -35, 3, 3);
+        // Costelas / Caixa torácica
+        ctx.fillStyle = '#ced4da'; ctx.fillRect(-4, -15, 8, 9); ctx.strokeRect(-4, -15, 8, 9);
+        ctx.fillStyle = '#111'; ctx.fillRect(-3, -12, 6, 2);
+        // Pernas finas de osso
+        ctx.fillStyle = '#e9ecef';
+        ctx.fillRect(-5, -6, 3, 7); ctx.fillRect(2, -6, 3, 7);
+        // Arco / Bacamarte de madeira na mão
+        ctx.strokeStyle = '#5c3a1e'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(8, -12, 8, -Math.PI * 0.4, Math.PI * 0.4); ctx.stroke();
+      } else if (isSpider) {
+        // ARANHA DA MINA (Voxel escuro, olhos vermelhos e 8 patas ágeis)
+        ctx.fillStyle = '#212529';
+        // Abdômen e Cefalotórax
+        ctx.fillRect(-11, -12, 10, 8); ctx.strokeRect(-11, -12, 10, 8);
+        ctx.fillRect(-1, -14, 9, 10); ctx.strokeRect(-1, -14, 9, 10);
+        // 6 Olhos vermelhos brilhantes
+        ctx.fillStyle = '#ff6b6b';
+        ctx.fillRect(4, -12, 2.5, 2.5); ctx.fillRect(4, -8, 2.5, 2.5);
+        ctx.fillRect(1, -12, 2, 2); ctx.fillRect(1, -8, 2, 2);
+        // 8 Pernas articuladas
+        ctx.strokeStyle = '#343a40'; ctx.lineWidth = 1.8;
+        for (var l = -2; l <= 2; l++) {
+          if (l === 0) continue;
+          var spSwing = Math.sin(t * 0.3 + l) * 3;
+          ctx.beginPath();
+          ctx.moveTo(-1, -10); ctx.lineTo(-1 + l * 4, -15); ctx.lineTo(-1 + l * 6, -1 + spSwing);
+          ctx.stroke();
+        }
+      } else {
+        // ZUMBI DE GIBÃO OU BICHO VOXEL GENÉRICO
+        ctx.fillStyle = shade(col, -0.25);
+        ctx.fillRect(-w * 0.36 + 3, -h * 0.86 + 3, w * 0.72, h * 0.72);
+        ctx.fillStyle = col;
+        ctx.fillRect(-w * 0.36, -h * 0.86, w * 0.72, h * 0.72);
+        ctx.strokeStyle = OUT; ctx.lineWidth = 1.5;
+        ctx.strokeRect(-w * 0.36, -h * 0.86, w * 0.72, h * 0.72);
+        ctx.fillStyle = '#111';
+        ctx.fillRect(w * 0.06, -h * 0.68, 4, 4);
+        ctx.fillRect(w * 0.22, -h * 0.68, 4, 4);
+        ctx.fillRect(w * 0.1, -h * 0.48, 8, 5);
+        ctx.fillStyle = shade(col, -0.35);
+        ctx.fillRect(-w * 0.25, -h * 0.14, 6, h * 0.14);
+        ctx.fillRect(w * 0.12, -h * 0.14, 6, h * 0.14);
+      }
       ctx.restore();
       return;
     }

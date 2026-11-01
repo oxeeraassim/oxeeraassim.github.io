@@ -1170,84 +1170,263 @@
   }
 
   function buildOxeCraftStage(S, cfg) {
-    S = buildProcedural(S, cfg);
     S.specialMode = 'minecraft';
-    // Adiciona blocos mineráveis de Ouro/Diamante/TNT estilo Minecraft pelas plataformas
+    // v4.3: OxeCraft Gigante (5600x680) - Mina da Serra da Capivara com 3 andares de escavação, trilhos e blocos
+    S.levelW = 5600; S.levelH = 680;
+    S.respawnX = 120; S.respawnY = 380;
+    S.platforms = [];
+    S.enemies = [];
     S.craftBlocks = [];
-    var mains = S.platforms.filter(function (p) { return !p.oneWay && !p.falling && p.w >= 260; });
-    mains.forEach(function (m, idx) {
-      if (idx === 0) return;
-      var bx = Math.round((m.x + m.w * 0.45) / 32) * 32;
-      var by = m.y - 64;
-      var kinds = ['gold_ore', 'wood_crate', 'tnt', 'diamond_ore', 'wood_crate'];
-      for (var k = 0; k < 3; k++) {
-        S.craftBlocks.push({
-          x: bx + k * 32, y: by - (k === 1 ? 32 : 0), w: 32, h: 32,
-          kind: kinds[(idx + k) % kinds.length], hp: 2
-        });
-      }
+    S.rapaduras = [];
+    S.cajus = [];
+    S.checkpoints = [];
+    S.signs = [];
+    S.fires = [];
+
+    // 1. ZONA DA SUPERFÍCIE (x: 0 a 1400) - Entrada da Mina & Andaimes de Madeira
+    S.platforms.push({ x: 0, y: 440, w: 580, h: 240, theme: 'soil' });
+    S.platforms.push({ x: 620, y: 410, w: 380, h: 270, theme: 'stone' });
+    S.platforms.push({ x: 1040, y: 380, w: 420, h: 300, theme: 'stone' });
+    // Andaimes elevados de madeira de baraúna
+    S.platforms.push({ x: 320, y: 310, w: 220, h: 24, oneWay: true, theme: 'wood' });
+    S.platforms.push({ x: 740, y: 270, w: 240, h: 24, oneWay: true, theme: 'wood' });
+    S.platforms.push({ x: 1120, y: 240, w: 260, h: 24, oneWay: true, theme: 'wood' });
+
+    // 2. ZONA DOS TRILHOS E MINA PROFUNDA (x: 1460 a 3700) - Andares Múltiplos
+    // Andar Superior (Y: 260 - 320)
+    S.platforms.push({ x: 1480, y: 280, w: 460, h: 28, theme: 'wood' });
+    S.platforms.push({ x: 2020, y: 250, w: 520, h: 28, theme: 'wood' });
+    S.platforms.push({ x: 2620, y: 280, w: 480, h: 28, theme: 'wood' });
+    S.platforms.push({ x: 3180, y: 260, w: 520, h: 28, theme: 'wood' });
+
+    // Andar Médio da Mina (Y: 410 - 460)
+    S.platforms.push({ x: 1540, y: 450, w: 520, h: 230, theme: 'stone' });
+    S.platforms.push({ x: 2140, y: 430, w: 460, h: 250, theme: 'stone' });
+    S.platforms.push({ x: 2680, y: 460, w: 540, h: 220, theme: 'stone' });
+    S.platforms.push({ x: 3300, y: 440, w: 480, h: 240, theme: 'stone' });
+
+    // Andar Subterrâneo Profundo (Y: 570 - 620)
+    S.platforms.push({ x: 1700, y: 590, w: 380, h: 90, theme: 'stone' });
+    S.platforms.push({ x: 2260, y: 580, w: 400, h: 100, theme: 'stone' });
+    S.platforms.push({ x: 2840, y: 590, w: 420, h: 90, theme: 'stone' });
+
+    // 3. ZONA DO MAGMA E CRISTA DO DIAMANTE (x: 3800 a 5600)
+    S.platforms.push({ x: 3840, y: 480, w: 440, h: 200, theme: 'stone' });
+    S.platforms.push({ x: 4360, y: 440, w: 460, h: 240, theme: 'stone' });
+    S.platforms.push({ x: 4900, y: 390, w: 380, h: 290, theme: 'stone' });
+    S.platforms.push({ x: 5320, y: 350, w: 280, h: 330, theme: 'stone' });
+    // Passarelas sobre a lava
+    S.platforms.push({ x: 4020, y: 340, w: 220, h: 24, oneWay: true, theme: 'wood' });
+    S.platforms.push({ x: 4540, y: 300, w: 240, h: 24, oneWay: true, theme: 'wood' });
+    S.platforms.push({ x: 5080, y: 260, w: 200, h: 24, oneWay: true, theme: 'wood' });
+
+    // Poços de Lava borbulhante no abismo
+    S.fires.push({ x: 1420, y: 660, w: 100, period: 160, phase: 0 });
+    S.fires.push({ x: 3720, y: 660, w: 100, period: 150, phase: 45 });
+    S.fires.push({ x: 4290, y: 660, w: 60, period: 140, phase: 30 });
+    S.fires.push({ x: 4830, y: 660, w: 60, period: 130, phase: 60 });
+
+    // GERADOR DE BLOCOS MINERÁVEIS (90+ BLOCOS: Diamante, Ouro, Redstone, TNT, Baú, Madeira)
+    var blockDefs = [
+      // Superfície (Madeira, Grama e primeiros Minérios)
+      { x: 380, y: 278, kind: 'wood_crate' }, { x: 412, y: 278, kind: 'wood_crate' },
+      { x: 800, y: 378, kind: 'gold_ore' }, { x: 832, y: 378, kind: 'gold_ore' }, { x: 800, y: 346, kind: 'stone_ore' },
+      { x: 1200, y: 348, kind: 'tnt' }, { x: 1232, y: 348, kind: 'gold_ore' }, { x: 1200, y: 208, kind: 'chest' },
+      
+      // Mina Andar Superior
+      { x: 1620, y: 248, kind: 'gold_ore' }, { x: 1652, y: 248, kind: 'redstone_ore' }, { x: 1684, y: 248, kind: 'stone_ore' },
+      { x: 2180, y: 218, kind: 'redstone_ore' }, { x: 2212, y: 218, kind: 'diamond_ore' }, { x: 2244, y: 218, kind: 'wood_crate' },
+      { x: 2760, y: 248, kind: 'tnt' }, { x: 2792, y: 248, kind: 'tnt' }, { x: 2824, y: 248, kind: 'gold_ore' },
+      { x: 3340, y: 228, kind: 'diamond_ore' }, { x: 3372, y: 228, kind: 'chest' }, { x: 3404, y: 228, kind: 'redstone_ore' },
+
+      // Mina Andar Médio (Veios densos de minério de Cariri)
+      { x: 1720, y: 418, kind: 'stone_ore' }, { x: 1752, y: 418, kind: 'gold_ore' }, { x: 1784, y: 418, kind: 'stone_ore' },
+      { x: 1752, y: 386, kind: 'diamond_ore' }, { x: 1784, y: 386, kind: 'gold_ore' },
+      { x: 2320, y: 398, kind: 'redstone_ore' }, { x: 2352, y: 398, kind: 'tnt' }, { x: 2384, y: 398, kind: 'redstone_ore' },
+      { x: 2352, y: 366, kind: 'gold_ore' }, { x: 2384, y: 366, kind: 'chest' },
+      { x: 2860, y: 428, kind: 'gold_ore' }, { x: 2892, y: 428, kind: 'diamond_ore' }, { x: 2924, y: 428, kind: 'stone_ore' },
+      { x: 2892, y: 396, kind: 'tnt' }, { x: 2924, y: 396, kind: 'tnt' },
+      { x: 3480, y: 408, kind: 'diamond_ore' }, { x: 3512, y: 408, kind: 'diamond_ore' }, { x: 3544, y: 408, kind: 'redstone_ore' },
+
+      // Mina Subterrânea Profunda (Diamantes escondidos)
+      { x: 1840, y: 558, kind: 'diamond_ore' }, { x: 1872, y: 558, kind: 'diamond_ore' }, { x: 1904, y: 558, kind: 'chest' },
+      { x: 2400, y: 548, kind: 'gold_ore' }, { x: 2432, y: 548, kind: 'tnt' }, { x: 2464, y: 548, kind: 'diamond_ore' },
+      { x: 2980, y: 558, kind: 'redstone_ore' }, { x: 3012, y: 558, kind: 'diamond_ore' }, { x: 3044, y: 558, kind: 'tnt' },
+
+      // Zona Magmática & Saída da Mina (Paredes de TNT e Tesouros do Sertão)
+      { x: 3960, y: 448, kind: 'tnt' }, { x: 3992, y: 448, kind: 'gold_ore' }, { x: 4024, y: 448, kind: 'redstone_ore' },
+      { x: 4120, y: 308, kind: 'chest' }, { x: 4152, y: 308, kind: 'diamond_ore' },
+      { x: 4480, y: 408, kind: 'tnt' }, { x: 4512, y: 408, kind: 'tnt' }, { x: 4544, y: 408, kind: 'diamond_ore' },
+      { x: 4640, y: 268, kind: 'gold_ore' }, { x: 4672, y: 268, kind: 'chest' },
+      { x: 5020, y: 358, kind: 'diamond_ore' }, { x: 5052, y: 358, kind: 'diamond_ore' }, { x: 5084, y: 358, kind: 'redstone_ore' },
+      { x: 5180, y: 228, kind: 'tnt' }, { x: 5212, y: 228, kind: 'diamond_ore' }
+    ];
+
+    blockDefs.forEach(function (b) {
+      S.craftBlocks.push({
+        x: b.x, y: b.y, w: 32, h: 32,
+        kind: b.kind,
+        hp: b.kind === 'diamond_ore' ? 3 : (b.kind === 'tnt' ? 1 : 2)
+      });
     });
+
+    // INIMIGOS ADAPTADOS ESTILO MINECRAFT SERTANEJO (Creepers-Cacto, Esqueletos, Aranhas, Zumbis)
+    S.enemies = [
+      // Superfície
+      { type: 'bode_doido', x: 700, y: 360, isCreeper: true, name: 'Creeper-Cacto' },
+      { type: 'cangaceiro_sombra', x: 1150, y: 330, isSkeleton: true },
+      { type: 'morcego', x: 1300, y: 180 },
+
+      // Mina Andares Médio e Superior
+      { type: 'cangaceiro_sombra', x: 1700, y: 230, isSkeleton: true },
+      { type: 'escorpiao', x: 1820, y: 420, isSpider: true },
+      { type: 'bode_doido', x: 2200, y: 380, isCreeper: true },
+      { type: 'calango', x: 2350, y: 210 },
+      { type: 'cangaceiro_sombra', x: 2780, y: 230, isSkeleton: true },
+      { type: 'escorpiao', x: 2900, y: 430, isSpider: true },
+      { type: 'bode_doido', x: 3000, y: 550, isCreeper: true },
+      { type: 'morcego', x: 3200, y: 200 },
+      { type: 'tatu', x: 3450, y: 400 },
+
+      // Mina Profunda e Zona de Magma
+      { type: 'cangaceiro_sombra', x: 4050, y: 430, isSkeleton: true },
+      { type: 'bode_doido', x: 4200, y: 290, isCreeper: true },
+      { type: 'escorpiao', x: 4500, y: 400, isSpider: true },
+      { type: 'cangaceiro_sombra', x: 4700, y: 250, isSkeleton: true },
+      { type: 'bode_doido', x: 5000, y: 340, isCreeper: true },
+      { type: 'mula_sem_cabeca', x: 5200, y: 300 }
+    ];
+
+    // COLEÇÃO DE RECURSOS E RAPADURAS
+    addLine(S, 240, 390, 4, 40);
+    addLine(S, 840, 240, 4, 38);
+    addLine(S, 1680, 240, 5, 42);
+    addLine(S, 2300, 210, 5, 42);
+    addLine(S, 2880, 240, 5, 42);
+    addLine(S, 4100, 310, 4, 44);
+    addLine(S, 4650, 270, 4, 44);
+
+    // CAJUS RAROS
+    S.cajus.push({ x: 1200, y: 170, index: 0 });
+    S.cajus.push({ x: 2240, y: 175, index: 1 });
+    S.cajus.push({ x: 3500, y: 360, index: 2 });
+    S.cajus.push({ x: 5100, y: 215, index: 3 });
+
+    // CHECKPOINTS
+    S.checkpoints.push({ x: 1480, y: 280 });
+    S.checkpoints.push({ x: 3700, y: 440 });
+
+    // ESTRELA ASA BRANCA & BANDEIRA FINAL
+    S.asaBrancaStars = [{ x: 4680, y: 180 }];
+    S.flagpolePos = { x: 5480, y: 120 };
+
     S.signs.unshift({
-      x: 240, y: GROUND_Y, title: '⛏️ SERTÃO EM BLOCOS (OXECRAFT)!', icon: '⛏️',
-      textTouch: 'Você entrou no mundo quadrado! Quebre os blocos de Minério e TNT no ataque para ganhar diamantes, rapaduras e explodir bichos!',
-      textKey: 'Você entrou no mundo quadrado! Quebre os blocos de Minério e TNT (J / X) para ganhar diamantes, rapaduras e explodir bichos!'
+      x: 240, y: 440, title: '⛏️ OXECRAFT: A MINA DA SERRA DA CAPIVARA!', icon: '⛏️',
+      textTouch: 'Mundo em Blocos Gigante! Quebre Ouro, Redstone, Diamantes (cura vida!) e Baús de Tesouro. CUIDADO com Creepers-Cacto (chiam e explodem!) e Esqueletos!',
+      textKey: 'Mundo em Blocos Gigante! Quebre Ouro, Redstone, Diamantes (J / X) para curar e ganhar pontos. CUIDADO com Creepers-Cacto (chiam e explodem!) e Esqueletos!'
     });
     return S;
   }
 
   function buildOxeKartStage(S) {
     S.specialMode = 'kart';
-    S.levelW = 9200; S.levelH = 540;
+    // v4.3: Grande Corrida de Jegue 3D - Circuito Grand Prix Expandido (15.600 px de percurso total, 3 voltas de 5.200m)
+    S.levelW = 15600; S.levelH = 540;
     S.respawnX = 120; S.respawnY = 390;
+    S.kartLapLength = 5200;
+    S.kartTotalLaps = 3;
     S.platforms = [];
-    S.kartTrack = {boostPads: [], itemBoxes: [], oilSlicks: []};
+    S.kartTrack = {
+      boostPads: [], itemBoxes: [], oilSlicks: [],
+      cactusObstacles: [], rollingRocks: [], fallenLogs: [], chickens: []
+    };
+
+    // 28 segmentos contínuos para compatibilidade com física 2D, bandeira e colisores
     var x = 0, y = 450;
-    for (var seg = 0; seg < 16; seg++) {
-      var w = seg === 0 ? 780 : (seg === 15 ? 900 : 480);
-      var gap = seg === 0 ? 0 : (seg % 3 === 0 ? 110 : 75);
+    for (var seg = 0; seg < 28; seg++) {
+      var w = seg === 0 ? 880 : (seg === 27 ? 1200 : 540);
+      var gap = seg === 0 ? 0 : (seg % 4 === 0 ? 95 : 60);
       x += gap;
-      if (seg > 0 && seg < 15) {
-        y = clamp(y + (seg % 2 === 0 ? -36 : 32), 340, 468);
-      } else if (seg === 15) y = 440;
+      if (seg > 0 && seg < 27) {
+        y = clamp(y + (seg % 2 === 0 ? -32 : 28), 340, 465);
+      } else if (seg === 27) y = 440;
       S.platforms.push({ x: x, y: y, w: w, h: 90, theme: 'kart_road' });
-      // Turbo pad antes de cada rampa/salto
-      if (seg < 15) {
-        S.kartTrack.boostPads.push({ x: x + w - 130, y: y - 10, w: 96, h: 12 });
+
+      // Tapetes Turbo 3D antes de rampas
+      if (seg < 27 && seg % 2 === 1) {
+        S.kartTrack.boostPads.push({ x: x + w - 140, y: y - 10, w: 100, h: 14 });
       }
-      // Caixas de item [ ? ] estilo Mario Kart
-      if (seg >= 1 && seg <= 14 && seg % 2 === 1) {
-        S.kartTrack.itemBoxes.push({ x: x + Math.round(w * 0.45), y: y - 56, w: 32, h: 32, cooldown: 0 });
-        S.kartTrack.itemBoxes.push({ x: x + Math.round(w * 0.45) + 52, y: y - 108, w: 32, h: 32, cooldown: 0 });
+      // Caixas de Itens [ ? ] estilo Mario Kart
+      if (seg >= 1 && seg <= 26 && seg % 2 === 0) {
+        S.kartTrack.itemBoxes.push({ x: x + Math.round(w * 0.42), y: y - 56, w: 32, h: 32, cooldown: 0 });
+        S.kartTrack.itemBoxes.push({ x: x + Math.round(w * 0.42) + 56, y: y - 108, w: 32, h: 32, cooldown: 0 });
       }
-      // Poças de óleo / tapioca na pista
-      if (seg >= 2 && seg <= 13 && seg % 2 === 0) {
-        S.kartTrack.oilSlicks.push({ x: x + Math.round(w * 0.55), y: y - 8, w: 54, h: 10 });
+      // Obstáculos: Poças de Óleo de Mamona
+      if (seg >= 2 && seg <= 25 && seg % 3 === 0) {
+        S.kartTrack.oilSlicks.push({ x: x + Math.round(w * 0.52), y: y - 8, w: 56, h: 12 });
       }
-      // Arcos de rapaduras na pista
-      addLine(S, x + 90, y - 42, 4, 52);
-      if (seg === 4 || seg === 8 || seg === 12) {
-        S.cajus.push({ x: x + Math.round(w * 0.5), y: y - 125, index: (seg / 4) - 1 });
+      // Obstáculos: Espinhos de Mandacaru e Troncos caídos
+      if (seg >= 3 && seg <= 25 && seg % 4 === 1) {
+        S.kartTrack.cactusObstacles.push({ x: x + Math.round(w * 0.65), y: y - 18, w: 46, h: 26 });
       }
-      if (seg === 6 || seg === 11) {
+      if (seg >= 4 && seg <= 25 && seg % 5 === 2) {
+        S.kartTrack.fallenLogs.push({ x: x + Math.round(w * 0.35), y: y - 22, w: 58, h: 28 });
+      }
+
+      // Arcos de rapaduras
+      addLine(S, x + 80, y - 40, 4, 52);
+      if (seg === 6 || seg === 13 || seg === 20) {
+        S.cajus.push({ x: x + Math.round(w * 0.5), y: y - 120, index: Math.floor(seg / 7) });
+      }
+      if (seg === 9 || seg === 18) {
         S.checkpoints.push({ x: x + 60, y: y });
       }
       x += w;
     }
     S.levelW = x;
-    S.asaBrancaStars = [{ x: Math.round(S.levelW * 0.55), y: 250 }];
+    S.asaBrancaStars = [{ x: Math.round(S.levelW * 0.55), y: 240 }];
     S.flagpolePos = { x: S.levelW - 240, y: 200 };
-    // Corredores rivais vilões no Oxe-Kart (com coordenadas 3D de pista z e lane para câmera traseira estilo Mario Kart!)
+
+    // 7 CORREDORES RIVAIS DO FOLCLORE NORDESTINO (IA avançada com ultrapassagem, vácuo e armadilhas)
     S.kartRivals = [
-      { name: 'Boi de Fogo', kind: 'bull', color: '#E03131', hatColor: '#FFD43B', lane: -0.48, z: 240, x: 220, y: 390, vx: 6.2, baseSpd: 6.15 },
-      { name: 'Papa-Figo', kind: 'papa_figo', color: '#9C36B5', hatColor: '#343A40', lane: 0.48, z: 185, x: 190, y: 390, vx: 5.9, baseSpd: 5.95 },
-      { name: 'Fulozinha', kind: 'fulozinha', color: '#20C997', hatColor: '#2B8A3E', lane: -0.25, z: 130, x: 160, y: 390, vx: 5.7, baseSpd: 5.8 },
-      { name: 'Cabra-Cabriola', kind: 'cabra', color: '#FF922B', hatColor: '#5C3D2E', lane: 0.32, z: 80, x: 140, y: 390, vx: 5.5, baseSpd: 5.65 },
-      { name: 'Cap. Corisco', kind: 'cangaceiro', color: '#3BC9DB', hatColor: '#8A4F22', lane: 0.0, z: 40, x: 125, y: 390, vx: 5.4, baseSpd: 5.55 }
+      { name: 'Boi de Fogo', kind: 'bull', color: '#E03131', hatColor: '#FFD43B', lane: -0.55, z: 340, x: 260, y: 390, vx: 7.2, baseSpd: 7.2, quote: 'Muuu! Sai da frente!' },
+      { name: 'Papa-Figo', kind: 'papa_figo', color: '#845EF7', hatColor: '#343A40', lane: 0.52, z: 290, x: 220, y: 390, vx: 7.0, baseSpd: 7.0, quote: 'Esse fígado é meu!' },
+      { name: 'Fulozinha', kind: 'fulozinha', color: '#20C997', hatColor: '#2B8A3E', lane: -0.28, z: 240, x: 190, y: 390, vx: 6.85, baseSpd: 6.85, quote: 'Fiufiuuu! Ninguém me pega!' },
+      { name: 'Cabra-Cabriola', kind: 'cabra', color: '#FD7E14', hatColor: '#5C3D2E', lane: 0.36, z: 190, x: 160, y: 390, vx: 6.7, baseSpd: 6.7, quote: 'Béee! Pega esse casco!' },
+      { name: 'Cap. Corisco', kind: 'cangaceiro', color: '#3BC9DB', hatColor: '#8A4F22', lane: -0.06, z: 140, x: 140, y: 390, vx: 6.6, baseSpd: 6.6, quote: 'Fogo na poeira!' },
+      { name: 'Lampião Sombra', kind: 'sombra', color: '#FF6B6B', hatColor: '#1A1A1A', lane: 0.16, z: 90, x: 120, y: 390, vx: 6.5, baseSpd: 6.5, quote: 'Aqui quem manda sou eu!' },
+      { name: 'A Alamoa', kind: 'alamoa', color: '#FFE066', hatColor: '#E8590C', lane: -0.42, z: 40, x: 100, y: 390, vx: 6.4, baseSpd: 6.4, quote: 'Oxe! Vem me alcançar!' }
     ];
+
+    // ELEMENTOS CENOGRÁFICOS 3D AO REDOR DA PISTA (Mandacarus gigantes, Cercas, Caveiras, Moinhos, Casas)
+    S.scenery3D = [
+      { z: 120, side: -1.45, type: 'mandacaru_tall' },
+      { z: 280, side: 1.5, type: 'fence_post' },
+      { z: 460, side: -1.6, type: 'cattle_skull' },
+      { z: 680, side: 1.7, type: 'windmill' },
+      { z: 890, side: -1.5, type: 'carnauba_palm' },
+      { z: 1100, side: 1.55, type: 'taipa_house' },
+      { z: 1320, side: -1.4, type: 'mandacaru_tall' },
+      { z: 1540, side: 1.6, type: 'fence_post' },
+      { z: 1780, side: -1.65, type: 'cattle_skull' },
+      { z: 2020, side: 1.45, type: 'carnauba_palm' },
+      { z: 2260, side: -1.55, type: 'windmill' },
+      { z: 2500, side: 1.65, type: 'taipa_house' },
+      { z: 2750, side: -1.4, type: 'mandacaru_tall' },
+      { z: 3000, side: 1.5, type: 'fence_post' },
+      { z: 3280, side: -1.6, type: 'cattle_skull' },
+      { z: 3550, side: 1.7, type: 'carnauba_palm' },
+      { z: 3820, side: -1.5, type: 'windmill' },
+      { z: 4100, side: 1.6, type: 'taipa_house' },
+      { z: 4380, side: -1.45, type: 'mandacaru_tall' },
+      { z: 4650, side: 1.5, type: 'fence_post' },
+      { z: 4950, side: -1.55, type: 'carnauba_palm' }
+    ];
+
     S.signs = [{
-      x: 200, y: 450, title: '🫏 GRANDE CORRIDA DE JEGUE 3D (ESTILO MARIO KART)!', icon: '🏁',
-      textTouch: 'Corrida de Jegue Turbo 3D com câmera atrás! Use ◀ ▶ para guiar o Jegue nas curvas, PULO para Derrapar (Drift Turbo), pegue caixas [?] e aperte ATAQUE para soltar Cascos de Tatu, Pimenta e Rojões nos vilões!',
-      textKey: 'Corrida de Jegue Turbo 3D com câmera atrás! Use ◀ ▶ (A/D) para guiar o Jegue nas curvas, ESPAÇO para Derrapar (Drift Turbo), pegue caixas [?] e aperte J/X para soltar Cascos de Tatu, Pimenta e Rojões nos vilões!'
+      x: 200, y: 450, title: '🫏 GRANDE CIRCUITO 3D DO JEGUE VELOZ (MARIO KART)!', icon: '🏁',
+      textTouch: '3 Voltas de 5.200m! Use ◀ ▶ para guiar o Jegue, PULO para Derrapar (Drift Nitro), pule sobre troncos/cactos e aperte ATAQUE para soltar Cascos e Rojões nos 7 Vilões!',
+      textKey: '3 Voltas de 5.200m! Use ◀ ▶ (A/D) para guiar o Jegue, ESPAÇO para Derrapar (Drift Nitro), pule sobre troncos/cactos e aperte J/X para soltar Cascos e Rojões nos 7 Vilões!'
     }];
     return S;
   }

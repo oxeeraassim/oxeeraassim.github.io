@@ -807,13 +807,20 @@ class Tonho {
       this.facing = 1;
       if (!L.kartRace) {
         L.kartRace = {
-          trackZ: 0, lap: 1, totalLaps: 3, lapLength: 2600,
-          laneX: 0, steer: 0, speed: 6.5, hopY: 0, hopVy: 0,
+          trackZ: 0, lap: 1, totalLaps: L.kartTotalLaps || 3, lapLength: L.kartLapLength || 5200,
+          laneX: 0, steer: 0, speed: 6.8, hopY: 0, hopVy: 0, spinTimer: 0,
           driftDir: 0, driftCharge: 0, heldItem: null, rouletteTimer: 0, rouletteItem: 'casco_tatu',
           shells3D: [], lightningFlash: 0, rank: 1
         };
       }
       const kr = L.kartRace;
+      if (kr.spinTimer > 0) {
+        kr.spinTimer--;
+        kr.speed = Math.max(2.4, kr.speed * 0.92);
+        kr.trackZ += kr.speed;
+        this.x = clamp(120 + (kr.trackZ / (kr.lapLength * kr.totalLaps)) * ((L.flagX || L.levelW - 220) - 120), 80, L.levelW - 180);
+        return;
+      }
       if (this.kartBoost > 0) { this.kartBoost--; if (frameCount % 2 === 0) spawnSparks(this.x, this.y + this.h - 6, 2, '#FF922B'); }
       const steerInput = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
       kr.steer = lerp(kr.steer || 0, steerInput, 0.22);
@@ -846,9 +853,9 @@ class Tonho {
       const steerPower = (kr.driftDir !== 0 ? 0.052 : 0.042);
       kr.laneX = clamp((kr.laneX || 0) + steerInput * steerPower + centrifugal, -1.42, 1.42);
       const offRoad = Math.abs(kr.laneX) > 1.04 && (this.kartBoost || 0) <= 0;
-      const topSpd = this.kartBoost > 0 ? 13.4 : (unionTimer > 0 ? 12.8 : (offRoad ? 5.6 : 9.4));
+      const topSpd = this.kartBoost > 0 ? 13.8 : (unionTimer > 0 ? 12.8 : (offRoad ? 5.6 : 9.8));
       const accelTarget = keys.down ? 4.2 : topSpd * (keys.up || keys.right || !keys.left ? 1.0 : 0.92);
-      kr.speed = lerp(kr.speed || 6.5, accelTarget, this.kartBoost > 0 ? 0.16 : 0.08);
+      kr.speed = lerp(kr.speed || 6.8, accelTarget, this.kartBoost > 0 ? 0.16 : 0.08);
       kr.trackZ += kr.speed;
       const totalRaceDist = kr.lapLength * kr.totalLaps;
       kr.lap = clamp(Math.floor(kr.trackZ / kr.lapLength) + 1, 1, kr.totalLaps);
@@ -3351,7 +3358,7 @@ function drawBossGuide(ctx, boss, camX, camY) {
   }
   function fleeJegue(p, mType) { jegueFlee.push({ x: p.x, y: p.y + p.h, vx: -(p.facing || 1) * 5, t: 70, facing: -(p.facing || 1), type: mType || 'jegue' }); }
 
-  // OxeCraft (Minecraft): quebrar blocos de Ouro, Diamante, Madeira, TNT e Terra!
+  // OxeCraft (Minecraft): quebrar blocos de Ouro, Diamante, Redstone, Baú, Madeira, TNT e Pedra!
   function breakCraftBlocksNear(cx, cy, R) {
     const L = currentLevel;
     if (!L || !Array.isArray(L.craftBlocks)) return;
@@ -3362,23 +3369,41 @@ function drawBossGuide(ctx, boss, camX, camY) {
       if (Math.hypot(bx - cx, by - cy) <= R + 18) {
         const isGold = b.kind === 'gold' || b.kind === 'gold_ore';
         const isDiamond = b.kind === 'diamond' || b.kind === 'diamond_ore';
+        const isRedstone = b.kind === 'redstone' || b.kind === 'redstone_ore';
+        const isChest = b.kind === 'chest';
         const isWood = b.kind === 'wood' || b.kind === 'wood_crate';
         b.hp = (b.hp || 1) - 1;
-        spawnSparks(bx, by, 8, isDiamond ? '#4DABF7' : isGold ? '#FFD43B' : isWood ? '#D9A066' : '#9C6644');
+        const sparkCol = isDiamond ? '#4DABF7' : isRedstone ? '#FF6B6B' : isGold ? '#FFD43B' : isWood ? '#D9A066' : '#9C6644';
+        spawnSparks(bx, by, 8, sparkCol);
         if (b.hp <= 0) {
           b.broken = true;
           sfx('stomp');
           addUnionProgress(4);
           if (isGold) {
-            rapaduras += 3; addScore(120);
-            floatText(bx, by - 10, '⛏️ +3 RAPADURAS DE OURO!', '#FFD43B');
+            rapaduras += 3; addScore(200);
+            floatText(bx, by - 12, '⛏️ +3 RAPADURAS DE OURO!', '#FFD43B');
             updateHUD();
           } else if (isDiamond) {
-            addScore(400);
+            addScore(500);
+            if (player && player.hp < player.maxHp) player.hp++;
             const dropPool = ['peixeira', 'bacamarte', 'rojao', 'baleadeira', 'pipa', 'ovo_ouro'];
             const w = dropPool[Math.floor(Math.random() * dropPool.length)];
             giveItem(w);
-            floatText(bx, by - 12, '💎 DIAMANTE! +ARMA!', '#4DABF7');
+            floatText(bx, by - 14, '💎 DIAMANTE RARO! +1 VIDA +ARMA!', '#4DABF7');
+            updateHUD();
+          } else if (isRedstone) {
+            addScore(250);
+            if (player) { player.dash = Math.max(player.dash || 0, 36); player.whipCooldown = 0; }
+            sfx('powerup');
+            floatText(bx, by - 12, '⚡ REDSTONE! TURBO DASH!', '#FF6B6B');
+            updateHUD();
+          } else if (isChest) {
+            addScore(600);
+            rapaduras += 5;
+            if (player && player.hp < player.maxHp) player.hp++;
+            sfx('caju');
+            floatText(bx, by - 14, '🎁 BAÚ DO SERTÃO! +5 RAPADURAS +1 VIDA!', '#FFD43B');
+            updateHUD();
           } else if (isWood) {
             rapaduras += 1; addScore(60);
             floatText(bx, by - 10, '🪵 +1 RAPADURA!', '#D9A066');
@@ -3482,6 +3507,59 @@ function drawBossGuide(ctx, boss, camX, camY) {
       });
       const kr = L.kartRace;
       if (kr) {
+        const curLapZ = kr.trackZ % kr.lapLength;
+        // Colisão 3D com Tapetes Turbo e Caixas [?] ao longo do circuito
+        const pList = [450, 1150, 1920, 2750, 3600, 4450];
+        pList.forEach((pz) => {
+          let dz = pz - curLapZ;
+          if (dz < 0) dz += kr.lapLength;
+          if (dz < 32 && Math.abs(kr.laneX) < 0.65) {
+            player.kartBoost = Math.max(player.kartBoost || 0, 50);
+            kr.speed = Math.max(kr.speed, 12.8);
+            if (frameCount % 15 === 0) { sfx('whip'); floatText(player.x, player.y - 18, '🏎️ NITRO TURBO!', '#00F5D4'); }
+          }
+        });
+
+        // Colisão 3D com Caixas de Itens [?]
+        const bList = [260, 800, 1480, 2200, 3100, 3950, 4800];
+        bList.forEach((bz, bidx) => {
+          let dz = bz - curLapZ;
+          if (dz < 0) dz += kr.lapLength;
+          const bLane = (bidx % 2 === 0 ? -0.38 : 0.38);
+          if (dz < 35 && Math.abs(kr.laneX - bLane) < 0.52 && !kr.heldItem && kr.rouletteTimer <= 0) {
+            kr.rouletteTimer = 35;
+            sfx('powerup');
+            floatText(player.x, player.y - 20, '🎁 CAIXA [?]', '#FFD43B');
+          }
+        });
+
+        // Colisão 3D com Obstáculos na pista (Óleo, Mandacaru, Pedra de Granito e Tronco)
+        const hzList = [
+          { z: 620, lane: -0.25, type: 'oil' }, { z: 1320, lane: 0.3, type: 'cactus' },
+          { z: 1850, lane: -0.15, type: 'rock' }, { z: 2540, lane: 0.25, type: 'oil' },
+          { z: 3380, lane: -0.35, type: 'cactus' }, { z: 4200, lane: 0.1, type: 'rock' },
+          { z: 4720, lane: -0.2, type: 'log' }
+        ];
+        hzList.forEach((hz) => {
+          let dz = hz.z - curLapZ;
+          if (dz < 0) dz += kr.lapLength;
+          if (dz < 30 && Math.abs(kr.laneX - hz.lane) < 0.42 && kr.spinTimer <= 0) {
+            if (hz.type === 'oil') {
+              kr.spinTimer = 40;
+              kr.speed = Math.max(2.4, kr.speed * 0.45);
+              sfx('bonk'); addScreenShake(5);
+              floatText(player.x, player.y - 18, '🛢️ RODOU NO ÓLEO DE MAMONA!', '#ADB5BD');
+            } else if (kr.hopY > 15) {
+              floatText(player.x, player.y - 18, '🦘 SALTOU O OBSTÁCULO!', '#51CF66');
+            } else {
+              player.takeDamage(1, player.x);
+              kr.speed = Math.max(2.5, kr.speed * 0.42);
+              sfx('thud'); addScreenShake(7);
+              floatText(player.x, player.y - 18, '💥 BATEU NO OBSTÁCULO!', '#FF6B6B');
+            }
+          }
+        });
+
         if (kr.rouletteTimer > 0) {
           kr.rouletteTimer--;
           const rItems = ['casco_tatu', 'pimenta_turbo', 'rojao_azul', 'trovao_oxe'];
@@ -3496,7 +3574,7 @@ function drawBossGuide(ctx, boss, camX, camY) {
           const sh = kr.shells3D[si];
           sh.z += sh.vz || 18;
           sh.life = (sh.life || 120) - 1;
-          const hitRv = (L.kartRivals || []).find((r) => Math.abs(r.z - sh.z) < 32 && Math.abs((r.lane || 0) - (sh.lane || 0)) < 0.65);
+          const hitRv = (L.kartRivals || []).find((r) => Math.abs(r.z - sh.z) < 36 && Math.abs((r.lane || 0) - (sh.lane || 0)) < 0.68);
           if (hitRv) {
             hitRv.spinTimer = 65; sfx('stomp');
             spawnSparks(player.x, player.y, 14, '#FFD43B');
@@ -3509,10 +3587,10 @@ function drawBossGuide(ctx, boss, camX, camY) {
       }
       (L.kartRivals || []).forEach((rv) => {
         if (rv.spinTimer > 0) { rv.spinTimer--; rv.x += 1.2; rv.z = (rv.z || 0) + 1.2; return; }
-        // Rubber-banding equilibrado para corrida emocionante
+        // Rubber-banding refinado: rivais correm em bloco com ultrapassagens ferozes
         const diff = player.x - rv.x;
-        const base = rv.baseSpd || rv.baseSpeed || 5.1;
-        const spd = clamp(base + (diff > 260 ? 1.35 : diff < -220 ? -0.85 : Math.sin(frameCount * 0.03 + rv.x) * 0.35), 3.6, 7.2);
+        const base = rv.baseSpd || rv.baseSpeed || 6.2;
+        const spd = clamp(base + (diff > 280 ? 1.45 : diff < -220 ? -0.85 : Math.sin(frameCount * 0.03 + rv.x) * 0.4), 4.2, 8.4);
         rv.x = Math.min((L.flagX || L.levelW - 180) - 40, rv.x + spd);
         rv.z = (rv.z || 0) + spd;
         // Encontrar altura da pista abaixo do rival
@@ -3524,6 +3602,30 @@ function drawBossGuide(ctx, boss, camX, camY) {
           rv.spinTimer = 55; sfx('stomp');
           spawnSparks(rv.x + 20, rv.y + 18, 12, '#FFD43B');
           floatText(rv.x, rv.y - 14, `💥 RODOU ${rv.name}!`, '#FFD43B');
+        }
+      });
+    }
+
+    // Modo OxeCraft: IA e detonação do Creeper-Cacto do Sertão
+    if (L.specialMode === 'minecraft' && player && !player.dead) {
+      (L.enemies || []).forEach((e) => {
+        if (!e.dead && (e.isCreeper || e.name === 'Creeper-Cacto' || e.type === 'bode_doido')) {
+          const dist = Math.hypot((e.x + e.w / 2) - (player.x + player.w / 2), (e.y + e.h / 2) - (player.y + player.h / 2));
+          if (dist < 110) {
+            e.hissTimer = (e.hissTimer || 0) + 1;
+            e.vx = 0;
+            if (e.hissTimer === 1) { sfx('charge'); floatText(e.x + e.w / 2, e.y - 18, '⚠️ TSSSSSS...', '#51CF66'); }
+            if (e.hissTimer >= 60) {
+              e.dead = true;
+              sfx('quake'); addScreenShake(8);
+              spawnBurst(e.x + e.w / 2, e.y + e.h / 2, '#51CF66', 28);
+              floatText(e.x + e.w / 2, e.y - 20, '💥 BOOOOM DO CREEPER!', '#FF6B6B');
+              if (dist < 115) player.takeDamage(1, e.x + e.w / 2);
+              breakCraftBlocksNear(e.x + e.w / 2, e.y + e.h / 2, 110);
+            }
+          } else if (e.hissTimer > 0) {
+            e.hissTimer = Math.max(0, e.hissTimer - 1);
+          }
         }
       });
     }
@@ -3605,8 +3707,8 @@ function drawBossGuide(ctx, boss, camX, camY) {
     };
     if (L.specialMode === 'kart') {
       L.kartRace = {
-        trackZ: 0, lap: 1, totalLaps: 3, lapLength: 2600,
-        laneX: 0, steer: 0, speed: 6.5, hopY: 0, hopVy: 0,
+        trackZ: 0, lap: 1, totalLaps: L.kartTotalLaps || 3, lapLength: L.kartLapLength || 5200,
+        laneX: 0, steer: 0, speed: 6.8, hopY: 0, hopVy: 0, spinTimer: 0,
         driftDir: 0, driftCharge: 0, heldItem: null, rouletteTimer: 0, rouletteItem: 'casco_tatu',
         shells3D: [], lightningFlash: 0, rank: 1
       };
@@ -4330,150 +4432,319 @@ function drawBossGuide(ctx, boss, camX, camY) {
 
   function renderKart3D(ctx, L, W, H) {
     const kr = L.kartRace || {
-      trackZ: 0, lap: 1, totalLaps: 3, lapLength: 2600,
-      laneX: 0, steer: 0, speed: 6.5, hopY: 0, hopVy: 0,
+      trackZ: 0, lap: 1, totalLaps: L.kartTotalLaps || 3, lapLength: L.kartLapLength || 5200,
+      laneX: 0, steer: 0, speed: 6.8, hopY: 0, hopVy: 0, spinTimer: 0,
       driftDir: 0, driftCharge: 0, heldItem: null, rouletteTimer: 0, rouletteItem: 'casco_tatu',
       shells3D: [], lightningFlash: 0, rank: 1
     };
-    // 1. Céu e horizonte do Sertão (montanhas 3D e sol poente)
-    const horizonY = Math.round(H * 0.44);
-    const skyG = ctx.createLinearGradient(0, 0, 0, horizonY);
-    skyG.addColorStop(0, '#E8590C');
-    skyG.addColorStop(0.45, '#F76707');
-    skyG.addColorStop(0.8, '#FFA94D');
+
+    // 1. CÉU E HORIZONTE DO SERTÃO EM ALTA RESOLUÇÃO (CREPÚSCULO VIBRANTE & SERRAS PARALLAX)
+    const horizonBaseY = Math.round(H * 0.42);
+    // Inclinação suave da câmera nas curvas (camera banking)
+    const curveBase = Math.sin(kr.trackZ * 0.0016) * 0.8 + Math.cos(kr.trackZ * 0.0008) * 0.45;
+    const camBank = clamp((kr.steer || 0) * 0.024 + curveBase * 0.015, -0.06, 0.06);
+
+    ctx.save();
+    if (camBank !== 0) {
+      ctx.translate(W / 2, horizonBaseY);
+      ctx.rotate(camBank);
+      ctx.translate(-W / 2, -horizonBaseY);
+    }
+
+    const skyG = ctx.createLinearGradient(0, 0, 0, horizonBaseY + 20);
+    skyG.addColorStop(0, '#D9480F');
+    skyG.addColorStop(0.35, '#F76707');
+    skyG.addColorStop(0.7, '#FFA94D');
     skyG.addColorStop(1, '#FFE066');
     ctx.fillStyle = skyG;
-    ctx.fillRect(0, 0, W, horizonY);
+    ctx.fillRect(-W * 0.2, -H * 0.2, W * 1.4, horizonBaseY * 1.3);
 
-    // Sol poente dourado do Sertão
-    const sunX = Math.round(W * 0.5 - (kr.laneX || 0) * 45);
-    const sunY = horizonY - 28;
-    const sunHalo = ctx.createRadialGradient(sunX, sunY, 6, sunX, sunY, 78);
-    sunHalo.addColorStop(0, 'rgba(255,243,191,0.95)');
-    sunHalo.addColorStop(0.35, 'rgba(255,146,43,0.55)');
-    sunHalo.addColorStop(1, 'rgba(255,107,107,0)');
-    ctx.fillStyle = sunHalo; ctx.fillRect(sunX - 78, sunY - 78, 156, 156);
-    ctx.fillStyle = '#FFF3BF'; ctx.beginPath(); ctx.arc(sunX, sunY, 26, 0, Math.PI * 2); ctx.fill();
+    // Sol poente dourado do Sertão com corona volumétrica
+    const sunX = Math.round(W * 0.5 - (kr.laneX || 0) * 45 - curveBase * 60);
+    const sunY = horizonBaseY - 32;
+    const sunHalo = ctx.createRadialGradient(sunX, sunY, 6, sunX, sunY, 95);
+    sunHalo.addColorStop(0, 'rgba(255,249,219,0.95)');
+    sunHalo.addColorStop(0.25, 'rgba(255,212,59,0.6)');
+    sunHalo.addColorStop(0.6, 'rgba(247,103,7,0.3)');
+    sunHalo.addColorStop(1, 'rgba(217,72,15,0)');
+    ctx.fillStyle = sunHalo; ctx.fillRect(sunX - 95, sunY - 95, 190, 190);
+    ctx.fillStyle = '#FFF9DB'; ctx.beginPath(); ctx.arc(sunX, sunY, 30, 0, Math.PI * 2); ctx.fill();
 
-    // Silhuetas de serras nordestinas ao fundo (parallax suave)
-    ctx.fillStyle = '#7A2E1E';
-    ctx.beginPath(); ctx.moveTo(0, horizonY);
-    for (let x = 0; x <= W; x += 32) {
-      const h = Math.sin((x + kr.trackZ * 0.04) * 0.012) * 24 + Math.cos((x + kr.trackZ * 0.02) * 0.02) * 14;
-      ctx.lineTo(x, horizonY - 14 - Math.max(0, h));
+    // Nuvens estilizadas em camadas no horizonte
+    for (let c = 0; c < 5; c++) {
+      const cx = ((c * 280 - kr.trackZ * 0.05) % (W + 300) + W + 300) % (W + 300) - 150;
+      const cy = 28 + (c % 3) * 22;
+      ctx.fillStyle = 'rgba(255, 236, 153, 0.45)';
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, 65, 16, 0, 0, Math.PI * 2);
+      ctx.ellipse(cx + 25, cy - 8, 38, 18, 0, 0, Math.PI * 2);
+      ctx.fill();
     }
-    ctx.lineTo(W, horizonY); ctx.closePath(); ctx.fill();
 
-    // 2. Projeção de pista 3D (estilo Mode-7 / OutRun / Super Mario Kart)
-    const nSlices = 76;
-    const roadBaseW = W * 0.88;
-    const camHeight = 110;
-    const curveBase = Math.sin(kr.trackZ * 0.0018) * 0.75 + Math.cos(kr.trackZ * 0.0009) * 0.5;
+    // Carcarás voando em silhueta distante
+    for (let b = 0; b < 3; b++) {
+      const bx = ((b * 380 + frameCount * 1.2) % (W + 200)) - 100;
+      const by = 45 + b * 20 + Math.sin(frameCount * 0.05 + b) * 8;
+      const wing = Math.sin(frameCount * 0.2 + b) * 6;
+      ctx.strokeStyle = '#5C3416'; ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.moveTo(bx - 12, by + wing); ctx.lineTo(bx, by); ctx.lineTo(bx + 12, by + wing);
+      ctx.stroke();
+    }
+
+    // Silhuetas de serras e chapadas nordestinas (3 camadas de profundidade)
+    // Camada distante (Chapada do Araripe)
+    ctx.fillStyle = '#8B3A1C';
+    ctx.beginPath(); ctx.moveTo(-50, horizonBaseY);
+    for (let x = -50; x <= W + 50; x += 36) {
+      const h1 = Math.sin((x + kr.trackZ * 0.02) * 0.008) * 35 + Math.cos((x + kr.trackZ * 0.01) * 0.015) * 18;
+      ctx.lineTo(x, horizonBaseY - 18 - Math.max(0, h1));
+    }
+    ctx.lineTo(W + 50, horizonBaseY); ctx.closePath(); ctx.fill();
+
+    // Camada média (Serras de Pedra Braba)
+    ctx.fillStyle = '#5A2012';
+    ctx.beginPath(); ctx.moveTo(-50, horizonBaseY);
+    for (let x = -50; x <= W + 50; x += 28) {
+      const h2 = Math.sin((x + kr.trackZ * 0.05) * 0.014) * 22 + Math.cos((x + kr.trackZ * 0.03) * 0.025) * 12;
+      ctx.lineTo(x, horizonBaseY - 8 - Math.max(0, h2));
+    }
+    ctx.lineTo(W + 50, horizonBaseY); ctx.closePath(); ctx.fill();
+
+    // 2. PROJEÇÃO DE PISTA 3D COM ONDULAÇÃO DE TERRENO (110 SLICES - SILKY SMOOTH MODE-7)
+    const nSlices = 110;
+    const roadBaseW = W * 0.92;
+    const camHeight = 118;
 
     for (let i = nSlices - 1; i >= 0; i--) {
       const p = (i + 1) / nSlices;
-      const y0 = Math.round(horizonY + Math.pow(p, 1.85) * (H - horizonY));
       const pNext = (i + 2) / nSlices;
-      const y1 = Math.round(horizonY + Math.pow(pNext, 1.85) * (H - horizonY));
-      const sliceH = Math.max(1, y1 - y0);
 
       // Z em profundidade
-      const zDist = camHeight / (p * 0.95 + 0.05);
+      const zDist = camHeight / (p * 0.94 + 0.06);
       const worldZ = kr.trackZ + zDist;
-      const segIndex = Math.floor(worldZ / 36);
+      const segIndex = Math.floor(worldZ / 32);
+
+      // Ondulação de morros e vales (hills & dips 3D)
+      const hill = Math.sin(worldZ * 0.0022) * 44 + Math.cos(worldZ * 0.0011) * 22;
+      const hillNext = Math.sin((worldZ + 32) * 0.0022) * 44 + Math.cos((worldZ + 32) * 0.0011) * 22;
+
+      const y0 = Math.round(horizonBaseY + Math.pow(p, 1.85) * (H - horizonBaseY) - (1 - p) * hill);
+      const y1 = Math.round(horizonBaseY + Math.pow(pNext, 1.85) * (H - horizonBaseY) - (1 - pNext) * hillNext);
+      const sliceH = Math.max(1, y1 - y0);
 
       // Curvatura e perspectiva horizontal
-      const curveOffset = Math.pow(1 - p, 2.2) * (curveBase * 240);
+      const curveOffset = Math.pow(1 - p, 2.2) * (curveBase * 260);
       const roadCenterX = (W / 2) - (kr.laneX * roadBaseW * 0.38 * p) + curveOffset;
-      const roadW = Math.max(20, roadBaseW * Math.pow(p, 1.35));
+      const roadW = Math.max(24, roadBaseW * Math.pow(p, 1.34));
 
-      // Cores alternadas da terra (off-road)
+      // Terreno off-road nas margens (terra batida avermelhada e caatinga)
       const isAlt = (segIndex % 2 === 0);
-      ctx.fillStyle = isAlt ? '#D99B52' : '#C98840';
-      ctx.fillRect(0, y0, W, sliceH);
+      ctx.fillStyle = isAlt ? '#D99B52' : '#C48338';
+      ctx.fillRect(-50, y0, W + 100, sliceH);
 
-      // Zebras / Rumble strips nas bordas (vermelho e branco)
-      const stripW = Math.max(4, roadW * 0.075);
+      // Zebras / Rumble strips nas bordas (vermelho e branco vibrante estilo arcade)
+      const stripW = Math.max(5, roadW * 0.08);
       ctx.fillStyle = isAlt ? '#E03131' : '#F8F9FA';
       ctx.fillRect(roadCenterX - roadW / 2 - stripW, y0, stripW, sliceH);
       ctx.fillRect(roadCenterX + roadW / 2, y0, stripW, sliceH);
 
-      // Superfície da pista (asfalto/terra batida do Sertão)
-      const isCheckered = (worldZ % kr.lapLength < 55);
+      // Borda interna de asfalto/terra firme
+      const isCheckered = (worldZ % kr.lapLength < 60);
       if (isCheckered) {
+        // Linha de chegada quadriculada P&B
         ctx.fillStyle = ((Math.floor(worldZ / 12) + segIndex) % 2 === 0) ? '#111' : '#FFF';
       } else {
-        ctx.fillStyle = isAlt ? '#5C3D2E' : '#4E3224';
+        ctx.fillStyle = isAlt ? '#5C3826' : '#4A2A1A';
       }
       ctx.fillRect(roadCenterX - roadW / 2, y0, roadW, sliceH);
 
-      // Linha central amarela tracejada
+      // Linha central amarela tracejada do Sertão
       if (!isCheckered && (segIndex % 3 === 0)) {
         ctx.fillStyle = '#FFD43B';
-        const lineW = Math.max(2, roadW * 0.024);
+        const lineW = Math.max(2, roadW * 0.025);
         ctx.fillRect(roadCenterX - lineW / 2, y0, lineW, sliceH);
       }
     }
 
-    // 3. Objetos 3D na pista (Tapetes Turbo, Caixas [?], Manchas de Óleo)
     const lapZ = kr.trackZ % kr.lapLength;
-    // Boost Pads 3D
-    const pads3D = [450, 1150, 1920];
-    pads3D.forEach((pz) => {
-      let dz = pz - lapZ;
+
+    // 3. ELEMENTOS CENOGRÁFICOS 3D AO LADO DA PISTA (Mandacarus, Cercas, Caveiras, Moinhos, Casas)
+    const scList = Array.isArray(L.scenery3D) ? L.scenery3D : [
+      { z: 120, side: -1.45, type: 'mandacaru_tall' }, { z: 460, side: -1.6, type: 'cattle_skull' },
+      { z: 680, side: 1.7, type: 'windmill' }, { z: 1100, side: 1.55, type: 'taipa_house' },
+      { z: 1780, side: -1.65, type: 'cattle_skull' }, { z: 2260, side: -1.55, type: 'windmill' },
+      { z: 2750, side: -1.4, type: 'mandacaru_tall' }, { z: 3550, side: 1.7, type: 'carnauba_palm' }
+    ];
+
+    scList.forEach((sc) => {
+      let dz = sc.z - lapZ;
       if (dz < 0) dz += kr.lapLength;
-      if (dz > 15 && dz < 720) {
-        const p = clamp(110 / dz, 0.04, 1);
-        const sy = Math.round(horizonY + Math.pow(p, 1.85) * (H - horizonY));
-        const curveOffset = Math.pow(1 - p, 2.2) * (curveBase * 240);
-        const sx = (W / 2) - (kr.laneX * roadBaseW * 0.38 * p) + curveOffset;
-        const pw = Math.max(16, roadBaseW * Math.pow(p, 1.35) * 0.65);
-        ctx.fillStyle = (Math.floor(frameCount / 4) % 2 === 0) ? '#00F5D4' : '#FFD43B';
-        ctx.fillRect(sx - pw / 2, sy - 4, pw, Math.max(4, p * 16));
-        ctx.fillStyle = '#1A1A1A'; ctx.font = `bold ${Math.max(9, Math.round(18 * p))}px sans-serif`;
-        ctx.textAlign = 'center';
-        if (p > 0.18) ctx.fillText('>>> TURBO >>>', sx, sy);
+      if (dz > 18 && dz < 780) {
+        const p = clamp(118 / dz, 0.04, 1);
+        const hill = Math.sin((kr.trackZ + dz) * 0.0022) * 44 + Math.cos((kr.trackZ + dz) * 0.0011) * 22;
+        const sy = Math.round(horizonBaseY + Math.pow(p, 1.85) * (H - horizonBaseY) - (1 - p) * hill);
+        const curveOffset = Math.pow(1 - p, 2.2) * (curveBase * 260);
+        const sx = (W / 2) + (sc.side - kr.laneX * 0.38) * roadBaseW * 0.45 * p + curveOffset;
+
+        ctx.save();
+        ctx.translate(sx, sy);
+        if (sc.type === 'mandacaru_tall') {
+          // Mandacaru 3D gigante com flor vermelha
+          const mw = Math.max(10, p * 42), mh = Math.max(22, p * 110);
+          ctx.fillStyle = '#2B8A3E'; ctx.strokeStyle = '#1E120A'; ctx.lineWidth = Math.max(1.2, p * 2.2);
+          ctx.fillRect(-mw * 0.3, -mh, mw * 0.6, mh); ctx.strokeRect(-mw * 0.3, -mh, mw * 0.6, mh);
+          // Braços laterais
+          ctx.fillRect(-mw * 0.9, -mh * 0.7, mw * 0.6, mw * 0.4); ctx.strokeRect(-mw * 0.9, -mh * 0.7, mw * 0.6, mw * 0.4);
+          ctx.fillRect(-mw * 0.9, -mh * 0.85, mw * 0.3, mh * 0.25); ctx.strokeRect(-mw * 0.9, -mh * 0.85, mw * 0.3, mh * 0.25);
+          ctx.fillRect(mw * 0.3, -mh * 0.55, mw * 0.6, mw * 0.4); ctx.strokeRect(mw * 0.3, -mh * 0.55, mw * 0.6, mw * 0.4);
+          ctx.fillRect(mw * 0.6, -mh * 0.7, mw * 0.3, mh * 0.25); ctx.strokeRect(mw * 0.6, -mh * 0.7, mw * 0.3, mh * 0.25);
+          // Flor de mandacaru no topo
+          ctx.fillStyle = '#E03131'; ctx.beginPath(); ctx.arc(0, -mh, mw * 0.28, 0, Math.PI * 2); ctx.fill();
+        } else if (sc.type === 'cattle_skull') {
+          // Caveira de boi do sertão
+          const skS = Math.max(8, p * 36);
+          ctx.fillStyle = '#F1F3F5'; ctx.strokeStyle = '#1E120A'; ctx.lineWidth = Math.max(1, p * 2);
+          ctx.beginPath(); ctx.ellipse(0, -skS * 0.5, skS * 0.4, skS * 0.5, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+          // Chifres curvos
+          ctx.beginPath();
+          ctx.moveTo(-skS * 0.3, -skS * 0.7); ctx.quadraticCurveTo(-skS * 0.9, -skS * 1.1, -skS * 0.8, -skS * 0.5);
+          ctx.moveTo(skS * 0.3, -skS * 0.7); ctx.quadraticCurveTo(skS * 0.9, -skS * 1.1, skS * 0.8, -skS * 0.5);
+          ctx.stroke();
+        } else if (sc.type === 'windmill') {
+          // Moinho de vento do sertão
+          const wS = Math.max(16, p * 80);
+          ctx.strokeStyle = '#495057'; ctx.lineWidth = Math.max(1.5, p * 2.5);
+          ctx.beginPath(); ctx.moveTo(-wS * 0.25, 0); ctx.lineTo(-wS * 0.08, -wS); ctx.lineTo(wS * 0.08, -wS); ctx.lineTo(wS * 0.25, 0); ctx.stroke();
+          // Pás giratórias
+          ctx.save(); ctx.translate(0, -wS); ctx.rotate(frameCount * 0.08);
+          ctx.fillStyle = '#CED4DA';
+          for (let a = 0; a < 4; a++) {
+            ctx.rotate(Math.PI / 2);
+            ctx.fillRect(-wS * 0.05, -wS * 0.38, wS * 0.1, wS * 0.38);
+          }
+          ctx.restore();
+        } else {
+          // Casa de taipa com telhado de barro
+          const tw = Math.max(22, p * 88), th = Math.max(16, p * 58);
+          ctx.fillStyle = '#C68B59'; ctx.strokeStyle = '#3E2210'; ctx.lineWidth = Math.max(1.2, p * 2.2);
+          ctx.fillRect(-tw / 2, -th, tw, th); ctx.strokeRect(-tw / 2, -th, tw, th);
+          // Telhado triangular
+          ctx.fillStyle = '#D9480F';
+          ctx.beginPath(); ctx.moveTo(-tw * 0.6, -th); ctx.lineTo(0, -th * 1.45); ctx.lineTo(tw * 0.6, -th); ctx.closePath(); ctx.fill(); ctx.stroke();
+          // Porta
+          ctx.fillStyle = '#3E2210'; ctx.fillRect(-tw * 0.14, -th * 0.6, tw * 0.28, th * 0.6);
+        }
+        ctx.restore();
       }
     });
 
-    // Caixas [?] 3D
-    const boxes3D = [280, 820, 1500, 2250];
+    // 4. TAPETES TURBO, CAIXAS [?] E OBSTÁCULOS 3D NA PISTA
+    // Tapetes Turbo 3D
+    const pads3D = [450, 1150, 1920, 2750, 3600, 4450];
+    pads3D.forEach((pz) => {
+      let dz = pz - lapZ;
+      if (dz < 0) dz += kr.lapLength;
+      if (dz > 15 && dz < 740) {
+        const p = clamp(118 / dz, 0.04, 1);
+        const hill = Math.sin((kr.trackZ + dz) * 0.0022) * 44 + Math.cos((kr.trackZ + dz) * 0.0011) * 22;
+        const sy = Math.round(horizonBaseY + Math.pow(p, 1.85) * (H - horizonBaseY) - (1 - p) * hill);
+        const curveOffset = Math.pow(1 - p, 2.2) * (curveBase * 260);
+        const sx = (W / 2) - (kr.laneX * roadBaseW * 0.38 * p) + curveOffset;
+        const pw = Math.max(18, roadBaseW * Math.pow(p, 1.34) * 0.65);
+        ctx.fillStyle = (Math.floor(frameCount / 4) % 2 === 0) ? '#00F5D4' : '#FFD43B';
+        ctx.fillRect(sx - pw / 2, sy - 4, pw, Math.max(4, p * 16));
+        ctx.fillStyle = '#1A1A1A'; ctx.font = `900 ${Math.max(9, Math.round(18 * p))}px sans-serif`;
+        ctx.textAlign = 'center';
+        if (p > 0.18) ctx.fillText('>>> TURBO NITRO >>>', sx, sy);
+      }
+    });
+
+    // Caixas de Itens [ ? ] 3D holográficas
+    const boxes3D = [260, 800, 1480, 2200, 3100, 3950, 4800];
     boxes3D.forEach((bz, bidx) => {
       let dz = bz - lapZ;
       if (dz < 0) dz += kr.lapLength;
       if (dz > 15 && dz < 750) {
-        const p = clamp(110 / dz, 0.04, 1);
-        const sy = Math.round(horizonY + Math.pow(p, 1.85) * (H - horizonY)) - Math.round(p * 32);
-        const curveOffset = Math.pow(1 - p, 2.2) * (curveBase * 240);
-        const laneOffset = ((bidx % 2 === 0 ? -0.35 : 0.35) - kr.laneX) * roadBaseW * 0.38 * p;
+        const p = clamp(118 / dz, 0.04, 1);
+        const hill = Math.sin((kr.trackZ + dz) * 0.0022) * 44 + Math.cos((kr.trackZ + dz) * 0.0011) * 22;
+        const sy = Math.round(horizonBaseY + Math.pow(p, 1.85) * (H - horizonBaseY) - (1 - p) * hill) - Math.round(p * 34);
+        const curveOffset = Math.pow(1 - p, 2.2) * (curveBase * 260);
+        const laneOffset = ((bidx % 2 === 0 ? -0.38 : 0.38) - kr.laneX) * roadBaseW * 0.38 * p;
         const sx = (W / 2) + laneOffset + curveOffset;
-        const bs = Math.max(12, Math.round(p * 46));
+        const bs = Math.max(12, Math.round(p * 48));
         ctx.save();
         ctx.translate(sx, sy + Math.sin(frameCount * 0.12 + bidx) * 4);
         ctx.rotate(Math.sin(frameCount * 0.08 + bidx) * 0.2);
         const boxCols = ['#FF6B6B', '#FFD43B', '#51CF66', '#339AF0', '#CC5DE8'];
-        ctx.fillStyle = boxCols[(Math.floor(frameCount / 8) + bidx) % boxCols.length];
-        ctx.strokeStyle = '#FFF'; ctx.lineWidth = Math.max(1.5, p * 3);
+        ctx.fillStyle = boxCols[(Math.floor(frameCount / 6) + bidx) % boxCols.length];
+        ctx.strokeStyle = '#FFF'; ctx.lineWidth = Math.max(1.8, p * 3.2);
         ctx.beginPath();
-        if (ctx.roundRect) ctx.roundRect(-bs / 2, -bs / 2, bs, bs, 4);
+        if (ctx.roundRect) ctx.roundRect(-bs / 2, -bs / 2, bs, bs, 6);
         else ctx.rect(-bs / 2, -bs / 2, bs, bs);
         ctx.fill(); ctx.stroke();
-        ctx.fillStyle = '#FFF'; ctx.font = `bold ${Math.max(10, Math.round(bs * 0.72))}px sans-serif`;
+        ctx.fillStyle = '#FFF'; ctx.font = `900 ${Math.max(10, Math.round(bs * 0.72))}px sans-serif`;
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillText('?', 0, 0);
         ctx.restore();
       }
     });
 
-    // 4. Cascos de Tatu 3D disparados na pista
+    // Poças de Óleo de Mamona e Obstáculos na pista
+    const hazards3D = [
+      { z: 620, lane: -0.25, type: 'oil' }, { z: 1320, lane: 0.3, type: 'cactus' },
+      { z: 1850, lane: -0.15, type: 'rock' }, { z: 2540, lane: 0.25, type: 'oil' },
+      { z: 3380, lane: -0.35, type: 'cactus' }, { z: 4200, lane: 0.1, type: 'rock' },
+      { z: 4720, lane: -0.2, type: 'log' }
+    ];
+    hazards3D.forEach((hz) => {
+      let dz = hz.z - lapZ;
+      if (dz < 0) dz += kr.lapLength;
+      if (dz > 12 && dz < 720) {
+        const p = clamp(118 / dz, 0.04, 1);
+        const hill = Math.sin((kr.trackZ + dz) * 0.0022) * 44 + Math.cos((kr.trackZ + dz) * 0.0011) * 22;
+        const sy = Math.round(horizonBaseY + Math.pow(p, 1.85) * (H - horizonBaseY) - (1 - p) * hill);
+        const curveOffset = Math.pow(1 - p, 2.2) * (curveBase * 260);
+        const sx = (W / 2) + (hz.lane - kr.laneX) * roadBaseW * 0.38 * p + curveOffset;
+        ctx.save();
+        ctx.translate(sx, sy);
+        if (hz.type === 'oil') {
+          // Poça escura e escorregadia
+          ctx.fillStyle = '#1A1110'; ctx.beginPath();
+          ctx.ellipse(0, 0, Math.max(12, p * 44), Math.max(4, p * 14), 0, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = '#FFD43B'; ctx.font = `bold ${Math.max(8, Math.round(p * 12))}px sans-serif`;
+          ctx.textAlign = 'center'; if (p > 0.25) ctx.fillText('ÓLEO', 0, -p * 6);
+        } else if (hz.type === 'rock') {
+          // Pedra de granito rolante
+          const rSize = Math.max(8, p * 32);
+          ctx.fillStyle = '#868E96'; ctx.strokeStyle = '#1E120A'; ctx.lineWidth = Math.max(1.2, p * 2);
+          ctx.beginPath(); ctx.arc(0, -rSize * 0.6, rSize * 0.6, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+          ctx.fillStyle = '#ADB5BD'; ctx.beginPath(); ctx.arc(-rSize * 0.2, -rSize * 0.8, rSize * 0.2, 0, Math.PI * 2); ctx.fill();
+        } else if (hz.type === 'cactus') {
+          // Espinhos de Mandacaru
+          const cS = Math.max(8, p * 30);
+          ctx.fillStyle = '#2B8A3E'; ctx.strokeStyle = '#1E120A'; ctx.lineWidth = 1.8;
+          ctx.beginPath(); ctx.moveTo(-cS, 0); ctx.lineTo(-cS * 0.4, -cS); ctx.lineTo(0, -cS * 0.3); ctx.lineTo(cS * 0.4, -cS); ctx.lineTo(cS, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+        } else {
+          // Tronco caído
+          const lw = Math.max(16, p * 52), lh = Math.max(6, p * 18);
+          ctx.fillStyle = '#795548'; ctx.strokeStyle = '#3E2723'; ctx.lineWidth = 2;
+          ctx.fillRect(-lw / 2, -lh, lw, lh); ctx.strokeRect(-lw / 2, -lh, lw, lh);
+        }
+        ctx.restore();
+      }
+    });
+
+    // 5. CASCOS DE TATU 3D DISPARADOS NA PISTA
     (kr.shells3D || []).forEach((sh) => {
       const dz = sh.z - kr.trackZ;
       if (dz > 10 && dz < 800) {
-        const p = clamp(110 / dz, 0.04, 1);
-        const sy = Math.round(horizonY + Math.pow(p, 1.85) * (H - horizonY)) - Math.round(p * 14);
-        const curveOffset = Math.pow(1 - p, 2.2) * (curveBase * 240);
+        const p = clamp(118 / dz, 0.04, 1);
+        const hill = Math.sin((kr.trackZ + dz) * 0.0022) * 44 + Math.cos((kr.trackZ + dz) * 0.0011) * 22;
+        const sy = Math.round(horizonBaseY + Math.pow(p, 1.85) * (H - horizonBaseY) - (1 - p) * hill) - Math.round(p * 14);
+        const curveOffset = Math.pow(1 - p, 2.2) * (curveBase * 260);
         const sx = (W / 2) + (sh.lane - kr.laneX) * roadBaseW * 0.38 * p + curveOffset;
-        const r = Math.max(6, Math.round(p * 22));
+        const r = Math.max(6, Math.round(p * 24));
         ctx.save();
         ctx.fillStyle = sh.color || '#51CF66';
         ctx.strokeStyle = '#1E120A'; ctx.lineWidth = Math.max(1.5, p * 2.5);
@@ -4483,159 +4754,187 @@ function drawBossGuide(ctx, boss, camX, camY) {
       }
     });
 
-    // 5. Vilões Rivais 3D na pista adiante
+    // 6. OS 7 RIVAIS VILÕES DO FOLCLORE 3D NA PISTA ADIANTE (MODELOS VESTIMENTA & EXPRESSÕES)
     const rivals = Array.isArray(L.kartRivals) ? L.kartRivals : [];
     rivals.forEach((rv) => {
-      const dz = (rv.z || 120) - (kr.trackZ % kr.lapLength);
+      const dz = (rv.z || 140) - (kr.trackZ % kr.lapLength);
       const effZ = dz < -100 ? dz + kr.lapLength : dz;
       if (effZ > 12 && effZ < 780) {
-        const p = clamp(110 / effZ, 0.04, 1);
-        const sy = Math.round(horizonY + Math.pow(p, 1.85) * (H - horizonY));
-        const curveOffset = Math.pow(1 - p, 2.2) * (curveBase * 240);
+        const p = clamp(118 / effZ, 0.04, 1);
+        const hill = Math.sin((kr.trackZ + effZ) * 0.0022) * 44 + Math.cos((kr.trackZ + effZ) * 0.0011) * 22;
+        const sy = Math.round(horizonBaseY + Math.pow(p, 1.85) * (H - horizonBaseY) - (1 - p) * hill);
+        const curveOffset = Math.pow(1 - p, 2.2) * (curveBase * 260);
         const sx = (W / 2) + ((rv.lane || 0) - kr.laneX) * roadBaseW * 0.38 * p + curveOffset;
-        const rw = Math.max(18, Math.round(p * 74));
-        const rh = Math.max(16, Math.round(p * 66));
+        const rw = Math.max(18, Math.round(p * 76));
+        const rh = Math.max(16, Math.round(p * 68));
+
         ctx.save();
         ctx.translate(sx, sy);
         if (rv.spinTimer > 0) ctx.rotate(rv.spinTimer * 0.4);
-        // Sombra no chão
-        ctx.fillStyle = 'rgba(0,0,0,0.38)';
-        ctx.beginPath(); ctx.ellipse(0, 0, rw * 0.55, rh * 0.22, 0, 0, Math.PI * 2); ctx.fill();
-        // Corpo do kart/jegue rival visto de trás
+
+        // Sombra suave no chão
+        ctx.fillStyle = 'rgba(0,0,0,0.42)';
+        ctx.beginPath(); ctx.ellipse(0, 0, rw * 0.58, rh * 0.24, 0, 0, Math.PI * 2); ctx.fill();
+
+        // Kart / Jegue do Rival visto de costas
         ctx.fillStyle = rv.color || '#9C36B5';
         ctx.strokeStyle = '#1A1A1A'; ctx.lineWidth = Math.max(1.5, p * 2.5);
         ctx.beginPath();
         if (ctx.roundRect) ctx.roundRect(-rw / 2, -rh, rw, rh * 0.75, Math.max(3, p * 8));
         else ctx.rect(-rw / 2, -rh, rw, rh * 0.75);
         ctx.fill(); ctx.stroke();
-        // Cabeça / Chapéu de couro do vilão visto de trás
+
+        // Detalhes únicos de cada vilão
+        if (rv.kind === 'bull') {
+          // Boi de Fogo: chifres em brasa
+          ctx.fillStyle = '#FFE066'; ctx.beginPath();
+          ctx.moveTo(-rw * 0.4, -rh * 0.9); ctx.lineTo(-rw * 0.65, -rh * 1.3); ctx.lineTo(-rw * 0.25, -rh * 1.05); ctx.fill();
+          ctx.moveTo(rw * 0.4, -rh * 0.9); ctx.lineTo(rw * 0.65, -rh * 1.3); ctx.lineTo(rw * 0.25, -rh * 1.05); ctx.fill();
+        } else if (rv.kind === 'papa_figo') {
+          // Capa roxa sombria
+          ctx.fillStyle = '#343A40'; ctx.fillRect(-rw * 0.35, -rh * 0.7, rw * 0.7, rh * 0.5);
+        }
+
+        // Cabeça / Chapéu de couro do vilão
         ctx.fillStyle = rv.hatColor || '#3B1F0E';
         ctx.beginPath(); ctx.arc(0, -rh * 0.95, rw * 0.28, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-        // Aba do chapéu meia-lua
-        ctx.beginPath(); ctx.ellipse(0, -rh * 0.95, rw * 0.45, rh * 0.15, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-        // Nome do rival
-        if (p > 0.22) {
-          ctx.font = `bold ${Math.max(9, Math.round(p * 14))}px sans-serif`;
+        ctx.beginPath(); ctx.ellipse(0, -rh * 0.95, rw * 0.46, rh * 0.15, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+
+        // Nome do vilão acima
+        if (p > 0.2) {
+          ctx.font = `900 ${Math.max(9, Math.round(p * 15))}px sans-serif`;
           ctx.textAlign = 'center'; ctx.fillStyle = '#FFF'; ctx.strokeStyle = '#000'; ctx.lineWidth = 3;
-          ctx.strokeText(rv.name || 'Vilão', 0, -rh * 1.3);
-          ctx.fillText(rv.name || 'Vilão', 0, -rh * 1.3);
+          ctx.strokeText(rv.name || 'Vilão', 0, -rh * 1.35);
+          ctx.fillText(rv.name || 'Vilão', 0, -rh * 1.35);
         }
         ctx.restore();
       }
     });
 
-    // 6. O JEGUE DO TONHO (Câmera atrás, visão traseira do Jegue e do Herói montado!)
+    // 7. O JEGUE DO TONHO EM ALTA DEFINIÇÃO (VISÃO TRASEIRA HD, ANIMAÇÃO DE PATAS, ORELHAS E RABO)
     ctx.save();
-    const px = Math.round(W / 2 + (kr.steer || 0) * 22);
-    const py = Math.round(H - 24 - (kr.hopY || 0));
-    const trot = Math.sin(frameCount * 0.35) * (kr.speed > 2 ? 5 : 0);
-    const steerTilt = clamp((kr.steer || 0) * 0.14, -0.22, 0.22);
+    const px = Math.round(W / 2 + (kr.steer || 0) * 24);
+    const py = Math.round(H - 26 - (kr.hopY || 0));
+    const trot = Math.sin(frameCount * 0.38) * (kr.speed > 2 ? 5.5 : 0);
+    const steerTilt = clamp((kr.steer || 0) * 0.15, -0.24, 0.24);
     ctx.translate(px, py + trot);
     ctx.rotate(steerTilt);
 
-    // Faíscas de Drift / Fogo de Turbo no Jegue
+    // Linhas de velocidade / Radial action streaks em alta velocidade
+    if (kr.speed > 8.4 || player.kartBoost > 0) {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)'; ctx.lineWidth = 2.5;
+      for (let s = 0; s < 8; s++) {
+        const ang = (s / 8) * Math.PI * 2 + frameCount * 0.1;
+        const dist = 70 + (s % 3) * 20;
+        ctx.beginPath(); ctx.moveTo(Math.cos(ang) * dist, Math.sin(ang) * dist);
+        ctx.lineTo(Math.cos(ang) * (dist + 35), Math.sin(ang) * (dist + 35)); ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    // Faíscas de Drift / Fogo de Turbo (Azul -> Laranja -> Roxo/Rosa Ultra Mini-Turbo)
     if (player.kartBoost > 0 || (kr.driftCharge || 0) > 0) {
       const sparkCol = (kr.driftCharge >= 50) ? '#E599F7' : (kr.driftCharge >= 22 ? '#FF922B' : '#74C0FC');
       for (let s = -1; s <= 1; s += 2) {
         ctx.fillStyle = sparkCol;
         ctx.beginPath();
-        ctx.arc(s * 36, -8 + (frameCount % 4) * 2, 6 + (frameCount % 3) * 2, 0, Math.PI * 2);
+        ctx.arc(s * 38, -6 + (frameCount % 4) * 2, 6 + (frameCount % 3) * 2, 0, Math.PI * 2);
         ctx.fill();
       }
     }
-    // Sombra do Jegue no chão
-    ctx.fillStyle = 'rgba(0,0,0,0.42)';
-    ctx.beginPath(); ctx.ellipse(0, 4, 44, 14, 0, 0, Math.PI * 2); ctx.fill();
 
-    // Patas traseiras do Jegue (com ferraduras)
-    const legSwing = Math.sin(frameCount * 0.4) * 6;
+    // Sombra suave do Jegue
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.beginPath(); ctx.ellipse(0, 4, 46, 15, 0, 0, Math.PI * 2); ctx.fill();
+
+    // Patas traseiras do Jegue (com ferraduras de ferro forjado)
+    const legSwing = Math.sin(frameCount * 0.42) * 7;
     for (let side = -1; side <= 1; side += 2) {
-      const lx = side * 22;
+      const lx = side * 23;
       const ly = -14 + (side === 1 ? legSwing : -legSwing);
-      ctx.fillStyle = '#868E96'; ctx.strokeStyle = '#1E120A'; ctx.lineWidth = 2;
+      ctx.fillStyle = '#868E96'; ctx.strokeStyle = '#1E120A'; ctx.lineWidth = 2.2;
       ctx.fillRect(lx - 5, ly, 10, 18);
-      ctx.fillStyle = '#343A40'; ctx.fillRect(lx - 6, ly + 14, 12, 5); // ferradura
+      ctx.fillStyle = '#343A40'; ctx.fillRect(lx - 6, ly + 14, 12, 5); // Ferradura
     }
 
-    // Corpo / Anca peluda do Jegue vista de trás (arredondada, cinza fofinho)
-    const jgGrad = ctx.createLinearGradient(0, -68, 0, -10);
-    jgGrad.addColorStop(0, '#ADB5BD');
-    jgGrad.addColorStop(0.65, '#868E96');
+    // Anca musculosa e peluda do Jegue (gradiente realista com penugem)
+    const jgGrad = ctx.createLinearGradient(0, -70, 0, -10);
+    jgGrad.addColorStop(0, '#CED4DA');
+    jgGrad.addColorStop(0.5, '#868E96');
     jgGrad.addColorStop(1, '#495057');
-    ctx.fillStyle = jgGrad; ctx.strokeStyle = '#1E120A'; ctx.lineWidth = 2.4;
+    ctx.fillStyle = jgGrad; ctx.strokeStyle = '#1E120A'; ctx.lineWidth = 2.5;
     ctx.beginPath();
-    if (ctx.roundRect) ctx.roundRect(-34, -58, 68, 48, 22);
-    else ctx.rect(-34, -58, 68, 48);
+    if (ctx.roundRect) ctx.roundRect(-36, -60, 72, 50, 24);
+    else ctx.rect(-36, -60, 72, 50);
     ctx.fill(); ctx.stroke();
 
-    // Rabo do Jegue com penacho que balança ao correr
-    const tailWiggle = Math.sin(frameCount * 0.32) * 12;
-    ctx.strokeStyle = '#495057'; ctx.lineWidth = 4;
-    ctx.beginPath(); ctx.moveTo(0, -32); ctx.quadraticCurveTo(tailWiggle * 0.5, -16, tailWiggle, -6); ctx.stroke();
-    ctx.fillStyle = '#212529'; ctx.beginPath(); ctx.arc(tailWiggle, -4, 5, 0, Math.PI * 2); ctx.fill();
+    // Rabo do Jegue com penacho que sacode vigoroso
+    const tailWiggle = Math.sin(frameCount * 0.35) * 14;
+    ctx.strokeStyle = '#495057'; ctx.lineWidth = 4.5;
+    ctx.beginPath(); ctx.moveTo(0, -34); ctx.quadraticCurveTo(tailWiggle * 0.5, -16, tailWiggle, -6); ctx.stroke();
+    ctx.fillStyle = '#212529'; ctx.beginPath(); ctx.arc(tailWiggle, -4, 6, 0, Math.PI * 2); ctx.fill();
 
-    // Orelhas compridas do Jegue (apontadas para a frente nas curvas!)
+    // Orelhas compridas do Jegue (reagem ativamente à curva e saltos!)
     for (let es = -1; es <= 1; es += 2) {
       ctx.save();
-      ctx.translate(es * 18, -62);
-      ctx.rotate(es * 0.25 - steerTilt * 0.5);
-      ctx.fillStyle = '#868E96'; ctx.strokeStyle = '#1E120A'; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.ellipse(0, -16, 7, 18, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = '#FFA8A8'; ctx.beginPath(); ctx.ellipse(0, -15, 3.5, 12, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.translate(es * 19, -64);
+      ctx.rotate(es * 0.28 - steerTilt * 0.6);
+      ctx.fillStyle = '#868E96'; ctx.strokeStyle = '#1E120A'; ctx.lineWidth = 2.2;
+      ctx.beginPath(); ctx.ellipse(0, -17, 8, 20, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#FFA8A8'; ctx.beginPath(); ctx.ellipse(0, -16, 4, 13, 0, 0, Math.PI * 2); ctx.fill();
       ctx.restore();
     }
 
-    // Cangalha / Sela de couro com alforjes
-    ctx.fillStyle = '#8B5A2B'; ctx.strokeStyle = '#3E2210'; ctx.lineWidth = 2;
+    // Cangalha / Sela de couro com alforjes de mantimentos
+    ctx.fillStyle = '#8B5A2B'; ctx.strokeStyle = '#3E2210'; ctx.lineWidth = 2.2;
     ctx.beginPath();
-    if (ctx.roundRect) ctx.roundRect(-26, -64, 52, 14, 4);
-    else ctx.rect(-26, -64, 52, 14);
+    if (ctx.roundRect) ctx.roundRect(-28, -66, 56, 15, 5);
+    else ctx.rect(-28, -66, 56, 15);
     ctx.fill(); ctx.stroke();
-    // Alforjes nas laterais (sacos de mantimento/rapadura)
-    for (const af of [-32, 22]) {
-      ctx.fillStyle = '#A06A38'; ctx.fillRect(af, -50, 10, 16);
-      ctx.strokeRect(af, -50, 10, 16);
+    // Alforjes nas laterais (com costura aparente)
+    for (const af of [-34, 24]) {
+      ctx.fillStyle = '#A06A38'; ctx.fillRect(af, -52, 10, 18);
+      ctx.strokeRect(af, -52, 10, 18);
     }
 
-    // Herói (Tonho ou amigo) montado no Jegue visto de costas
+    // Herói montado de costas (Tonho / Amigos)
     const heroCol = (player.hero === 'zefinha' || heroKind === 'zefinha') ? '#F783AC' : '#D9480F';
-    ctx.fillStyle = heroCol; ctx.strokeStyle = '#1E120A'; ctx.lineWidth = 2.2;
+    ctx.fillStyle = heroCol; ctx.strokeStyle = '#1E120A'; ctx.lineWidth = 2.4;
     ctx.beginPath();
-    if (ctx.roundRect) ctx.roundRect(-16, -92, 32, 30, 8);
-    else ctx.rect(-16, -92, 32, 30);
+    if (ctx.roundRect) ctx.roundRect(-17, -95, 34, 32, 9);
+    else ctx.rect(-17, -95, 34, 32);
     ctx.fill(); ctx.stroke();
 
-    // Chapéu de Couro do Sertão visto de costas (copa arredondada + aba larga meia-lua com estrela dourada)
-    const hatG = ctx.createLinearGradient(0, -118, 0, -90);
-    hatG.addColorStop(0, '#C98A4B'); hatG.addColorStop(1, '#5C3416');
-    ctx.fillStyle = hatG; ctx.strokeStyle = '#1E120A'; ctx.lineWidth = 2.2;
-    // Copa
-    ctx.beginPath(); ctx.arc(0, -102, 15, Math.PI, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
-    // Aba larga
-    ctx.beginPath(); ctx.ellipse(0, -99, 28, 8, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-    // Estrela dourada de couro no centro da copa
-    ctx.fillStyle = '#FFD43B'; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText('★', 0, -103);
+    // Chapéu de Couro do Sertão com estrela dourada
+    const hatG = ctx.createLinearGradient(0, -122, 0, -92);
+    hatG.addColorStop(0, '#D99B52'); hatG.addColorStop(1, '#5C3416');
+    ctx.fillStyle = hatG; ctx.strokeStyle = '#1E120A'; ctx.lineWidth = 2.4;
+    ctx.beginPath(); ctx.arc(0, -104, 16, Math.PI, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(0, -101, 30, 9, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#FFD43B'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('★', 0, -105);
     ctx.restore();
 
-    // 7. Flash de Trovão (Item Trovão de São Pedro)
+    // 8. FLASH DE TROVÃO (QUANDO ATIVA TROVÃO DE SÃO PEDRO)
     if (kr.lightningFlash > 0) {
       kr.lightningFlash--;
-      ctx.fillStyle = `rgba(255,255,255,${Math.min(0.85, kr.lightningFlash / 20)})`;
-      ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = `rgba(255,255,255,${Math.min(0.9, kr.lightningFlash / 18)})`;
+      ctx.fillRect(-50, -50, W + 100, H + 100);
     }
 
-    // 8. HUD de Corrida estilo Mario Kart
-    // Item Box no topo esquerdo
+    // 9. HUD DE CORRIDA ARCADE MODERNO E REFINADO
+    ctx.restore(); // restaura banking
+
+    // Caixa de Item com efeito metálico no canto superior esquerdo
     ctx.save();
-    const ibx = 24, iby = 22, ibs = 52;
-    ctx.fillStyle = 'rgba(15,10,24,0.88)';
-    ctx.strokeStyle = '#FFD43B'; ctx.lineWidth = 3;
+    const ibx = 22, iby = 20, ibs = 56;
+    ctx.fillStyle = 'rgba(15,10,24,0.92)';
+    ctx.strokeStyle = '#FFD43B'; ctx.lineWidth = 3.5;
     ctx.beginPath();
-    if (ctx.roundRect) ctx.roundRect(ibx, iby, ibs, ibs, 10);
+    if (ctx.roundRect) ctx.roundRect(ibx, iby, ibs, ibs, 12);
     else ctx.rect(ibx, iby, ibs, ibs);
     ctx.fill(); ctx.stroke();
-    // Item dentro da caixa
     let itIcon = '❓';
     if (kr.rouletteTimer > 0) {
       const rList = ['🐢', '🌶️', '🚀', '⚡'];
@@ -4644,57 +4943,74 @@ function drawBossGuide(ctx, boss, camX, camY) {
     else if (kr.heldItem === 'rojao_azul') itIcon = '🚀';
     else if (kr.heldItem === 'trovao_oxe') itIcon = '⚡';
     else if (kr.heldItem === 'casco_tatu') itIcon = '🐢';
-    ctx.font = '26px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = '28px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText(itIcon, ibx + ibs / 2, iby + ibs / 2);
 
-    // Contador de Voltas (Lap Counter)
-    ctx.font = 'bold 15px sans-serif'; ctx.textAlign = 'left';
-    ctx.fillStyle = '#FFF'; ctx.strokeStyle = '#000'; ctx.lineWidth = 3;
+    // Contador de Voltas e Cronômetro
+    ctx.font = '900 16px sans-serif'; ctx.textAlign = 'left';
+    ctx.fillStyle = '#FFF'; ctx.strokeStyle = '#000'; ctx.lineWidth = 3.5;
     const lapTxt = kr.lap >= kr.totalLaps ? '🏁 VOLTA FINAL!' : `VOLTA ${kr.lap}/${kr.totalLaps}`;
     ctx.strokeText(lapTxt, ibx + ibs + 14, iby + 22);
     ctx.fillText(lapTxt, ibx + ibs + 14, iby + 22);
 
-    // Posição / Rank (1º, 2º, 3º...)
+    // Distância percorrida e mini-barra de progresso
+    ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(ibx + ibs + 14, iby + 32, 130, 8);
+    const prog = clamp(kr.trackZ / (kr.lapLength * kr.totalLaps), 0, 1);
+    ctx.fillStyle = '#00F5D4'; ctx.fillRect(ibx + ibs + 14, iby + 32, 130 * prog, 8);
+
+    // Posição / Rank (1º Ouro com Louros, 2º Prata, 3º Bronze)
     const aheadCount = rivals.filter((r) => (r.z || 0) > (kr.trackZ % kr.lapLength)).length;
     kr.rank = aheadCount + 1;
     const rankTxt = `${kr.rank}º`;
-    ctx.font = '900 44px sans-serif'; ctx.textAlign = 'right';
+    ctx.font = '900 50px sans-serif'; ctx.textAlign = 'right';
     const rankCol = kr.rank === 1 ? '#FFD43B' : (kr.rank === 2 ? '#CED4DA' : (kr.rank === 3 ? '#E599F7' : '#FF8787'));
-    ctx.fillStyle = rankCol; ctx.strokeStyle = '#000'; ctx.lineWidth = 6;
-    ctx.strokeText(rankTxt, W - 24, 60); ctx.fillText(rankTxt, W - 24, 60);
-    ctx.font = 'bold 13px sans-serif'; ctx.fillStyle = '#FFF';
-    ctx.strokeText(`/ ${rivals.length + 1}`, W - 24, 82); ctx.fillText(`/ ${rivals.length + 1}`, W - 24, 82);
+    ctx.fillStyle = rankCol; ctx.strokeStyle = '#000'; ctx.lineWidth = 7;
+    ctx.strokeText(rankTxt, W - 24, 62); ctx.fillText(rankTxt, W - 24, 62);
+    ctx.font = '900 14px sans-serif'; ctx.fillStyle = '#FFF';
+    ctx.strokeText(`/ ${rivals.length + 1} VILÕES`, W - 24, 86); ctx.fillText(`/ ${rivals.length + 1} VILÕES`, W - 24, 86);
 
-    // Velocímetro digital
-    const speedKmh = Math.round(kr.speed * 8.5);
-    ctx.font = 'bold 18px monospace'; ctx.textAlign = 'right';
-    ctx.fillStyle = '#00F5D4'; ctx.strokeStyle = '#000'; ctx.lineWidth = 3;
+    // Velocímetro digital radial estilizado
+    const speedKmh = Math.round(kr.speed * 8.8);
+    ctx.font = '900 20px monospace'; ctx.textAlign = 'right';
+    ctx.fillStyle = '#00F5D4'; ctx.strokeStyle = '#000'; ctx.lineWidth = 3.5;
     ctx.strokeText(`${speedKmh} KM/H`, W - 24, H - 24);
     ctx.fillText(`${speedKmh} KM/H`, W - 24, H - 24);
 
+    // Alerta de Proximidade Traseira (quando um rival está colado para ultrapassar)
+    const trailingRival = rivals.find((r) => {
+      const dz = (kr.trackZ % kr.lapLength) - (r.z || 0);
+      return dz > 0 && dz < 120;
+    });
+    if (trailingRival && Math.floor(frameCount / 8) % 2 === 0) {
+      ctx.fillStyle = '#FF6B6B'; ctx.strokeStyle = '#000'; ctx.lineWidth = 4;
+      ctx.font = '900 16px sans-serif'; ctx.textAlign = 'center';
+      ctx.strokeText(`⚠️ ${trailingRival.name} TENTANDO ULTRAPASSAR!`, W / 2, 70);
+      ctx.fillText(`⚠️ ${trailingRival.name} TENTANDO ULTRAPASSAR!`, W / 2, 70);
+    }
+
     // Minimapa do Circuito Oval
-    const mmW = 92, mmH = 54, mmX = W - mmW - 20, mmY = H - mmH - 52;
-    ctx.fillStyle = 'rgba(15,10,24,0.78)'; ctx.strokeStyle = '#5C3D2E'; ctx.lineWidth = 2;
+    const mmW = 100, mmH = 58, mmX = W - mmW - 20, mmY = H - mmH - 54;
+    ctx.fillStyle = 'rgba(15,10,24,0.85)'; ctx.strokeStyle = '#5C3D2E'; ctx.lineWidth = 2.5;
     ctx.beginPath();
-    if (ctx.roundRect) ctx.roundRect(mmX, mmY, mmW, mmH, 8);
+    if (ctx.roundRect) ctx.roundRect(mmX, mmY, mmW, mmH, 10);
     else ctx.rect(mmX, mmY, mmW, mmH);
     ctx.fill(); ctx.stroke();
     // Traçado do circuito
-    ctx.strokeStyle = '#ADB5BD'; ctx.lineWidth = 3;
+    ctx.strokeStyle = '#CED4DA'; ctx.lineWidth = 3.5;
     ctx.beginPath(); ctx.ellipse(mmX + mmW / 2, mmY + mmH / 2, mmW * 0.38, mmH * 0.32, 0, 0, Math.PI * 2); ctx.stroke();
     // Ponto dos Rivais no minimapa
     rivals.forEach((rv) => {
       const ang = (((rv.z || 0) % kr.lapLength) / kr.lapLength) * Math.PI * 2;
       const rx = mmX + mmW / 2 + Math.cos(ang) * (mmW * 0.38);
       const ry = mmY + mmH / 2 + Math.sin(ang) * (mmH * 0.32);
-      ctx.fillStyle = rv.color || '#E03131'; ctx.beginPath(); ctx.arc(rx, ry, 3.5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = rv.color || '#E03131'; ctx.beginPath(); ctx.arc(rx, ry, 3.8, 0, Math.PI * 2); ctx.fill();
     });
-    // Ponto do Jogador no minimapa (amarelo brilhante)
+    // Ponto do Jogador no minimapa (amarelo ouro brilhante)
     const pAng = ((kr.trackZ % kr.lapLength) / kr.lapLength) * Math.PI * 2;
     const pxm = mmX + mmW / 2 + Math.cos(pAng) * (mmW * 0.38);
     const pym = mmY + mmH / 2 + Math.sin(pAng) * (mmH * 0.32);
-    ctx.fillStyle = '#FFD43B'; ctx.strokeStyle = '#000'; ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.arc(pxm, pym, 5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#FFD43B'; ctx.strokeStyle = '#000'; ctx.lineWidth = 1.8;
+    ctx.beginPath(); ctx.arc(pxm, pym, 5.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
 
     ctx.restore();
   }
