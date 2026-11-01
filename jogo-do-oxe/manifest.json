@@ -1,8 +1,8 @@
 {
   "id": "./",
-  "name": "OXE! 2.0: A Grande Jornada dos Nove Sóis",
+  "name": "OXE! A Odisseia dos Nove Sóis",
   "short_name": "Jogo do Oxe",
-  "description": "Jogo de plataforma 2D com a identidade visual do Oxe, era assim? 6 mundos, 30 fases, desafio diário e trilha de forró 8-bit sintetizada. Funciona 100% offline!",
+  "description": "Jogo de plataforma 2D com a identidade visual do Oxe, era assim? 8 mundos, 56 fases, desafio diário e trilha de forró 8-bit sintetizada. Funciona 100% offline!",
   "lang": "pt-BR",
   "dir": "ltr",
   "start_url": "./?source=pwa",
