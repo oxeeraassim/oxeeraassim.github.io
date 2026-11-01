@@ -2026,7 +2026,7 @@
         player.y = mp.y - player.h;
       }
     }
-    // 3. Rodas de Mandacaru Espinhoso
+    // 3. Rodas de Mandacaru Espinhoso (cactos voadores giratórios que vão de um lado para o outro)
     var wheels = L.hazardWheels || [];
     for (var k = 0; k < wheels.length; k++) {
       var w = wheels[k];
@@ -2034,9 +2034,23 @@
       w.t = (w.t || 0) + (w.speed || 0.035);
       w.angle = (w.angle || 0) + 0.12;
       w.x = (w.baseX != null ? w.baseX : w.x) + Math.sin(w.t) * (w.range || 70);
-      var r = w.r || 22;
-      var box = { x: w.x - r * 0.8, y: w.y - r * 0.8, w: r * 1.6, h: r * 1.6 };
-      if (aabb(player, box) && player.takeDamage) player.takeDamage(1);
+      var r = w.r || 26;
+      // v4.2: Raio letal ampliado e colisão matemática círculo-caixa para ferir a cabeça do personagem ao passar por baixo
+      var hitR = r * 1.35;
+      var cx = Math.max(player.x, Math.min(w.x, player.x + player.w));
+      var cy = Math.max(player.y, Math.min(w.y, player.y + player.h));
+      var dSq = (w.x - cx) * (w.x - cx) + (w.y - cy) * (w.y - cy);
+      if (dSq <= hitR * hitR && player.takeDamage) {
+        player.takeDamage(1, w.x);
+      }
+      if (typeof companion !== 'undefined' && companion && !companion.dead) {
+        var ccx = Math.max(companion.x, Math.min(w.x, companion.x + companion.w));
+        var ccy = Math.max(companion.y, Math.min(w.y, companion.y + companion.h));
+        var cdSq = (w.x - ccx) * (w.x - ccx) + (w.y - ccy) * (w.y - ccy);
+        if (cdSq <= hitR * hitR && companion.takeDamage) {
+          companion.takeDamage(1, w.x);
+        }
+      }
     }
   }
 

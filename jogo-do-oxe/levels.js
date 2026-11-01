@@ -212,15 +212,17 @@
 
   var TOTAL_LEVELS = WORLDS.length * SPW;
   // v3.7: fases com Amigos (Zefinha, Menino Cabeça de Vento, Galinha Melindrosa, Bode Toddy, Mestre Seu Lunga e Tatu-Bola). Mais difíceis (+50% bichos e obstáculos)!
+  // v4.2: Proporção equilibrada de duplas — 1 fase especial por mundo (e 2 no mundo bônus)
   var DUO_STAGES = {
-    '1-2': 'cabeca_vento', '1-3': 'galinha',      '1-5': 'zefinha',      '1-6': 'bode_toddy',
-    '2-2': 'tatu_bola',    '2-3': 'seu_lunga',    '2-5': 'cabeca_vento', '2-6': 'galinha',
-    '3-2': 'bode_toddy',   '3-3': 'zefinha',      '3-5': 'seu_lunga',    '3-6': 'tatu_bola',
-    '4-2': 'galinha',      '4-4': 'cabeca_vento', '4-5': 'zefinha',      '4-6': 'bode_toddy',
-    '5-2': 'tatu_bola',    '5-4': 'galinha',      '5-5': 'seu_lunga',    '5-6': 'cabeca_vento',
-    '6-2': 'cabeca_vento', '6-4': 'bode_toddy',   '6-5': 'zefinha',      '6-6': 'seu_lunga',
-    '7-2': 'bode_toddy',   '7-4': 'seu_lunga',    '7-5': 'tatu_bola',    '7-6': 'galinha',
-    '★-2': 'zefinha', '★-3': 'cabeca_vento', '★-4': 'galinha', '★-5': 'seu_lunga', '★-6': 'tatu_bola'
+    '1-3': 'zefinha',
+    '2-5': 'cabeca_vento',
+    '3-2': 'galinha',
+    '4-5': 'bode_toddy',
+    '5-3': 'seu_lunga',
+    '6-5': 'tatu_bola',
+    '7-3': 'zefinha',
+    '★-3': 'cabeca_vento',
+    '★-6': 'bode_toddy'
   };
   var SPECIAL_MODE_STAGES = {
     '1-4': 'pacman',
@@ -406,7 +408,7 @@
   }
 
   function wheel(x, y, range, speed) {
-    return { x: Math.round(x), y: Math.round(y), r: 22, baseX: Math.round(x), baseY: Math.round(y),
+    return { x: Math.round(x), y: Math.round(y), r: 26, baseX: Math.round(x), baseY: Math.round(y),
       range: range || 70, speed: speed || 0.035 };
   }
 
@@ -789,11 +791,11 @@
           spawnGround(p, 1);
           if (R.chance(0.6)) spawnFlyer(p, 1);
           break;
-        case 'log': // tronco oco: passa por dentro ou por cima
+        case 'log': // tronco oco: passa por dentro ou por cima (altura ampliada proporcional aos personagens)
           p = gapTo(R.int(110, 170), nextY(70), R.int(500, 620));
-          var lw = R.int(190, 240), lx = Math.round(p.x + p.w * 0.45 - lw / 2);
-          S.logs.push({ x: lx, y: p.y - 70, w: lw, h: 70 });
-          plats.push({ x: lx, y: p.y - 74, w: lw, h: 14, theme: 'log', oneWay: true, optional: true, isLogTop: true });
+          var lw = R.int(220, 270), lx = Math.round(p.x + p.w * 0.45 - lw / 2);
+          S.logs.push({ x: lx, y: p.y - 78, w: lw, h: 78 });
+          plats.push({ x: lx, y: p.y - 82, w: lw, h: 16, theme: 'log', oneWay: true, optional: true, isLogTop: true });
           addLine(S, lx + 30, p.y - 30, Math.max(3, Math.floor((lw - 40) / 45)), 45);
           spawnGround({ x: p.x, y: p.y, w: Math.max(260, lx - p.x) }, 1);
           if (ground.length && R.chance(0.5)) { var lt = R.pick(ground); S.enemies.push(decorate({ type: lt, x: lx + Math.round(lw / 2), y: p.y - 32, dir: -1, patrol: { minX: lx + 10, maxX: lx + lw - 10 } }, lt)); }
@@ -1252,78 +1254,118 @@
 
   function buildBrawlOxeStage(S, wIdx) {
     S.specialMode = 'brawlstars';
-    S.levelW = 1480; S.levelH = 540;
-    S.respawnX = 120; S.respawnY = 250;
-    S.duo = true;
-    var pKind = DUO_STAGES[S.code] || 'cabeca_vento';
-    S.partner = { x: 180, y: 280, kind: pKind, joined: true };
-    // Paredes da Arena Vista de Cima (Estilo Brawl Stars)
+    // v4.2: Arena Oxe-Stars ampliada em 5x (3400x1180 = ~4M px², 5.02x maior em área) e mais desafiadora
+    S.levelW = 3400; S.levelH = 1180;
+    S.respawnX = 140; S.respawnY = 560;
+    S.duo = false;
+    // Paredes Perimetrais e Estruturas Táticas da Grande Arena
     S.platforms = [
-      { x: 24, y: 18, w: 1432, h: 24, theme: 'brawl_wall' },
-      { x: 24, y: 498, w: 1432, h: 24, theme: 'brawl_wall' },
-      { x: 24, y: 18, w: 24, h: 498, theme: 'brawl_wall' },
-      { x: 1432, y: 18, w: 24, h: 498, theme: 'brawl_wall' },
-      // Obstáculos táticos de barris/caixas na arena
-      { x: 280, y: 120, w: 96, h: 64, theme: 'brawl_wall' },
-      { x: 280, y: 356, w: 96, h: 64, theme: 'brawl_wall' },
-      { x: 560, y: 218, w: 96, h: 104, theme: 'brawl_wall' },
-      { x: 840, y: 110, w: 110, h: 68, theme: 'brawl_wall' },
-      { x: 840, y: 362, w: 110, h: 68, theme: 'brawl_wall' },
-      { x: 1120, y: 218, w: 84, h: 104, theme: 'brawl_wall' }
+      // Perímetro externo
+      { x: 24, y: 18, w: 3352, h: 28, theme: 'brawl_wall' },
+      { x: 24, y: 1134, w: 3352, h: 28, theme: 'brawl_wall' },
+      { x: 24, y: 18, w: 28, h: 1144, theme: 'brawl_wall' },
+      { x: 3348, y: 18, w: 28, h: 1144, theme: 'brawl_wall' },
+      // Setor Oeste (Entrada)
+      { x: 360, y: 160, w: 140, h: 80, theme: 'brawl_wall' },
+      { x: 360, y: 880, w: 140, h: 80, theme: 'brawl_wall' },
+      { x: 620, y: 360, w: 160, h: 180, theme: 'brawl_wall' },
+      { x: 620, y: 640, w: 160, h: 180, theme: 'brawl_wall' },
+      // Setor Central (Pátio dos Brawlers)
+      { x: 1120, y: 160, w: 180, h: 100, theme: 'brawl_wall' },
+      { x: 1120, y: 920, w: 180, h: 100, theme: 'brawl_wall' },
+      { x: 1480, y: 340, w: 200, h: 120, theme: 'brawl_wall' },
+      { x: 1480, y: 720, w: 200, h: 120, theme: 'brawl_wall' },
+      { x: 1720, y: 520, w: 180, h: 140, theme: 'brawl_wall' },
+      { x: 2040, y: 180, w: 160, h: 120, theme: 'brawl_wall' },
+      { x: 2040, y: 880, w: 160, h: 120, theme: 'brawl_wall' },
+      // Setor Leste (Portão da Vitória)
+      { x: 2480, y: 360, w: 160, h: 180, theme: 'brawl_wall' },
+      { x: 2480, y: 640, w: 160, h: 180, theme: 'brawl_wall' },
+      { x: 2840, y: 200, w: 140, h: 100, theme: 'brawl_wall' },
+      { x: 2840, y: 880, w: 140, h: 100, theme: 'brawl_wall' }
     ];
-    // Moitas de Capim (Bushes estilo Brawl Stars — esconde o personagem quando entra!)
+    // 16 Moitas de Capim (Bushes táticos) espalhadas por toda a arena
     S.brawlBushes = [
-      { x: 190, y: 210, w: 110, h: 120 },
-      { x: 430, y: 80,  w: 130, h: 90 },
-      { x: 430, y: 370, w: 130, h: 90 },
-      { x: 700, y: 195, w: 110, h: 150 },
-      { x: 990, y: 90,  w: 120, h: 95 },
-      { x: 990, y: 355, w: 120, h: 95 }
+      { x: 180, y: 220, w: 140, h: 140 },
+      { x: 180, y: 760, w: 140, h: 140 },
+      { x: 440, y: 460, w: 130, h: 220 },
+      { x: 840, y: 140, w: 200, h: 120 },
+      { x: 840, y: 900, w: 200, h: 120 },
+      { x: 920, y: 480, w: 160, h: 180 },
+      { x: 1350, y: 180, w: 180, h: 120 },
+      { x: 1350, y: 860, w: 180, h: 120 },
+      { x: 1700, y: 260, w: 180, h: 140 },
+      { x: 1700, y: 760, w: 180, h: 140 },
+      { x: 2040, y: 480, w: 160, h: 180 },
+      { x: 2280, y: 140, w: 180, h: 120 },
+      { x: 2280, y: 900, w: 180, h: 120 },
+      { x: 2700, y: 460, w: 140, h: 220 },
+      { x: 3040, y: 200, w: 160, h: 140 },
+      { x: 3040, y: 820, w: 160, h: 140 }
     ];
-    // Caixas de Power Cube (Rapadura Cubo Verde brilhante estilo Brawl Stars)
+    // 14 Caixas de Power Cube (Rapadura Cubo Verde brilhante)
     S.brawlCrates = [
-      { x: 390, y: 246, w: 42, h: 42, hp: 3, maxHp: 3 },
-      { x: 680, y: 92,  w: 42, h: 42, hp: 3, maxHp: 3 },
-      { x: 680, y: 406, w: 42, h: 42, hp: 3, maxHp: 3 },
-      { x: 960, y: 246, w: 42, h: 42, hp: 3, maxHp: 3 }
+      { x: 400, y: 360, w: 46, h: 46, hp: 4, maxHp: 4 },
+      { x: 400, y: 740, w: 46, h: 46, hp: 4, maxHp: 4 },
+      { x: 880, y: 260, w: 46, h: 46, hp: 4, maxHp: 4 },
+      { x: 880, y: 840, w: 46, h: 46, hp: 4, maxHp: 4 },
+      { x: 1240, y: 460, w: 46, h: 46, hp: 4, maxHp: 4 },
+      { x: 1240, y: 660, w: 46, h: 46, hp: 4, maxHp: 4 },
+      { x: 1620, y: 200, w: 46, h: 46, hp: 4, maxHp: 4 },
+      { x: 1620, y: 920, w: 46, h: 46, hp: 4, maxHp: 4 },
+      { x: 1980, y: 360, w: 46, h: 46, hp: 4, maxHp: 4 },
+      { x: 1980, y: 760, w: 46, h: 46, hp: 4, maxHp: 4 },
+      { x: 2360, y: 240, w: 46, h: 46, hp: 4, maxHp: 4 },
+      { x: 2360, y: 860, w: 46, h: 46, hp: 4, maxHp: 4 },
+      { x: 2760, y: 380, w: 46, h: 46, hp: 4, maxHp: 4 },
+      { x: 2760, y: 720, w: 46, h: 46, hp: 4, maxHp: 4 }
     ];
-    // Os 2 Personagens/Vilões Chefes da Arena que precisam ser mortos para abrir a saída!
-    var bossPair = wIdx === 3
+    // Os 3 Vilões Brawlers Chefes da Grande Arena (Mais fortes e desafiadores)
+    var bossTrio = wIdx === 3
       ? [
-          { type: 'papa_figo', name: '★ BRAWLER: PAPA-FIGO SOMBRIO', x: 920, y: 170, hp: 14, maxHp: 14, brawlBoss: true, color: '#9C36B5', spd: 2.1 },
-          { type: 'cabra_cabriola', name: '★ BRAWLER: CABRA-CABRIOLA', x: 1180, y: 330, hp: 16, maxHp: 16, brawlBoss: true, color: '#FA5252', spd: 2.35 }
+          { type: 'papa_figo', name: '★ BRAWLER: PAPA-FIGO SOMBRIO', x: 1420, y: 260, hp: 18, maxHp: 18, brawlBoss: true, color: '#9C36B5', spd: 2.15 },
+          { type: 'cabra_cabriola', name: '★ BRAWLER: CABRA-CABRIOLA', x: 1840, y: 880, hp: 20, maxHp: 20, brawlBoss: true, color: '#FA5252', spd: 2.4 },
+          { type: 'serpente', name: '★ BRAWLER: SERPENTE DA MARÉ', x: 2650, y: 560, hp: 22, maxHp: 22, brawlBoss: true, color: '#20C997', spd: 2.25 }
         ]
       : (wIdx === 5
         ? [
-            { type: 'cangaceiro_sombra', name: '★ BRAWLER: CAPITÃO CORISCO', x: 920, y: 165, hp: 16, maxHp: 16, brawlBoss: true, color: '#845EF7', spd: 2.3 },
-            { type: 'quibungo', name: '★ BRAWLER: REI QUIBUNGO', x: 1200, y: 320, hp: 18, maxHp: 18, brawlBoss: true, color: '#E8590C', spd: 2.4 }
+            { type: 'cangaceiro_sombra', name: '★ BRAWLER: CAPITÃO CORISCO', x: 1420, y: 260, hp: 20, maxHp: 20, brawlBoss: true, color: '#845EF7', spd: 2.35 },
+            { type: 'quibungo', name: '★ BRAWLER: REI QUIBUNGO', x: 1840, y: 880, hp: 22, maxHp: 22, brawlBoss: true, color: '#E8590C', spd: 2.45 },
+            { type: 'labatut', name: '★ BRAWLER: GENERAL LABATUT', x: 2650, y: 560, hp: 24, maxHp: 24, brawlBoss: true, color: '#D9480F', spd: 2.3 }
           ]
         : [
-            { type: 'mula_sem_cabeca', name: '★ BRAWLER: MULA DE FOGO', x: 920, y: 170, hp: 15, maxHp: 15, brawlBoss: true, color: '#FF922B', spd: 2.4 },
-            { type: 'lobisomem', name: '★ BRAWLER: LOBISOMEM DA SERRA', x: 1190, y: 325, hp: 17, maxHp: 17, brawlBoss: true, color: '#FCC419', spd: 2.45 }
+            { type: 'mula_sem_cabeca', name: '★ BRAWLER: MULA DE FOGO', x: 1420, y: 260, hp: 20, maxHp: 20, brawlBoss: true, color: '#FF922B', spd: 2.45 },
+            { type: 'lobisomem', name: '★ BRAWLER: LOBISOMEM DA SERRA', x: 1840, y: 880, hp: 22, maxHp: 22, brawlBoss: true, color: '#FCC419', spd: 2.5 },
+            { type: 'boi_encantado', name: '★ BRAWLER: BOI ENCANTADO', x: 2650, y: 560, hp: 24, maxHp: 24, brawlBoss: true, color: '#E03131', spd: 2.35 }
           ]);
-    S.enemies = bossPair.concat([
-      { type: 'calango', x: 520, y: 130, hp: 3, maxHp: 3, brawlMinion: true },
-      { type: 'sapo_cururu', x: 520, y: 390, hp: 3, maxHp: 3, brawlMinion: true },
-      { type: 'cacto_atirador', x: 770, y: 255, hp: 4, maxHp: 4, brawlMinion: true }
+    S.enemies = bossTrio.concat([
+      { type: 'calango', x: 740, y: 240, hp: 4, maxHp: 4, brawlMinion: true },
+      { type: 'sapo_cururu', x: 740, y: 880, hp: 4, maxHp: 4, brawlMinion: true },
+      { type: 'cacto_atirador', x: 1280, y: 560, hp: 5, maxHp: 5, brawlMinion: true },
+      { type: 'tatu', x: 1620, y: 380, hp: 5, maxHp: 5, brawlMinion: true },
+      { type: 'jararaca', x: 1620, y: 760, hp: 4, maxHp: 4, brawlMinion: true },
+      { type: 'cacto_atirador', x: 2240, y: 560, hp: 5, maxHp: 5, brawlMinion: true },
+      { type: 'onca_pintada', x: 2880, y: 360, hp: 6, maxHp: 6, brawlMinion: true },
+      { type: 'escorpiao', x: 2880, y: 780, hp: 4, maxHp: 4, brawlMinion: true }
     ]);
-    // Rapaduras e Cajus espalhados na arena
-    for (var rx = 240; rx <= 1260; rx += 170) {
-      S.rapaduras.push({ x: rx, y: 64 });
-      S.rapaduras.push({ x: rx, y: 454 });
+    // Rapaduras e Cajus em trilhas pela grande arena
+    for (var rx = 240; rx <= 3160; rx += 220) {
+      S.rapaduras.push({ x: rx, y: 90 });
+      S.rapaduras.push({ x: rx, y: 560 });
+      S.rapaduras.push({ x: rx, y: 1040 });
     }
     S.cajus = [
-      { x: 328, y: 256, index: 0 },
-      { x: 740, y: 66, index: 1 },
-      { x: 1160, y: 446, index: 2 }
+      { x: 740, y: 560, index: 0 },
+      { x: 1720, y: 120, index: 1 },
+      { x: 2680, y: 1040, index: 2 }
     ];
-    S.asaBrancaStars = [{ x: 740, y: 446 }];
-    S.flagpolePos = { x: 1356, y: 220 };
+    S.asaBrancaStars = [{ x: 1720, y: 1040 }];
+    S.flagpolePos = { x: 3260, y: 560 };
     S.brawlExitLocked = true;
     S.signs = [{
-      x: 150, y: 260, title: '⭐ ARENA OXE-STARS (VISÃO DE CIMA)!', icon: '⭐',
-      textTouch: 'Combate visto de cima estilo Brawl Stars! Quebre caixas para pegar Cubos de Força, esconda-se no mato, DERROTE OS 2 VILÕES CHEFES da Arena e corra para o Portão de Saída!',
-      textKey: 'Visão de cima estilo Brawl Stars! Mova em 4 direções, quebre caixas de Power Cube, DERROTE OS 2 VILÕES CHEFES da Arena e entre no Portão Dourado de Saída!'
+      x: 160, y: 560, title: '⭐ GRANDE ARENA OXE-STARS (5X MAIOR)!', icon: '⭐',
+      textTouch: 'Arena 5x maior estilo Brawl Stars! Colete Cubos de Força nas caixas, use as moitas para emboscar, DERROTE OS 3 CHEFES BRAWLERS e atravesse o Portão Dourado de Saída no extremo Leste!',
+      textKey: 'Arena 5x maior estilo Brawl Stars! Mova com WASD/Setas, quebre caixas para coletar Cubos de Força, DERROTE OS 3 CHEFES BRAWLERS e alcance o Portão Dourado de Saída!'
     }];
     return S;
   }

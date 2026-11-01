@@ -354,6 +354,14 @@ const TouchController = {
   center(id) { const el = document.getElementById(id); if (!el) return null; const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; },
   pick(zid, x, y) {
     if (zid === 'dpadZone') {
+      const zone = typeof document !== 'undefined' ? document.getElementById('dpadZone') : null;
+      const isFourWay = zone && zone.classList.contains('four-way');
+      if (!isFourWay) {
+        const L = this.center('dpadLeft'), R = this.center('dpadRight');
+        if (!L || !R) return 'left';
+        const mid = (L.x + R.x) / 2;
+        return x < mid ? 'left' : 'right';
+      }
       const candidates = [];
       const u = this.center('dpadUp'), d = this.center('dpadDown'), l = this.center('dpadLeft'), r = this.center('dpadRight');
       if (l) candidates.push({ id: 'left', dist: Math.hypot(x - l.x, y - l.y) });
@@ -378,7 +386,9 @@ const TouchController = {
     const wasJump = keys.jump, wasWhip = keys.whip;
     setJump(on.jump); setWhip(on.whip);
     if (isPress && ((on.jump && !wasJump) || (on.whip && !wasWhip))) triggerHaptic(10);
-    [['dpadLeft', keys.left], ['dpadRight', keys.right], ['dpadUp', keys.up], ['dpadDown', keys.down], ['btnJump', on.jump], ['btnWhip', on.whip]].forEach(([id, a]) => { const el = document.getElementById(id); if (el) el.classList.toggle('active', !!a); });
+    const zone = typeof document !== 'undefined' ? document.getElementById('dpadZone') : null;
+    const isFourWay = zone && zone.classList.contains('four-way');
+    [['dpadLeft', keys.left], ['dpadRight', keys.right], ['dpadUp', isFourWay && keys.up], ['dpadDown', isFourWay && keys.down], ['btnJump', on.jump], ['btnWhip', on.whip]].forEach(([id, a]) => { const el = typeof document !== 'undefined' ? document.getElementById(id) : null; if (el) el.classList.toggle('active', !!a); });
   },
   reset() { this.fingers.clear(); this.apply(false); }
 };
@@ -1447,7 +1457,7 @@ function makeHero(kind, x, y) {
 const ENEMY_DEF = Object.assign({
   calango: { w: 32, h: 20, hp: 1, spd: 1.2, color: '#82C91E' }, tatu: { w: 32, h: 24, hp: 2, spd: 0.9, color: '#A68A64' },
   carcara: { w: 36, h: 24, hp: 1, spd: 1.6, color: '#5C4033', fly: true }, morcego: { w: 26, h: 18, hp: 1, spd: 1.4, color: '#5F3DC4', fly: true },
-  cacto_atirador: { w: 28, h: 40, hp: 2, spd: 0, color: '#2B8A3E' }, bode_doido: { w: 40, h: 32, hp: 3, spd: 0.8, color: '#DEE2E6' },
+  cacto_atirador: { w: 32, h: 48, hp: 2, spd: 0, color: '#2B8A3E' }, bode_doido: { w: 40, h: 32, hp: 3, spd: 0.8, color: '#DEE2E6' },
   fulozinha: { w: 24, h: 30, hp: 2, spd: 1.2, color: '#20C997', fly: true }, papa_figo: { w: 32, h: 42, hp: 3, spd: 0.9, color: '#495057' },
   caranguejo: { w: 34, h: 22, hp: 2, spd: 1.1, color: '#FA5252' }, baiacu: { w: 30, h: 30, hp: 2, spd: 0.6, color: '#FAB005', fly: true },
   salamandra: { w: 34, h: 18, hp: 2, spd: 1.5, color: '#FD7E14' },
@@ -3659,6 +3669,16 @@ function drawBossGuide(ctx, boss, camX, camY) {
       givePartnerStarterWeapons(currentLevel.partner.kind);
     }
     spawnPlayerAt(currentLevel.spawn); currentState = GAME_STATE.PLAYING;
+    // v4.2: D-Pad 4 direções só aparece nas fases multidirecionais (Pac-Oxe, Brawl Stars, Shmup)
+    const dz = typeof document !== 'undefined' ? document.getElementById('dpadZone') : null;
+    const sm = currentLevel && currentLevel.specialMode;
+    const is4Way = sm === 'pacman' || sm === 'brawlstars' || sm === 'shmup';
+    if (dz && dz.classList) dz.classList.toggle('four-way', !!is4Way);
+    const jBtn = typeof document !== 'undefined' ? document.getElementById('btnJump') : null;
+    if (jBtn && typeof jBtn.querySelector === 'function') {
+      const lbl = jBtn.querySelector('.lbl');
+      if (lbl) lbl.textContent = sm === 'brawlstars' ? 'SUPER' : (sm === 'pacman' ? 'TURBO' : 'PULAR');
+    }
     try { AudioEngine.playMusic && AudioEngine.playMusic(currentLevel.spec.music || 'baiao'); } catch (e) {}
     showScreen('hud', true); updateHUD();
   }
@@ -3669,6 +3689,10 @@ function drawBossGuide(ctx, boss, camX, camY) {
     currentChallengeSeed = seed; currentLevelIdx = -1; currentLevel = buildChallengeLevel(seed);
     challengeTimeLeft = currentLevel.spec.timeLimit || 30; challengeStartScore = score; challengeScore = 0;
     spawnPlayerAt(currentLevel.spawn); currentState = GAME_STATE.CHALLENGE;
+    const dz = typeof document !== 'undefined' ? document.getElementById('dpadZone') : null;
+    if (dz && dz.classList) dz.classList.toggle('four-way', false);
+    const jBtn = typeof document !== 'undefined' ? document.getElementById('btnJump') : null;
+    if (jBtn && typeof jBtn.querySelector === 'function') { const lbl = jBtn.querySelector('.lbl'); if (lbl) lbl.textContent = 'PULAR'; }
     try { AudioEngine.playMusic && AudioEngine.playMusic(currentLevel.spec.music); } catch (e) {}
     showScreen('hud', true); updateHUD();
   }

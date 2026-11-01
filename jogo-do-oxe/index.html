@@ -410,15 +410,32 @@
     }
     .touch-btn.active { transform: scale(0.9); background: rgba(232, 89, 12, 0.6); border-color: #FFD43B; }
 
-    #dpadLeft, #dpadRight, #dpadUp, #dpadDown {
-      width: calc(62px * var(--touch-scale));
-      height: calc(62px * var(--touch-scale));
-      font-size: calc(22px * var(--touch-scale));
+    #dpadLeft, #dpadRight {
+      width: calc(66px * var(--touch-scale));
+      height: calc(66px * var(--touch-scale));
+      font-size: calc(24px * var(--touch-scale));
+      bottom: calc(var(--safe-bottom) + 24px * var(--touch-scale));
     }
-    #dpadLeft  { left: calc(var(--safe-left) + 10px); bottom: calc(var(--safe-bottom) + 52px * var(--touch-scale)); }
-    #dpadRight { left: calc(var(--safe-left) + 10px + 98px * var(--touch-scale)); bottom: calc(var(--safe-bottom) + 52px * var(--touch-scale)); }
-    #dpadUp    { left: calc(var(--safe-left) + 10px + 49px * var(--touch-scale)); bottom: calc(var(--safe-bottom) + 98px * var(--touch-scale)); }
-    #dpadDown  { left: calc(var(--safe-left) + 10px + 49px * var(--touch-scale)); bottom: calc(var(--safe-bottom) + 6px); }
+    #dpadLeft  { left: calc(var(--safe-left) + 12px); }
+    #dpadRight { left: calc(var(--safe-left) + 12px + 82px * var(--touch-scale)); }
+
+    /* Nas fases normais 2D de plataforma, cima e baixo ficam OCULTOS */
+    #dpadUp, #dpadDown {
+      display: none;
+      width: calc(58px * var(--touch-scale));
+      height: calc(58px * var(--touch-scale));
+      font-size: calc(20px * var(--touch-scale));
+    }
+
+    /* Apenas nas fases multidirecionais (Pac-Oxe, Brawl Stars, Shmup), ativa o dpad 4 direções */
+    #dpadZone.four-way #dpadUp,
+    #dpadZone.four-way #dpadDown {
+      display: flex;
+    }
+    #dpadZone.four-way #dpadLeft  { left: calc(var(--safe-left) + 10px); bottom: calc(var(--safe-bottom) + 52px * var(--touch-scale)); width: calc(58px * var(--touch-scale)); height: calc(58px * var(--touch-scale)); }
+    #dpadZone.four-way #dpadRight { left: calc(var(--safe-left) + 10px + 98px * var(--touch-scale)); bottom: calc(var(--safe-bottom) + 52px * var(--touch-scale)); width: calc(58px * var(--touch-scale)); height: calc(58px * var(--touch-scale)); }
+    #dpadZone.four-way #dpadUp    { left: calc(var(--safe-left) + 10px + 49px * var(--touch-scale)); bottom: calc(var(--safe-bottom) + 98px * var(--touch-scale)); }
+    #dpadZone.four-way #dpadDown  { left: calc(var(--safe-left) + 10px + 49px * var(--touch-scale)); bottom: calc(var(--safe-bottom) + 6px); }
 
     #btnJump {
       right: calc(var(--safe-right) + 18px);
