@@ -475,19 +475,29 @@
     }
 
     var LQ = !!(G.OxeHD && G.OxeHD.lowQuality);
-    // God rays
+    // God rays & poeira dourada atmosférica (dust motes)
     if (P.name !== 'caverna' && !LQ) {
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
-      for (var r = 0; r < 6; r++) {
-        var ang = 0.35 + r * 0.16 + Math.sin(t * 0.004 + r) * 0.03;
-        var a = 0.05 + 0.03 * Math.sin(t * 0.01 + r * 1.7);
-        ctx.fillStyle = dark ? 'rgba(160,140,255,' + (a * 0.6) + ')' : 'rgba(255,240,190,' + a + ')';
+      for (var r = 0; r < 8; r++) {
+        var ang = 0.3 + r * 0.14 + Math.sin(t * 0.005 + r) * 0.04;
+        var a = 0.06 + 0.035 * Math.sin(t * 0.012 + r * 1.6);
+        ctx.fillStyle = dark ? 'rgba(160,140,255,' + (a * 0.6) + ')' : 'rgba(255,238,180,' + a + ')';
         ctx.beginPath();
         ctx.moveTo(sunX, sunY);
-        ctx.lineTo(sunX - Math.cos(ang) * H * 2.2 - 40, sunY + Math.sin(ang) * H * 2.2);
-        ctx.lineTo(sunX - Math.cos(ang + 0.07) * H * 2.2 + 40, sunY + Math.sin(ang + 0.07) * H * 2.2);
+        ctx.lineTo(sunX - Math.cos(ang) * H * 2.4 - 50, sunY + Math.sin(ang) * H * 2.4);
+        ctx.lineTo(sunX - Math.cos(ang + 0.065) * H * 2.4 + 50, sunY + Math.sin(ang + 0.065) * H * 2.4);
         ctx.closePath(); ctx.fill();
+      }
+      for (var di = 0; di < 24; di++) {
+        var dSeed = di * 13.7;
+        var dx = ((hash(dSeed) * W - camX * 0.08 + Math.sin(t * 0.02 + di) * 30) % W + W) % W;
+        var dy = (hash(dSeed + 5) * H * 0.85 + Math.cos(t * 0.015 + di) * 20) % H;
+        var dAlpha = 0.25 + 0.25 * Math.sin(t * 0.04 + di * 2);
+        ctx.fillStyle = dark ? 'rgba(200,190,255,' + dAlpha + ')' : 'rgba(255,245,200,' + dAlpha + ')';
+        ctx.beginPath();
+        ctx.arc(dx, dy, 1.2 + (di % 3) * 0.6, 0, Math.PI * 2);
+        ctx.fill();
       }
       ctx.restore();
     }
@@ -1396,6 +1406,9 @@
 
     // ---- Cabeça
     ball(ctx, 0.5, -33, 9.5, 9, '#f2c094', { lw: 1.4 });
+    // Rim-light dourado cinematográfico
+    ctx.strokeStyle = 'rgba(255, 240, 180, 0.45)'; ctx.lineWidth = 1.3;
+    ctx.beginPath(); ctx.arc(0.5, -33, 9.2, -Math.PI * 0.75, -Math.PI * 0.15); ctx.stroke();
     // bochecha
     ctx.save(); ctx.globalAlpha = 0.4; ellPath(ctx, 5, -30, 2.5, 1.6); ctx.fillStyle = '#ff8787'; ctx.fill(); ctx.restore();
     // olhos / expressão

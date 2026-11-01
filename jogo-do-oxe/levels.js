@@ -420,7 +420,7 @@
     var S = emptySpec({
       idx: 0, worldIdx: 0, stageIdx: 0, code: '1-1', name: W.stages[0].name,
       worldName: W.name, biome: W.biome, music: W.music, mechanic: W.mechanic,
-      levelW: 5700, respawnX: 80, respawnY: 400, handcrafted: true
+      levelW: 9400, respawnX: 80, respawnY: 400, handcrafted: true
     });
 
     S.platforms = [
@@ -532,22 +532,77 @@
     addArc(S, 4890, 460, 5110, 460, 6, 110);          // 4920→5080
     addLine(S, 5160, 420, 4, 60);
 
+    // Sector 3 Artesanal: O Desfiladeiro dos Cactos e o Alto da Serra (5700 a 9400 px)
+    S.platforms.push(
+      { x: 5720, y: 460, w: 760, h: 80,  theme: 'soil' },
+      { x: 6020, y: 310, w: 180, h: 20,  theme: 'wood',  optional: true, oneWay: true },
+      { x: 6320, y: 220, w: 160, h: 20,  theme: 'stone', optional: true, oneWay: true },
+      { x: 6640, y: 440, w: 820, h: 100, theme: 'stone' },
+      { x: 6820, y: 290, w: 160, h: 20,  theme: 'wood',  optional: true, oneWay: true },
+      { x: 7200, y: 400, w: 36,  h: 40,  theme: 'stone', isRock: true },
+      { x: 7620, y: 460, w: 780, h: 80,  theme: 'soil' },
+      { x: 7920, y: 290, w: 170, h: 20,  theme: 'stone', optional: true, oneWay: true },
+      { x: 8260, y: 380, w: 340, h: 160, theme: 'stone' },
+      { x: 8740, y: 460, w: 660, h: 80,  theme: 'soil' }
+    );
+
+    S.enemies.push(
+      { type: 'calango', x: 5980, y: 428, dir: -1, patrol: { minX: 5800, maxX: 6150 } },
+      { type: 'cacto_atirador', x: 6380, y: 190, dir: -1, fireRate: 140, onLedge: true },
+      { type: 'sapo_cururu', x: 6780, y: 408, dir: -1, hopPower: 9, patrol: { minX: 6680, maxX: 6920 } },
+      { type: 'bode_doido', x: 7420, y: 408, dir: -1, chargeSpeed: 4.5, stunFrames: 150, platformX: 6640, platformW: 820, rockX: 7200 },
+      { type: 'marimbondo', x: 7750, y: 310, dir: -1, amp: 28, patrol: { minX: 7660, maxX: 7880 } },
+      { type: 'tatu', x: 7840, y: 428, dir: -1, armored: true, patrol: { minX: 7680, maxX: 8100 } },
+      { type: 'calango', x: 8420, y: 348, dir: -1, patrol: { minX: 8300, maxX: 8550 } },
+      { type: 'carcara', x: 8600, y: 200, dir: -1, amp: 32, patrol: { minX: 8350, maxX: 8900 } }
+    );
+
+    S.updrafts.push({ x: 7460, y: 90, w: 130, h: 450, strength: 0.65 });
+    S.trampolines.push(tramp(6600, 440), tramp(8200, 460));
+    S.movingPlatforms.push(
+      { x: 6500, y: 310, w: 120, h: 22, axis: 'x', range: 80, speed: 0.025, phase: 0.8, optional: true },
+      { x: 7520, y: 230, w: 120, h: 22, axis: 'y', range: 75, speed: 0.025, phase: 2.1, optional: true }
+    );
+    S.hazardWheels.push(
+      wheel(6200, 320, 70, 0.035),
+      wheel(7850, 340, 70, 0.038)
+    );
+
+    S.signs.push({
+      x: 5800, y: 460, title: 'O Alto da Serra', icon: '⛰️',
+      textTouch: 'Você alcançou as alturas! O vento é forte e os cactos espinhosos rodam mais rápido!',
+      textKey: 'Você alcançou as alturas! O vento é forte e os cactos espinhosos rodam mais rápido!'
+    });
+
+    addArc(S, 5660, 460, 5740, 460, 4, 70);
+    addLine(S, 6040, 270, 3, 50);
+    addArc(S, 6460, 460, 6660, 440, 5, 90);
+    addLine(S, 6840, 250, 3, 50);
+    addArc(S, 7440, 440, 7640, 460, 6, 110);
+    addLine(S, 7940, 250, 3, 50);
+    addArc(S, 8560, 380, 8760, 460, 5, 90);
+    addLine(S, 8820, 420, 4, 60);
+
     S.cajus = [
       { x: 1490, y: 270 },   // saliência do cacto (opcional)
       { x: 2980, y: 150 },   // topo da corrente térmica
-      { x: 4700, y: 320 }    // bloco de madeira opcional
+      { x: 4700, y: 320 },   // bloco de madeira opcional
+      { x: 6380, y: 160 }    // caju secreto no alto da serra
     ];
-    S.asaBrancaStars = [{ x: 3930, y: 240 }];
+    S.asaBrancaStars = [{ x: 3930, y: 240 }, { x: 7980, y: 220 }];
     S.items = [
       { type: 'baleadeira', x: 1290, y: 350 },
       { type: 'jegue', x: 1700, y: 416 },
       { type: 'peixeira', x: 2450, y: 350 },
       { type: 'cuscuz', x: 3360, y: 240 },
       { type: 'bode_toddy_mount', x: 4380, y: 416 },
-      { type: 'reliquia_uniao', x: 5180, y: 390 }
+      { type: 'reliquia_uniao', x: 5180, y: 390 },
+      { type: 'baleadeira', x: 6060, y: 270 },
+      { type: 'cuscuz', x: 6860, y: 250 },
+      { type: 'jegue', x: 7700, y: 416 }
     ];
-    S.checkpoints = [{ x: 1960, y: 460 }, { x: 4260, y: 460 }];
-    S.flagpolePos = { x: 5460, y: 220 };
+    S.checkpoints = [{ x: 1960, y: 460 }, { x: 4260, y: 460 }, { x: 6720, y: 440 }, { x: 8300, y: 380 }];
+    S.flagpolePos = { x: 9100, y: 220 };
     return S;
   }
 
@@ -988,7 +1043,7 @@
     });
     var sm = at(0.42);
     S.asaBrancaStars.push({ x: Math.round(sm.x + sm.w / 2 + 30), y: sm.y - 135 });
-    [1 / 4, 2 / 4, 3 / 4].forEach(function (f) {
+    [0.2, 0.4, 0.6, 0.8].forEach(function (f) {
       var m = at(f);
       S.checkpoints.push({ x: m.x + 30, y: m.y });
     });
@@ -1171,8 +1226,8 @@
 
   function buildOxeCraftStage(S, cfg) {
     S.specialMode = 'minecraft';
-    // v4.3: OxeCraft Gigante (5600x680) - Mina da Serra da Capivara com 3 andares de escavação, trilhos e blocos
-    S.levelW = 5600; S.levelH = 680;
+    // v4.4: OxeCraft Expandido (8600x680) - Mina da Serra da Capivara com 4 setores completos
+    S.levelW = 8600; S.levelH = 680;
     S.respawnX = 120; S.respawnY = 380;
     S.platforms = [];
     S.enemies = [];
@@ -1220,11 +1275,25 @@
     S.platforms.push({ x: 4540, y: 300, w: 240, h: 24, oneWay: true, theme: 'wood' });
     S.platforms.push({ x: 5080, y: 260, w: 200, h: 24, oneWay: true, theme: 'wood' });
 
+    // 4. SETOR DO PORTAL DE OBSIDIANA E CRISTA DE NETHERITE (x: 5660 a 8600)
+    S.platforms.push({ x: 5680, y: 440, w: 480, h: 240, theme: 'stone' });
+    S.platforms.push({ x: 6240, y: 390, w: 500, h: 290, theme: 'stone' });
+    S.platforms.push({ x: 6820, y: 340, w: 460, h: 340, theme: 'stone' });
+    S.platforms.push({ x: 7360, y: 300, w: 480, h: 380, theme: 'stone' });
+    S.platforms.push({ x: 7920, y: 430, w: 620, h: 250, theme: 'stone' });
+    // Pontes aéreas de madeira
+    S.platforms.push({ x: 5900, y: 320, w: 220, h: 24, oneWay: true, theme: 'wood' });
+    S.platforms.push({ x: 6480, y: 270, w: 240, h: 24, oneWay: true, theme: 'wood' });
+    S.platforms.push({ x: 7060, y: 220, w: 220, h: 24, oneWay: true, theme: 'wood' });
+
     // Poços de Lava borbulhante no abismo
     S.fires.push({ x: 1420, y: 660, w: 100, period: 160, phase: 0 });
     S.fires.push({ x: 3720, y: 660, w: 100, period: 150, phase: 45 });
     S.fires.push({ x: 4290, y: 660, w: 60, period: 140, phase: 30 });
     S.fires.push({ x: 4830, y: 660, w: 60, period: 130, phase: 60 });
+    S.fires.push({ x: 6160, y: 660, w: 80, period: 130, phase: 20 });
+    S.fires.push({ x: 6740, y: 660, w: 80, period: 140, phase: 50 });
+    S.fires.push({ x: 7280, y: 660, w: 70, period: 120, phase: 80 });
 
     // GERADOR DE BLOCOS MINERÁVEIS (90+ BLOCOS: Diamante, Ouro, Redstone, TNT, Baú, Madeira)
     var blockDefs = [
@@ -1259,7 +1328,16 @@
       { x: 4480, y: 408, kind: 'tnt' }, { x: 4512, y: 408, kind: 'tnt' }, { x: 4544, y: 408, kind: 'diamond_ore' },
       { x: 4640, y: 268, kind: 'gold_ore' }, { x: 4672, y: 268, kind: 'chest' },
       { x: 5020, y: 358, kind: 'diamond_ore' }, { x: 5052, y: 358, kind: 'diamond_ore' }, { x: 5084, y: 358, kind: 'redstone_ore' },
-      { x: 5180, y: 228, kind: 'tnt' }, { x: 5212, y: 228, kind: 'diamond_ore' }
+      { x: 5180, y: 228, kind: 'tnt' }, { x: 5212, y: 228, kind: 'diamond_ore' },
+
+      // Setor do Portal de Obsidiana e Crista de Netherite (x: 5660 a 8600)
+      { x: 5740, y: 408, kind: 'diamond_ore' }, { x: 5772, y: 408, kind: 'diamond_ore' }, { x: 5804, y: 408, kind: 'tnt' },
+      { x: 5920, y: 288, kind: 'chest' }, { x: 5952, y: 288, kind: 'gold_ore' },
+      { x: 6320, y: 358, kind: 'chest' }, { x: 6352, y: 358, kind: 'gold_ore' }, { x: 6384, y: 358, kind: 'redstone_ore' },
+      { x: 6500, y: 238, kind: 'diamond_ore' }, { x: 6532, y: 238, kind: 'tnt' },
+      { x: 6920, y: 308, kind: 'diamond_ore' }, { x: 6952, y: 308, kind: 'tnt' }, { x: 6984, y: 308, kind: 'chest' },
+      { x: 7460, y: 268, kind: 'diamond_ore' }, { x: 7492, y: 268, kind: 'diamond_ore' }, { x: 7524, y: 268, kind: 'redstone_ore' },
+      { x: 7980, y: 398, kind: 'tnt' }, { x: 8012, y: 398, kind: 'diamond_ore' }, { x: 8044, y: 398, kind: 'chest' }
     ];
 
     blockDefs.forEach(function (b) {
@@ -1294,7 +1372,15 @@
       { type: 'escorpiao', x: 4500, y: 400, isSpider: true },
       { type: 'cangaceiro_sombra', x: 4700, y: 250, isSkeleton: true },
       { type: 'bode_doido', x: 5000, y: 340, isCreeper: true },
-      { type: 'mula_sem_cabeca', x: 5200, y: 300 }
+      { type: 'mula_sem_cabeca', x: 5200, y: 300 },
+
+      // Setor 4: Crista de Netherite & Abismo de Redstone
+      { type: 'cangaceiro_sombra', x: 5820, y: 400, isSkeleton: true },
+      { type: 'bode_doido', x: 6380, y: 350, isCreeper: true },
+      { type: 'escorpiao', x: 6940, y: 300, isSpider: true },
+      { type: 'bode_doido', x: 7480, y: 260, isCreeper: true },
+      { type: 'cangaceiro_sombra', x: 7700, y: 250, isSkeleton: true },
+      { type: 'mula_sem_cabeca', x: 8100, y: 380 }
     ];
 
     // COLEÇÃO DE RECURSOS E RAPADURAS
@@ -1305,20 +1391,26 @@
     addLine(S, 2880, 240, 5, 42);
     addLine(S, 4100, 310, 4, 44);
     addLine(S, 4650, 270, 4, 44);
+    addLine(S, 5740, 390, 5, 42);
+    addLine(S, 6300, 340, 5, 42);
+    addLine(S, 7420, 250, 5, 42);
+    addLine(S, 8000, 370, 4, 44);
 
     // CAJUS RAROS
     S.cajus.push({ x: 1200, y: 170, index: 0 });
     S.cajus.push({ x: 2240, y: 175, index: 1 });
     S.cajus.push({ x: 3500, y: 360, index: 2 });
     S.cajus.push({ x: 5100, y: 215, index: 3 });
+    S.cajus.push({ x: 7080, y: 170, index: 4 });
 
     // CHECKPOINTS
     S.checkpoints.push({ x: 1480, y: 280 });
     S.checkpoints.push({ x: 3700, y: 440 });
+    S.checkpoints.push({ x: 5720, y: 400 });
 
     // ESTRELA ASA BRANCA & BANDEIRA FINAL
-    S.asaBrancaStars = [{ x: 4680, y: 180 }];
-    S.flagpolePos = { x: 5480, y: 120 };
+    S.asaBrancaStars = [{ x: 4680, y: 180 }, { x: 7520, y: 170 }];
+    S.flagpolePos = { x: 8380, y: 190 };
 
     S.signs.unshift({
       x: 240, y: 440, title: '⛏️ OXECRAFT: A MINA DA SERRA DA CAPIVARA!', icon: '⛏️',
@@ -1330,10 +1422,10 @@
 
   function buildOxeKartStage(S) {
     S.specialMode = 'kart';
-    // v4.3: Grande Corrida de Jegue 3D - Circuito Grand Prix Expandido (15.600 px de percurso total, 3 voltas de 5.200m)
-    S.levelW = 15600; S.levelH = 540;
+    // v4.4: Grande Corrida de Jegue 3D - Circuito Grand Prix Expandido (20.400 px de percurso total, 3 voltas de 6.800m)
+    S.levelW = 20400; S.levelH = 540;
     S.respawnX = 120; S.respawnY = 390;
-    S.kartLapLength = 5200;
+    S.kartLapLength = 6800;
     S.kartTotalLaps = 3;
     S.platforms = [];
     S.kartTrack = {
@@ -1341,44 +1433,44 @@
       cactusObstacles: [], rollingRocks: [], fallenLogs: [], chickens: []
     };
 
-    // 28 segmentos contínuos para compatibilidade com física 2D, bandeira e colisores
+    // 36 segmentos contínuos para percurso expandido épico
     var x = 0, y = 450;
-    for (var seg = 0; seg < 28; seg++) {
-      var w = seg === 0 ? 880 : (seg === 27 ? 1200 : 540);
+    for (var seg = 0; seg < 36; seg++) {
+      var w = seg === 0 ? 880 : (seg === 35 ? 1200 : 540);
       var gap = seg === 0 ? 0 : (seg % 4 === 0 ? 95 : 60);
       x += gap;
-      if (seg > 0 && seg < 27) {
+      if (seg > 0 && seg < 35) {
         y = clamp(y + (seg % 2 === 0 ? -32 : 28), 340, 465);
-      } else if (seg === 27) y = 440;
+      } else if (seg === 35) y = 440;
       S.platforms.push({ x: x, y: y, w: w, h: 90, theme: 'kart_road' });
 
       // Tapetes Turbo 3D antes de rampas
-      if (seg < 27 && seg % 2 === 1) {
+      if (seg < 35 && seg % 2 === 1) {
         S.kartTrack.boostPads.push({ x: x + w - 140, y: y - 10, w: 100, h: 14 });
       }
       // Caixas de Itens [ ? ] estilo Mario Kart
-      if (seg >= 1 && seg <= 26 && seg % 2 === 0) {
+      if (seg >= 1 && seg <= 34 && seg % 2 === 0) {
         S.kartTrack.itemBoxes.push({ x: x + Math.round(w * 0.42), y: y - 56, w: 32, h: 32, cooldown: 0 });
         S.kartTrack.itemBoxes.push({ x: x + Math.round(w * 0.42) + 56, y: y - 108, w: 32, h: 32, cooldown: 0 });
       }
       // Obstáculos: Poças de Óleo de Mamona
-      if (seg >= 2 && seg <= 25 && seg % 3 === 0) {
+      if (seg >= 2 && seg <= 33 && seg % 3 === 0) {
         S.kartTrack.oilSlicks.push({ x: x + Math.round(w * 0.52), y: y - 8, w: 56, h: 12 });
       }
       // Obstáculos: Espinhos de Mandacaru e Troncos caídos
-      if (seg >= 3 && seg <= 25 && seg % 4 === 1) {
+      if (seg >= 3 && seg <= 33 && seg % 4 === 1) {
         S.kartTrack.cactusObstacles.push({ x: x + Math.round(w * 0.65), y: y - 18, w: 46, h: 26 });
       }
-      if (seg >= 4 && seg <= 25 && seg % 5 === 2) {
+      if (seg >= 4 && seg <= 33 && seg % 5 === 2) {
         S.kartTrack.fallenLogs.push({ x: x + Math.round(w * 0.35), y: y - 22, w: 58, h: 28 });
       }
 
       // Arcos de rapaduras
       addLine(S, x + 80, y - 40, 4, 52);
-      if (seg === 6 || seg === 13 || seg === 20) {
-        S.cajus.push({ x: x + Math.round(w * 0.5), y: y - 120, index: Math.floor(seg / 7) });
+      if (seg === 7 || seg === 15 || seg === 24) {
+        S.cajus.push({ x: x + Math.round(w * 0.5), y: y - 120, index: Math.floor(seg / 8) });
       }
-      if (seg === 9 || seg === 18) {
+      if (seg === 9 || seg === 18 || seg === 27) {
         S.checkpoints.push({ x: x + 60, y: y });
       }
       x += w;
@@ -1387,15 +1479,15 @@
     S.asaBrancaStars = [{ x: Math.round(S.levelW * 0.55), y: 240 }];
     S.flagpolePos = { x: S.levelW - 240, y: 200 };
 
-    // 7 CORREDORES RIVAIS DO FOLCLORE NORDESTINO (IA avançada com ultrapassagem, vácuo e armadilhas)
+    // 7 CORREDORES RIVAIS DO FOLCLORE NORDESTINO (Grid de largada estendido)
     S.kartRivals = [
-      { name: 'Boi de Fogo', kind: 'bull', color: '#E03131', hatColor: '#FFD43B', lane: -0.55, z: 340, x: 260, y: 390, vx: 7.2, baseSpd: 7.2, quote: 'Muuu! Sai da frente!' },
-      { name: 'Papa-Figo', kind: 'papa_figo', color: '#845EF7', hatColor: '#343A40', lane: 0.52, z: 290, x: 220, y: 390, vx: 7.0, baseSpd: 7.0, quote: 'Esse fígado é meu!' },
-      { name: 'Fulozinha', kind: 'fulozinha', color: '#20C997', hatColor: '#2B8A3E', lane: -0.28, z: 240, x: 190, y: 390, vx: 6.85, baseSpd: 6.85, quote: 'Fiufiuuu! Ninguém me pega!' },
-      { name: 'Cabra-Cabriola', kind: 'cabra', color: '#FD7E14', hatColor: '#5C3D2E', lane: 0.36, z: 190, x: 160, y: 390, vx: 6.7, baseSpd: 6.7, quote: 'Béee! Pega esse casco!' },
-      { name: 'Cap. Corisco', kind: 'cangaceiro', color: '#3BC9DB', hatColor: '#8A4F22', lane: -0.06, z: 140, x: 140, y: 390, vx: 6.6, baseSpd: 6.6, quote: 'Fogo na poeira!' },
-      { name: 'Lampião Sombra', kind: 'sombra', color: '#FF6B6B', hatColor: '#1A1A1A', lane: 0.16, z: 90, x: 120, y: 390, vx: 6.5, baseSpd: 6.5, quote: 'Aqui quem manda sou eu!' },
-      { name: 'A Alamoa', kind: 'alamoa', color: '#FFE066', hatColor: '#E8590C', lane: -0.42, z: 40, x: 100, y: 390, vx: 6.4, baseSpd: 6.4, quote: 'Oxe! Vem me alcançar!' }
+      { name: 'Boi de Fogo', kind: 'bull', color: '#E03131', hatColor: '#FFD43B', lane: -0.55, z: 820, x: 260, y: 390, vx: 7.2, baseSpd: 7.2, quote: 'Muuu! Sai da frente!' },
+      { name: 'Papa-Figo', kind: 'papa_figo', color: '#845EF7', hatColor: '#343A40', lane: 0.52, z: 720, x: 220, y: 390, vx: 7.0, baseSpd: 7.0, quote: 'Esse fígado é meu!' },
+      { name: 'Fulozinha', kind: 'fulozinha', color: '#20C997', hatColor: '#2B8A3E', lane: -0.28, z: 620, x: 190, y: 390, vx: 6.85, baseSpd: 6.85, quote: 'Fiufiuuu! Ninguém me pega!' },
+      { name: 'Cabra-Cabriola', kind: 'cabra', color: '#FD7E14', hatColor: '#5C3D2E', lane: 0.36, z: 510, x: 160, y: 390, vx: 6.7, baseSpd: 6.7, quote: 'Béee! Pega esse casco!' },
+      { name: 'Cap. Corisco', kind: 'cangaceiro', color: '#3BC9DB', hatColor: '#8A4F22', lane: -0.06, z: 400, x: 140, y: 390, vx: 6.6, baseSpd: 6.6, quote: 'Fogo na poeira!' },
+      { name: 'Lampião Sombra', kind: 'sombra', color: '#FF6B6B', hatColor: '#1A1A1A', lane: 0.16, z: 290, x: 120, y: 390, vx: 6.5, baseSpd: 6.5, quote: 'Aqui quem manda sou eu!' },
+      { name: 'A Alamoa', kind: 'alamoa', color: '#FFE066', hatColor: '#E8590C', lane: -0.42, z: 180, x: 100, y: 390, vx: 6.4, baseSpd: 6.4, quote: 'Oxe! Vem me alcançar!' }
     ];
 
     // ELEMENTOS CENOGRÁFICOS 3D AO REDOR DA PISTA (Mandacarus gigantes, Cercas, Caveiras, Moinhos, Casas)
@@ -1641,7 +1733,7 @@
     var S = emptySpec({
       idx: idx, worldIdx: w, stageIdx: s, code: st.code, name: st.name, diffIdx: d,
       worldName: W.name, biome: W.biome, music: W.music, mechanic: W.mechanic,
-      levelW: Math.round((5200 + Math.min(s, 5) * 260) * 1.5) // v3.2: fases 50% maiores
+      levelW: Math.round((7800 + Math.min(s, 6) * 500) * 1.55) // v4.4: todas as fases ampliadas em 70% (12.000 a 16.700 px)
     });
     if (s === BOSS_STAGE) return finalizeSpec(buildBossArena(S, w));
     if (SPECIAL_MODE_STAGES[st.code] === 'pacman') return finalizeSpec(buildPacOxeStage(S));

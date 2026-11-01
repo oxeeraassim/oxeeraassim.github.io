@@ -826,7 +826,8 @@ class Tonho {
       kr.steer = lerp(kr.steer || 0, steerInput, 0.22);
       // Pulo + Drift estilo Mario Kart (segurar Pulo nas curvas carrega faíscas azuis/laranjas/roxas!)
       if (this.jumpBuffer > 0 && kr.hopY <= 0) {
-        kr.hopVy = 6.2; this.jumpBuffer = 0; sfx('jump');
+        kr.hopVy = 6.8; this.jumpBuffer = 0; sfx('jump');
+        if (Math.random() < 0.45) { sfx('jegueBray'); spawnFloatingText('I-Ó! 🐴', this.x, this.y - 28, '#FFE066'); }
         if (steerInput !== 0) kr.driftDir = steerInput;
       }
       if (kr.hopY > 0 || kr.hopVy > 0) {
@@ -841,7 +842,7 @@ class Tonho {
         if ((kr.driftCharge || 0) >= 22) {
           const superDrift = kr.driftCharge >= 50;
           this.kartBoost = Math.max(this.kartBoost || 0, superDrift ? 65 : 38);
-          sfx('whip');
+          sfx('whip'); sfx('jegueBray');
           spawnFloatingText(superDrift ? '🟣 ULTRA DRIFT TURBO!' : '🔥 MINI-TURBO DRIFT!', this.x, this.y - 22, superDrift ? '#E599F7' : '#FF922B');
         }
         kr.driftDir = 0; kr.driftCharge = 0;
@@ -1885,7 +1886,9 @@ class Enemy {
     if (currentLevel && currentLevel.specialMode === 'brawlstars' && player) {
       player.brawlSuper = Math.min(100, (player.brawlSuper || 0) + 20);
     }
-    this.hp -= dmg; this.hitFlashTimer = 10; this.hitCd = (this.legend || this.isBrawlBoss) ? 20 : 14; sfx('hit'); hitstopFrames = Math.max(hitstopFrames, 3);
+    this.hp -= dmg; this.hitFlashTimer = 10; this.hitCd = (this.legend || this.isBrawlBoss) ? 20 : 14; sfx('hit');
+    hitstopFrames = Math.max(hitstopFrames, (dmg >= 2 || weak) ? 5 : 3);
+    if (dmg >= 2 || weak) addScreenShake(3);
     const kdir = fromX !== undefined ? (Math.sign(this.x + this.w / 2 - fromX) || 1) : -this.facing;
     this.kbx = (weapon === 'laco' ? -kdir * 5.5 : kdir * ((this.legend || this.isBrawlBoss) ? 2.5 : (weapon === 'porrete' ? 6.5 : 4)));
     this.stagger = (this.legend || this.isBrawlBoss) ? 10 : (this.lassoed > 0 ? 180 : (weapon === 'zabumba' ? 45 : 18));
@@ -1897,7 +1900,12 @@ class Enemy {
       this.dead = true; this.deathTimer = (this.legend || this.isBrawlBoss) ? 70 : 40; this.deathVy = -6.5; addScore(this.scoreValue);
       if (typeof addUnionProgress === 'function') addUnionProgress(3.2);
       spawnSparks(this.x + this.w / 2, this.y + this.h / 2, (this.legend || this.isBrawlBoss) ? 30 : 14, this.color);
-      spawnFloatingText('+' + this.scoreValue, this.x + this.w / 2, this.y, (this.legend || this.isBrawlBoss) ? '#FFE066' : '#FFD43B');
+      const comicPunches = ['VIXE!', 'OXE!', 'CABRA DA PESTE!', 'TOMA!', 'EITA!', 'ARRETADO!', 'DANOU-SE!'];
+      const punchWord = comicPunches[Math.floor(Math.random() * comicPunches.length)];
+      if (Math.random() < 0.45 || this.legend || this.isBrawlBoss) {
+        spawnFloatingText(punchWord, this.x + this.w / 2, this.y - 18, (this.legend || this.isBrawlBoss) ? '#FF6B6B' : '#FFE066');
+      }
+      spawnFloatingText('+' + this.scoreValue, this.x + this.w / 2, this.y + 4, (this.legend || this.isBrawlBoss) ? '#FFE066' : '#FFD43B');
       if (this.isBrawlBoss && currentLevel) {
         currentLevel.brawlBossesKilled = (currentLevel.brawlBossesKilled || 0) + 1;
         if (player) {
@@ -4511,14 +4519,18 @@ function drawBossGuide(ctx, boss, camX, camY) {
     }
     ctx.lineTo(W + 50, horizonBaseY); ctx.closePath(); ctx.fill();
 
-    // 2. PROJEÇÃO DE PISTA 3D COM ONDULAÇÃO DE TERRENO (110 SLICES - SILKY SMOOTH MODE-7)
-    const nSlices = 110;
+    // Fundo base sólido da caatinga (elimina qualquer micro-fresta de scanline)
+    ctx.fillStyle = '#C48338';
+    ctx.fillRect(-W * 0.2, horizonBaseY, W * 1.4, H - horizonBaseY + 60);
+
+    // 2. PROJEÇÃO DE PISTA 3D COM ONDULAÇÃO DE TERRENO (120 SLICES - SILKY SMOOTH MODE-7)
+    const nSlices = 120;
     const roadBaseW = W * 0.92;
     const camHeight = 118;
 
     for (let i = nSlices - 1; i >= 0; i--) {
       const p = (i + 1) / nSlices;
-      const pNext = (i + 2) / nSlices;
+      const pPrev = i / nSlices;
 
       // Z em profundidade
       const zDist = camHeight / (p * 0.94 + 0.06);
@@ -4527,11 +4539,12 @@ function drawBossGuide(ctx, boss, camX, camY) {
 
       // Ondulação de morros e vales (hills & dips 3D)
       const hill = Math.sin(worldZ * 0.0022) * 44 + Math.cos(worldZ * 0.0011) * 22;
-      const hillNext = Math.sin((worldZ + 32) * 0.0022) * 44 + Math.cos((worldZ + 32) * 0.0011) * 22;
+      const hillPrev = Math.sin((worldZ - 28) * 0.0022) * 44 + Math.cos((worldZ - 28) * 0.0011) * 22;
 
-      const y0 = Math.round(horizonBaseY + Math.pow(p, 1.85) * (H - horizonBaseY) - (1 - p) * hill);
-      const y1 = Math.round(horizonBaseY + Math.pow(pNext, 1.85) * (H - horizonBaseY) - (1 - pNext) * hillNext);
-      const sliceH = Math.max(1, y1 - y0);
+      const y0 = Math.round(horizonBaseY + Math.pow(pPrev, 1.85) * (H - horizonBaseY) - (1 - pPrev) * hillPrev);
+      const y1 = Math.round(horizonBaseY + Math.pow(p, 1.85) * (H - horizonBaseY) - (1 - p) * hill);
+      const sy = Math.min(y0, y1);
+      const sliceH = Math.max(2, Math.abs(y1 - y0) + 2);
 
       // Curvatura e perspectiva horizontal
       const curveOffset = Math.pow(1 - p, 2.2) * (curveBase * 260);
@@ -4541,13 +4554,13 @@ function drawBossGuide(ctx, boss, camX, camY) {
       // Terreno off-road nas margens (terra batida avermelhada e caatinga)
       const isAlt = (segIndex % 2 === 0);
       ctx.fillStyle = isAlt ? '#D99B52' : '#C48338';
-      ctx.fillRect(-50, y0, W + 100, sliceH);
+      ctx.fillRect(-50, sy, W + 100, sliceH);
 
       // Zebras / Rumble strips nas bordas (vermelho e branco vibrante estilo arcade)
       const stripW = Math.max(5, roadW * 0.08);
       ctx.fillStyle = isAlt ? '#E03131' : '#F8F9FA';
-      ctx.fillRect(roadCenterX - roadW / 2 - stripW, y0, stripW, sliceH);
-      ctx.fillRect(roadCenterX + roadW / 2, y0, stripW, sliceH);
+      ctx.fillRect(roadCenterX - roadW / 2 - stripW, sy, stripW, sliceH);
+      ctx.fillRect(roadCenterX + roadW / 2, sy, stripW, sliceH);
 
       // Borda interna de asfalto/terra firme
       const isCheckered = (worldZ % kr.lapLength < 60);
@@ -4557,13 +4570,13 @@ function drawBossGuide(ctx, boss, camX, camY) {
       } else {
         ctx.fillStyle = isAlt ? '#5C3826' : '#4A2A1A';
       }
-      ctx.fillRect(roadCenterX - roadW / 2, y0, roadW, sliceH);
+      ctx.fillRect(roadCenterX - roadW / 2, sy, roadW, sliceH);
 
       // Linha central amarela tracejada do Sertão
       if (!isCheckered && (segIndex % 3 === 0)) {
         ctx.fillStyle = '#FFD43B';
         const lineW = Math.max(2, roadW * 0.025);
-        ctx.fillRect(roadCenterX - lineW / 2, y0, lineW, sliceH);
+        ctx.fillRect(roadCenterX - lineW / 2, sy, lineW, sliceH);
       }
     }
 
@@ -4844,77 +4857,326 @@ function drawBossGuide(ctx, boss, camX, camY) {
       }
     }
 
-    // Sombra suave do Jegue
-    ctx.fillStyle = 'rgba(0,0,0,0.45)';
-    ctx.beginPath(); ctx.ellipse(0, 4, 46, 15, 0, 0, Math.PI * 2); ctx.fill();
+    // 7. O JEGUE DO TONHO EM PERSPECTIVA HÍBRIDA 3D/2D CHARISMÁTICA (1000x MELHOR!)
+    // Variáveis dinâmicas de movimento, galope e inclinação
+    const isJumping = (kr.hopY || 0) > 0;
+    const rearUpAngle = isJumping ? clamp((kr.hopVy || 0) * 0.04, -0.05, 0.24) : 0;
+    const headTurn = clamp((kr.steer || 0) * 22, -18, 18);
+    const trotCycle = frameCount * (kr.speed > 2 ? 0.44 : 0.08);
+    const legSwing = Math.sin(trotCycle) * 9;
+    const frontLegSwing = Math.sin(trotCycle + Math.PI) * 11;
 
-    // Patas traseiras do Jegue (com ferraduras de ferro forjado)
-    const legSwing = Math.sin(frameCount * 0.42) * 7;
-    for (let side = -1; side <= 1; side += 2) {
-      const lx = side * 23;
-      const ly = -14 + (side === 1 ? legSwing : -legSwing);
-      ctx.fillStyle = '#868E96'; ctx.strokeStyle = '#1E120A'; ctx.lineWidth = 2.2;
-      ctx.fillRect(lx - 5, ly, 10, 18);
-      ctx.fillStyle = '#343A40'; ctx.fillRect(lx - 6, ly + 14, 12, 5); // Ferradura
-    }
-
-    // Anca musculosa e peluda do Jegue (gradiente realista com penugem)
-    const jgGrad = ctx.createLinearGradient(0, -70, 0, -10);
-    jgGrad.addColorStop(0, '#CED4DA');
-    jgGrad.addColorStop(0.5, '#868E96');
-    jgGrad.addColorStop(1, '#495057');
-    ctx.fillStyle = jgGrad; ctx.strokeStyle = '#1E120A'; ctx.lineWidth = 2.5;
+    // Sombra projetada no chão (permanece no chão quando pula)
+    ctx.save();
+    const shadowScale = isJumping ? clamp(1 - (kr.hopY / 120), 0.5, 1) : 1;
+    ctx.fillStyle = 'rgba(0,0,0,0.48)';
     ctx.beginPath();
-    if (ctx.roundRect) ctx.roundRect(-36, -60, 72, 50, 24);
-    else ctx.rect(-36, -60, 72, 50);
-    ctx.fill(); ctx.stroke();
+    ctx.ellipse(0, 8 + (kr.hopY || 0), 52 * shadowScale, 16 * shadowScale, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
 
-    // Rabo do Jegue com penacho que sacode vigoroso
-    const tailWiggle = Math.sin(frameCount * 0.35) * 14;
-    ctx.strokeStyle = '#495057'; ctx.lineWidth = 4.5;
-    ctx.beginPath(); ctx.moveTo(0, -34); ctx.quadraticCurveTo(tailWiggle * 0.5, -16, tailWiggle, -6); ctx.stroke();
-    ctx.fillStyle = '#212529'; ctx.beginPath(); ctx.arc(tailWiggle, -4, 6, 0, Math.PI * 2); ctx.fill();
+    // Empinada nas patas dianteiras durante saltos
+    if (rearUpAngle !== 0) ctx.rotate(-rearUpAngle);
 
-    // Orelhas compridas do Jegue (reagem ativamente à curva e saltos!)
-    for (let es = -1; es <= 1; es += 2) {
+    // Patas dianteiras do Jegue (visíveis à frente estendidas no galope)
+    for (let fSide = -1; fSide <= 1; fSide += 2) {
+      const flx = fSide * 16 + headTurn * 0.4;
+      const fly = isJumping ? -34 + fSide * 4 : -12 + (fSide === 1 ? frontLegSwing : -frontLegSwing);
       ctx.save();
-      ctx.translate(es * 19, -64);
-      ctx.rotate(es * 0.28 - steerTilt * 0.6);
-      ctx.fillStyle = '#868E96'; ctx.strokeStyle = '#1E120A'; ctx.lineWidth = 2.2;
-      ctx.beginPath(); ctx.ellipse(0, -17, 8, 20, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = '#FFA8A8'; ctx.beginPath(); ctx.ellipse(0, -16, 4, 13, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#868E96'; ctx.strokeStyle = '#1E120A'; ctx.lineWidth = 2.4;
+      if (isJumping) {
+        // Patas erguidas e dobradas no ar triunfantes!
+        ctx.translate(flx, -38);
+        ctx.rotate(fSide * 0.28 - 0.45);
+        ctx.fillRect(-5, 0, 10, 24); ctx.strokeRect(-5, 0, 10, 24);
+        // Ferradura reluzente
+        ctx.fillStyle = '#343A40'; ctx.fillRect(-6, 20, 12, 6); ctx.strokeRect(-6, 20, 12, 6);
+        ctx.fillStyle = '#CED4DA'; ctx.fillRect(-4, 22, 8, 2);
+      } else {
+        ctx.fillRect(flx - 5, fly, 10, 20); ctx.strokeRect(flx - 5, fly, 10, 20);
+        ctx.fillStyle = '#343A40'; ctx.fillRect(flx - 6, fly + 15, 12, 5); ctx.strokeRect(flx - 6, fly + 15, 12, 5);
+        ctx.fillStyle = '#CED4DA'; ctx.fillRect(flx - 4, fly + 16, 8, 2);
+      }
       ctx.restore();
     }
 
-    // Cangalha / Sela de couro com alforjes de mantimentos
-    ctx.fillStyle = '#8B5A2B'; ctx.strokeStyle = '#3E2210'; ctx.lineWidth = 2.2;
-    ctx.beginPath();
-    if (ctx.roundRect) ctx.roundRect(-28, -66, 56, 15, 5);
-    else ctx.rect(-28, -66, 56, 15);
-    ctx.fill(); ctx.stroke();
-    // Alforjes nas laterais (com costura aparente)
-    for (const af of [-34, 24]) {
-      ctx.fillStyle = '#A06A38'; ctx.fillRect(af, -52, 10, 18);
-      ctx.strokeRect(af, -52, 10, 18);
+    // Patas traseiras do Jegue (com ferraduras de ferro forjado e faíscas)
+    for (let side = -1; side <= 1; side += 2) {
+      const lx = side * 24;
+      const ly = -14 + (side === 1 ? legSwing : -legSwing);
+      ctx.fillStyle = '#7D8590'; ctx.strokeStyle = '#1E120A'; ctx.lineWidth = 2.4;
+      ctx.fillRect(lx - 6, ly, 12, 20); ctx.strokeRect(lx - 6, ly, 12, 20);
+      // Ferradura de ferro fundido
+      ctx.fillStyle = '#212529'; ctx.fillRect(lx - 7, ly + 15, 14, 6); ctx.strokeRect(lx - 7, ly + 15, 14, 6);
+      ctx.fillStyle = '#CED4DA'; ctx.fillRect(lx - 5, ly + 17, 10, 2); // Brilho prateado do metal
     }
 
-    // Herói montado de costas (Tonho / Amigos)
-    const heroCol = (player.hero === 'zefinha' || heroKind === 'zefinha') ? '#F783AC' : '#D9480F';
-    ctx.fillStyle = heroCol; ctx.strokeStyle = '#1E120A'; ctx.lineWidth = 2.4;
+    // Corpo e Flancos musculosos do Jegue (pelagem cinza e listra dorsal)
+    const jgGrad = ctx.createLinearGradient(0, -78, 0, -10);
+    jgGrad.addColorStop(0, '#ADB5BD');
+    jgGrad.addColorStop(0.4, '#868E96');
+    jgGrad.addColorStop(0.85, '#495057');
+    jgGrad.addColorStop(1, '#343A40');
+    ctx.fillStyle = jgGrad; ctx.strokeStyle = '#1E120A'; ctx.lineWidth = 2.8;
     ctx.beginPath();
-    if (ctx.roundRect) ctx.roundRect(-17, -95, 34, 32, 9);
-    else ctx.rect(-17, -95, 34, 32);
+    if (ctx.roundRect) ctx.roundRect(-38, -68, 76, 56, 26);
+    else ctx.rect(-38, -68, 76, 56);
     ctx.fill(); ctx.stroke();
 
-    // Chapéu de Couro do Sertão com estrela dourada
-    const hatG = ctx.createLinearGradient(0, -122, 0, -92);
-    hatG.addColorStop(0, '#D99B52'); hatG.addColorStop(1, '#5C3416');
-    ctx.fillStyle = hatG; ctx.strokeStyle = '#1E120A'; ctx.lineWidth = 2.4;
-    ctx.beginPath(); ctx.arc(0, -104, 16, Math.PI, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.beginPath(); ctx.ellipse(0, -101, 30, 9, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#FFD43B'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText('★', 0, -105);
-    ctx.restore();
+    // Faixa dorsal escura tradicional (Cruz de São Jerônimo dos jumentos nordestinos)
+    ctx.fillStyle = '#212529';
+    ctx.beginPath();
+    ctx.ellipse(0, -42, 6, 24, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Rabo comprido com penacho felpudo que balança com vigor
+    const tailWiggle = Math.sin(frameCount * 0.38) * 18;
+    ctx.strokeStyle = '#343A40'; ctx.lineWidth = 5;
+    ctx.beginPath(); ctx.moveTo(0, -38); ctx.quadraticCurveTo(tailWiggle * 0.6, -18, tailWiggle, -4); ctx.stroke();
+    ctx.fillStyle = '#111'; ctx.beginPath(); ctx.ellipse(tailWiggle, -2, 7, 11, 0.2, 0, Math.PI * 2); ctx.fill();
+
+    // MANTA DE CHITA NORDESTINA TRADICIONAL (sob a sela, vermelha com estampas florais e franjas douradas)
+    ctx.fillStyle = '#D9480F'; ctx.strokeStyle = '#1E120A'; ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(-34, -72, 68, 26, 8);
+    else ctx.rect(-34, -72, 68, 26);
+    ctx.fill(); ctx.stroke();
+    // Estampa de flores e mandacarus de chita
+    ctx.fillStyle = '#FFD43B';
+    for (let fx = -24; fx <= 24; fx += 16) {
+      ctx.beginPath(); ctx.arc(fx, -62, 3.8, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.fillStyle = '#20C997';
+    for (let fx = -16; fx <= 16; fx += 16) {
+      ctx.beginPath(); ctx.arc(fx, -56, 2.5, 0, Math.PI * 2); ctx.fill();
+    }
+    // Franja de penduricalhos amarelos na borda da manta
+    ctx.strokeStyle = '#FCC419'; ctx.lineWidth = 2.5;
+    for (let fx = -30; fx <= 30; fx += 6) {
+      ctx.beginPath(); ctx.moveTo(fx, -47); ctx.lineTo(fx, -43); ctx.stroke();
+    }
+
+    // CANGALHA DE MADEIRA CEDRO E COURO CRU
+    ctx.fillStyle = '#8B5A2B'; ctx.strokeStyle = '#2B1408'; ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(-28, -78, 56, 16, 6);
+    else ctx.rect(-28, -78, 56, 16);
+    ctx.fill(); ctx.stroke();
+    // Tachas de latão na cangalha
+    ctx.fillStyle = '#FFD43B';
+    [-20, -10, 0, 10, 20].forEach((tx) => { ctx.beginPath(); ctx.arc(tx, -70, 2, 0, Math.PI * 2); ctx.fill(); });
+
+    // Alforjes de couro nas laterais com cantil de barro e mantimentos
+    for (const af of [-38, 26]) {
+      ctx.fillStyle = '#9C6237'; ctx.strokeStyle = '#1E120A'; ctx.lineWidth = 2.2;
+      ctx.fillRect(af, -60, 12, 20); ctx.strokeRect(af, -60, 12, 20);
+      ctx.strokeStyle = '#F1F3F5'; ctx.lineWidth = 1.2;
+      ctx.strokeRect(af + 2, -58, 8, 16); // Costura pespontada
+    }
+    // Cantil / Moringa de barro na lateral esquerda
+    ctx.fillStyle = '#D97706'; ctx.strokeStyle = '#1E120A'; ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.arc(-33, -48, 5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillRect(-34, -56, 3, 4);
+
+    // TONHO MONTADO NA SELA (VISÃO 3/4 HEROICA SEGURANDO AS RÉDEAS)
+    const heroCol = (player.hero === 'zefinha' || heroKind === 'zefinha') ? '#F783AC' : '#D9480F';
+    const riderX = headTurn * 0.2;
+    ctx.save();
+    ctx.translate(riderX, 0);
+
+    // Tronco e colete de couro de Tonho
+    ctx.fillStyle = heroCol; ctx.strokeStyle = '#1E120A'; ctx.lineWidth = 2.6;
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(-16, -106, 32, 34, 8);
+    else ctx.rect(-16, -106, 32, 34);
+    ctx.fill(); ctx.stroke();
+
+    // Colete de couro de bode com bordados
+    ctx.fillStyle = '#6F3A15';
+    ctx.fillRect(-13, -102, 6, 26); ctx.fillRect(7, -102, 6, 26);
+    const neckScarfWiggle = Math.sin(frameCount * 0.3) * 7;
+    ctx.fillStyle = '#E03131'; ctx.strokeStyle = '#1E120A'; ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    ctx.moveTo(3, -104); ctx.lineTo(20 + neckScarfWiggle, -98); ctx.lineTo(14, -90); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+
+    // Cabeça e rosto simpático de Tonho
+    ctx.fillStyle = '#F2C094'; ctx.strokeStyle = '#1E120A'; ctx.lineWidth = 2.4;
+    ctx.beginPath(); ctx.arc(0, -118, 12, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    // Olhos e bigodinho de cangaceiro
+    ctx.fillStyle = '#212529';
+    ctx.beginPath(); ctx.arc(-4, -119, 2.2, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(4, -119, 2.2, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#3E2210'; ctx.fillRect(-6, -113, 12, 3.5); // Bigodinho
+
+    // Braços e mãos de Tonho segurando as rédeas firmemente
+    for (let hs = -1; hs <= 1; hs += 2) {
+      const armX = hs * 18;
+      ctx.fillStyle = heroCol; ctx.strokeStyle = '#1E120A'; ctx.lineWidth = 2.2;
+      ctx.beginPath(); ctx.ellipse(armX, -94, 5.5, 11, hs * 0.3, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      // Mão segurando rédea
+      ctx.fillStyle = '#F8D7DA'; ctx.beginPath(); ctx.arc(hs * 14, -84, 4.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    }
+
+    // Chapéu de Couro Cangaceiro (Copa meia-lua alta com Estrela Dourada)
+    const hatG = ctx.createLinearGradient(0, -145, 0, -122);
+    hatG.addColorStop(0, '#F59F00'); hatG.addColorStop(1, '#5C3416');
+    ctx.fillStyle = hatG; ctx.strokeStyle = '#1E120A'; ctx.lineWidth = 2.6;
+    // Aba larga curvada
+    ctx.beginPath(); ctx.ellipse(0, -124, 30, 9, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    // Copa meia-lua cangaceira
+    ctx.beginPath(); ctx.arc(0, -127, 18, Math.PI, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+    // Estrela de 5 pontas dourada
+    ctx.fillStyle = '#FFD43B'; ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('★', 0, -129);
+    ctx.restore(); // fim riderX
+
+    // PESCOÇO ARQUEADO E ROBUSTO DO JEGUE (EXTENDE-SE À FRENTE DO CAVALEIRO)
+    const neckBaseX = headTurn * 0.3;
+    const neckTopX = headTurn * 0.65;
+    const neckTopY = -72;
+    ctx.save();
+    const neckG = ctx.createLinearGradient(neckBaseX, -58, neckTopX, neckTopY);
+    neckG.addColorStop(0, '#868E96'); neckG.addColorStop(1, '#CED4DA');
+    ctx.fillStyle = neckG; ctx.strokeStyle = '#1E120A'; ctx.lineWidth = 2.6;
+    ctx.beginPath();
+    ctx.moveTo(-16 + neckBaseX, -56);
+    ctx.quadraticCurveTo(-18 + neckBaseX, -66, -12 + neckTopX, neckTopY);
+    ctx.lineTo(12 + neckTopX, neckTopY);
+    ctx.quadraticCurveTo(18 + neckBaseX, -66, 16 + neckBaseX, -56);
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+
+    // Crina escovada preta estilo moicano ao longo do pescoço
+    ctx.strokeStyle = '#1E120A'; ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(neckBaseX, -58);
+    ctx.quadraticCurveTo(neckBaseX * 0.7, -66, neckTopX, neckTopY);
+    ctx.stroke();
+    ctx.fillStyle = '#212529';
+    for (let ci = 0; ci < 5; ci++) {
+      const cpY = -58 - ci * 3.5;
+      const cpX = lerp(neckBaseX, neckTopX, ci / 5);
+      ctx.beginPath(); ctx.arc(cpX, cpY, 3.8, 0, Math.PI * 2); ctx.fill();
+    }
+
+    // A CABEÇA CHARISMÁTICA DO JEGUE (EM FRENTE AO CAVALEIRO - 100% INCONFUNDÍVEL!)
+    const headX = neckTopX;
+    const headY = neckTopY - 6;
+    ctx.translate(headX, headY);
+
+    // ORELHAS GIGANTES DO JEGUE (36px de comprimento, ladeando o Tonho com grande carisma!)
+    for (let es = -1; es <= 1; es += 2) {
+      ctx.save();
+      const earBaseX = es * 15;
+      ctx.translate(earBaseX, -6);
+      const earTilt = es * 0.28 - (kr.steer || 0) * 0.45 + (isJumping ? -es * 0.12 : Math.sin(trotCycle + es) * 0.1);
+      ctx.rotate(earTilt);
+      // Parte externa peluda cinza
+      ctx.fillStyle = '#868E96'; ctx.strokeStyle = '#1E120A'; ctx.lineWidth = 2.4;
+      ctx.beginPath(); ctx.ellipse(0, -20, 8.5, 22, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      // Ponta escura da orelha (marca típica do jumento)
+      ctx.fillStyle = '#343A40';
+      ctx.beginPath(); ctx.ellipse(0, -35, 5, 7, 0, 0, Math.PI * 2); ctx.fill();
+      // Interior rosado e aveludado da orelha com penugem branca
+      ctx.fillStyle = '#FFA8A8';
+      ctx.beginPath(); ctx.ellipse(0, -18, 4.8, 15, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.7)';
+      ctx.beginPath(); ctx.ellipse(0, -16, 2.2, 9, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    }
+
+    // Crânio do Jegue (cinza aveludado com topete)
+    ctx.fillStyle = '#949DA5'; ctx.strokeStyle = '#1E120A'; ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.ellipse(0, -3, 17, 15, 0, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+
+    // Topete do Jegue entre as orelhas
+    ctx.fillStyle = '#212529';
+    ctx.beginPath(); ctx.ellipse(0, -14, 5.5, 7, 0, 0, Math.PI * 2); ctx.fill();
+
+    // OLHOS GRANDES E CARISMÁTICOS DO JEGUE (com brilho e sobrancelhas expressivas!)
+    for (let eyeSide = -1; eyeSide <= 1; eyeSide += 2) {
+      const ex = eyeSide * 10;
+      const ey = -5;
+      // Globo ocular
+      ctx.fillStyle = '#FFFFFF'; ctx.strokeStyle = '#1E120A'; ctx.lineWidth = 1.8;
+      ctx.beginPath(); ctx.arc(ex, ey, 5.2, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      // Íris castanha e pupila preta
+      ctx.fillStyle = '#5C3416'; ctx.beginPath(); ctx.arc(ex, ey, 3.6, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#111111'; ctx.beginPath(); ctx.arc(ex, ey, 2.1, 0, Math.PI * 2); ctx.fill();
+      // Brilho specular branco (olhar vivo e simpático)
+      ctx.fillStyle = '#FFFFFF'; ctx.beginPath(); ctx.arc(ex - 1.3, ey - 1.3, 1.3, 0, Math.PI * 2); ctx.fill();
+      // Sobrancelha expressiva
+      ctx.strokeStyle = '#212529'; ctx.lineWidth = 1.8;
+      ctx.beginPath(); ctx.moveTo(ex - 4, ey - 6); ctx.lineTo(ex + 4, ey - 5 + (isJumping ? -2 : 0)); ctx.stroke();
+    }
+
+    // FOCINHO VELUDO BRANCO/CREME (A MARCA INCONFUNDÍVEL DO JEGUE!)
+    const muzzleG = ctx.createLinearGradient(0, -2, 0, 16);
+    muzzleG.addColorStop(0, '#FFFFFF');
+    muzzleG.addColorStop(0.65, '#F1F3F5');
+    muzzleG.addColorStop(1, '#DEE2E6');
+    ctx.fillStyle = muzzleG; ctx.strokeStyle = '#1E120A'; ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    ctx.ellipse(0, 8, 14, 11, 0, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+
+    // Narinas pretas expressivas que soltam vapor no turbo
+    ctx.fillStyle = '#212529';
+    ctx.beginPath(); ctx.ellipse(-5, 6.8, 3, 4.2, -0.2, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(5, 6.8, 3, 4.2, 0.2, 0, Math.PI * 2); ctx.fill();
+
+    // Vapor / Fumaça saindo das narinas em alta velocidade ou turbo
+    if (kr.speed > 8.5 || player.kartBoost > 0) {
+      ctx.fillStyle = 'rgba(255,255,255,0.7)';
+      for (let ns = -1; ns <= 1; ns += 2) {
+        ctx.beginPath();
+        ctx.arc(ns * 7.5, 7 + (frameCount % 4) * 2, 3 + (frameCount % 3) * 1.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // Sorriso alegre do Jegue com dentes brancos e queixo aveludado
+    ctx.strokeStyle = '#1E120A'; ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(0, 11, 7.5, 0.15, Math.PI - 0.15);
+    ctx.stroke();
+    if (isJumping || player.kartBoost > 0) {
+      // Dentes brancos à mostra no sorriso do jegue!
+      ctx.fillStyle = '#FFF'; ctx.fillRect(-4, 10, 8, 3.5);
+      ctx.strokeStyle = '#1E120A'; ctx.lineWidth = 1; ctx.strokeRect(-4, 10, 8, 3.5);
+    }
+
+    // CABRESTO DE COURO COM FIVELAS DOURADAS
+    ctx.strokeStyle = '#5C3416'; ctx.lineWidth = 2.2;
+    // Fita do focinho
+    ctx.beginPath(); ctx.moveTo(-12, 4); ctx.quadraticCurveTo(0, 2, 12, 4); ctx.stroke();
+    // Fita vertical da bochecha
+    ctx.beginPath(); ctx.moveTo(-9, -4); ctx.lineTo(-10, 9); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(9, -4); ctx.lineTo(10, 9); ctx.stroke();
+    // Argolas de latão do cabresto
+    ctx.fillStyle = '#FFD43B';
+    ctx.beginPath(); ctx.arc(-10, 7, 2.5, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(10, 7, 2.5, 0, Math.PI * 2); ctx.fill();
+
+    // RÉDEAS DE COURO TRANÇADO INDO ATÉ AS MÃOS DE TONHO!
+    ctx.strokeStyle = '#8B5A2B'; ctx.lineWidth = 2.2;
+    const handRelY = -84 - headY; // Conexão exata na mão de Tonho
+    // Rédea esquerda
+    ctx.beginPath();
+    ctx.moveTo(-10, 7);
+    ctx.quadraticCurveTo(-14, handRelY * 0.4, -riderX - 14 - headX, handRelY);
+    ctx.stroke();
+    // Rédea direita
+    ctx.beginPath();
+    ctx.moveTo(10, 7);
+    ctx.quadraticCurveTo(14, handRelY * 0.4, -riderX + 14 - headX, handRelY);
+    ctx.stroke();
+
+    ctx.restore(); // fim headX, headY
+    ctx.restore(); // fim jegue px, py
 
     // 8. FLASH DE TROVÃO (QUANDO ATIVA TROVÃO DE SÃO PEDRO)
     if (kr.lightningFlash > 0) {
