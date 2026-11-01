@@ -146,7 +146,7 @@
         'sapo_cururu', 'marimbondo', 'jararaca', 'cangaceiro_sombra', 'mula_sem_cabeca',
         'boitata_fogo', 'lobisomem'],
       stages: stages(['O Despertar do Mandacaru', 'Vereda do Bode Doido', 'Ninho do Carcará',
-        '🌀 Labirinto Come-Rapadura (Pac-Oxe)', 'Tronco Oco do Juazeiro', 'Carroça da Feira', '👑 O Touro de Fogo Ancestral'], 0)
+        'O Labirinto da Rapadura', 'Tronco Oco do Juazeiro', 'Carroça da Feira', '👑 O Touro de Fogo Ancestral'], 0)
     },
     {
       id: 2, idx: 1, name: 'Cavernas da Serra da Capivara', biome: 'caverna', music: 'caverna',
@@ -155,7 +155,7 @@
         'sapo_cururu', 'marimbondo', 'jararaca', 'cangaceiro_sombra', 'mula_sem_cabeca',
         'boitata_fogo', 'lobisomem'],
       stages: stages(['Pinturas Rupestres', 'Gruta dos Vagalumes', 'Abismo de Quartzo',
-        '⛏️ Sertão em Blocos (OxeCraft)', 'Toca da Lacraia', 'Corujas da Pedra Furada', '👑 Comadre Fulozinha'], 1)
+        'Minas da Serra da Capivara', 'Toca da Lacraia', 'Corujas da Pedra Furada', '👑 Comadre Fulozinha'], 1)
     },
     {
       id: 3, idx: 2, name: 'Pântano e Mata de Caroá', biome: 'pantano', music: 'forro',
@@ -164,7 +164,7 @@
         'sapo_cururu', 'marimbondo', 'jararaca', 'cangaceiro_sombra', 'mula_sem_cabeca',
         'boitata_fogo', 'lobisomem'],
       stages: stages(['Cipós da Caatinga', 'Vento do Agreste', 'Assovios na Neblina',
-        '🏎️ Grande Prêmio Rolimã (Oxe-Kart)', 'Lagoa do Buriti', 'Varadouro dos Caititus', '👑 O Papa-Figo'], 2)
+        'A Grande Corrida de Jegue', 'Lagoa do Buriti', 'Varadouro dos Caititus', '👑 O Papa-Figo'], 2)
     },
     {
       id: 4, idx: 3, name: 'Litoral e Manguezal', biome: 'mangue', music: 'coco',
@@ -173,7 +173,7 @@
         'sapo_cururu', 'marimbondo', 'jararaca', 'cangaceiro_sombra', 'mula_sem_cabeca',
         'boitata_fogo', 'lobisomem'],
       stages: stages(['Praia dos Jangadeiros', 'Raízes do Mangue', 'Maré de Quarto Crescente',
-        '⭐ Arena Oxe-Stars: Ilha do Mangue', 'Farol da Alamoa', 'Jangada ao Luar', '👑 Serpente da Maré'], 3)
+        'Terreiro da Ilha do Mangue', 'Farol da Alamoa', 'Jangada ao Luar', '👑 Serpente da Maré'], 3)
     },
     {
       id: 5, idx: 4, name: 'Cânion dos Nove Sóis', biome: 'canion', music: 'maracatu',
@@ -182,7 +182,7 @@
         'sapo_cururu', 'marimbondo', 'jararaca', 'cangaceiro_sombra', 'mula_sem_cabeca',
         'boitata_fogo', 'lobisomem'],
       stages: stages(['Fendas de Vapor', 'Pontes de Pedra-Pomes', 'Caldeira do Boqueirão',
-        '🚀 Voo do Carcará (Asa-Delta Turbo)', 'Arenito da Onça', 'Fogo da Cumacanga', '👑 Guardião de Brasa'], 4)
+        'O Voo do Carcará', 'Arenito da Onça', 'Fogo da Cumacanga', '👑 Guardião de Brasa'], 4)
     },
     {
       id: 6, idx: 5, name: 'O Trono da Seca', biome: 'trono', music: 'frevo',
@@ -192,20 +192,20 @@
         'sapo_cururu', 'marimbondo', 'jararaca', 'cangaceiro_sombra', 'mula_sem_cabeca',
         'boitata_fogo', 'lobisomem'],
       stages: stages(['Portais da Miragem', 'Torre dos Ventos', 'Corredor dos Eclipses',
-        '⭐ Arena Oxe-Stars: Fortaleza Sombria', 'Ponte dos Mil Espinhos', 'Último Sol do Sertão', '👑 A Sombra da Seca'], 5)
+        'Desafio da Fortaleza Sombria', 'Ponte dos Mil Espinhos', 'Último Sol do Sertão', '👑 A Sombra da Seca'], 5)
     },
     {
       id: 7, idx: 6, name: 'A Caatinga dos Espinhos', biome: 'caatinga', music: 'xote', diff: 6,
       mechanic: 'thorns', bossType: 'corpo_seco',
       enemies: ['prea', 'cascavel', 'caititu', 'teju', 'onca_pintada', 'rola_bosta', 'lacraia', 'ararinha_azul', 'rasga_mortalha', 'cumacanga'],
-      stages: stages(['Xique-Xique e Facheiro', 'O Tronco Oco', 'Carroça na Vereda', '🥊 Ringue da Feira (Street Oxe)',
+      stages: stages(['Xique-Xique e Facheiro', 'O Tronco Oco', 'Carroça na Vereda', 'O Ringue da Feira de Caruaru',
         'Açude Seco', 'Umbuzeiro Assombrado', '👑 O Corpo-Seco'], 6)
     },
     {
       id: 8, idx: 7, name: 'Mundo Especial: Noite de São João', biome: 'saojoao', music: 'forro', diff: 3, special: true,
       mechanic: 'fogueiras', bossType: 'boi_encantado',
       enemies: ['prea', 'caititu', 'rola_bosta', 'sapo_cururu', 'rasga_mortalha', 'cumacanga', 'alamoa', 'muricoca', 'boitata_fogo'],
-      stages: stages(['Arraiá do Tonho', 'Balões no Céu', 'Quadrilha Maluca', '⭐ Arena Oxe-Stars: Terreiro de Fogos',
+      stages: stages(['Arraiá do Tonho', 'Balões no Céu', 'Quadrilha Maluca', 'Terreiro da Noite de São João',
         'Correio Elegante', 'Forró até o Sol Raiar', '👑 O Boi Encantado'], 7)
     }
   ];
@@ -1234,17 +1234,18 @@
     S.levelW = x;
     S.asaBrancaStars = [{ x: Math.round(S.levelW * 0.55), y: 250 }];
     S.flagpolePos = { x: S.levelW - 240, y: 200 };
-    // Corredores rivais vilões no Oxe-Kart
+    // Corredores rivais vilões no Oxe-Kart (com coordenadas 3D de pista z e lane para câmera traseira estilo Mario Kart!)
     S.kartRivals = [
-      { name: 'Boi Brabo Kart', kind: 'bull', color: '#E03131', x: 220, y: 390, vx: 6.2, baseSpd: 6.15 },
-      { name: 'Papa-Figo Rolimã', kind: 'papa_figo', color: '#9C36B5', x: 190, y: 390, vx: 5.9, baseSpd: 5.95 },
-      { name: 'Fulozinha Turbo', kind: 'fulozinha', color: '#20C997', x: 160, y: 390, vx: 5.7, baseSpd: 5.8 },
-      { name: 'Cabra-Cabriola', kind: 'cabra', color: '#FF922B', x: 140, y: 390, vx: 5.5, baseSpd: 5.65 }
+      { name: 'Boi de Fogo', kind: 'bull', color: '#E03131', hatColor: '#FFD43B', lane: -0.48, z: 240, x: 220, y: 390, vx: 6.2, baseSpd: 6.15 },
+      { name: 'Papa-Figo', kind: 'papa_figo', color: '#9C36B5', hatColor: '#343A40', lane: 0.48, z: 185, x: 190, y: 390, vx: 5.9, baseSpd: 5.95 },
+      { name: 'Fulozinha', kind: 'fulozinha', color: '#20C997', hatColor: '#2B8A3E', lane: -0.25, z: 130, x: 160, y: 390, vx: 5.7, baseSpd: 5.8 },
+      { name: 'Cabra-Cabriola', kind: 'cabra', color: '#FF922B', hatColor: '#5C3D2E', lane: 0.32, z: 80, x: 140, y: 390, vx: 5.5, baseSpd: 5.65 },
+      { name: 'Cap. Corisco', kind: 'cangaceiro', color: '#3BC9DB', hatColor: '#8A4F22', lane: 0.0, z: 40, x: 125, y: 390, vx: 5.4, baseSpd: 5.55 }
     ];
     S.signs = [{
-      x: 200, y: 450, title: '🏎️ GRANDE PRÊMIO OXE-KART!', icon: '🏁',
-      textTouch: 'Acelere no Carrinho de Rolimã! Passe nos tapetes TURBO (>>>), pegue as caixas [?] e use o ataque para disparar Cascos de Tatu e Pimenta Turbo contra os vilões!',
-      textKey: 'Acelere no Carrinho de Rolimã! Passe nos tapetes TURBO (>>>), pegue as caixas [?] e aperte J/X para lançar Cascos de Tatu e Pimenta Turbo nos vilões!'
+      x: 200, y: 450, title: '🫏 GRANDE CORRIDA DE JEGUE 3D (ESTILO MARIO KART)!', icon: '🏁',
+      textTouch: 'Corrida de Jegue Turbo 3D com câmera atrás! Use ◀ ▶ para guiar o Jegue nas curvas, PULO para Derrapar (Drift Turbo), pegue caixas [?] e aperte ATAQUE para soltar Cascos de Tatu, Pimenta e Rojões nos vilões!',
+      textKey: 'Corrida de Jegue Turbo 3D com câmera atrás! Use ◀ ▶ (A/D) para guiar o Jegue nas curvas, ESPAÇO para Derrapar (Drift Turbo), pegue caixas [?] e aperte J/X para soltar Cascos de Tatu, Pimenta e Rojões nos vilões!'
     }];
     return S;
   }

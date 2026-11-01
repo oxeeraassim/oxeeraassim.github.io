@@ -754,20 +754,67 @@ class Tonho {
       return;
     }
 
-    // ----- MODO ESPECIAL 3: OXE-KART CORRIDA DE ROLIMÃ (3-4) -----
+    // ----- MODO ESPECIAL 3: OXE-KART 3D CÂMERA ATRÁS DO CARRO (ESTILO MARIO KART, 3-4) -----
     if (sm === 'kart' && this === player) {
       this.facing = 1;
-      if (this.kartBoost > 0) { this.kartBoost--; if (frameCount % 2 === 0) spawnSparks(this.x, this.y + this.h - 6, 2, '#FF922B'); }
-      const topSpd = this.kartBoost > 0 ? 10.6 : (this.dash > 0 ? 10.2 : 7.6);
-      if (keys.right || !keys.left) this.vx = lerp(this.vx, topSpd * (keys.right ? 1.05 : 0.86), 0.08);
-      else if (keys.left) this.vx = lerp(this.vx, 2.5, 0.12);
-      if (this.onGround) { this.coyote = 9; } else if (this.coyote > 0) this.coyote--;
-      if (this.jumpBuffer > 0 && this.coyote > 0) {
-        this.vy = -12.6; this.onGround = false; this.coyote = 0; this.jumpBuffer = 0; sfx('jump');
+      if (!L.kartRace) {
+        L.kartRace = {
+          trackZ: 0, lap: 1, totalLaps: 3, lapLength: 2600,
+          laneX: 0, steer: 0, speed: 6.5, hopY: 0, hopVy: 0,
+          driftDir: 0, driftCharge: 0, heldItem: null, rouletteTimer: 0, rouletteItem: 'casco_tatu',
+          shells3D: [], lightningFlash: 0, rank: 1
+        };
       }
-      this.vy = Math.min(MAX_FALL_SPEED, this.vy + GRAVITY);
-      this.moveAndCollide();
-      this.checkHazards();
+      const kr = L.kartRace;
+      if (this.kartBoost > 0) { this.kartBoost--; if (frameCount % 2 === 0) spawnSparks(this.x, this.y + this.h - 6, 2, '#FF922B'); }
+      const steerInput = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
+      kr.steer = lerp(kr.steer || 0, steerInput, 0.22);
+      // Pulo + Drift estilo Mario Kart (segurar Pulo nas curvas carrega faíscas azuis/laranjas/roxas!)
+      if (this.jumpBuffer > 0 && kr.hopY <= 0) {
+        kr.hopVy = 6.2; this.jumpBuffer = 0; sfx('jump');
+        if (steerInput !== 0) kr.driftDir = steerInput;
+      }
+      if (kr.hopY > 0 || kr.hopVy > 0) {
+        kr.hopY = Math.max(0, (kr.hopY || 0) + kr.hopVy);
+        kr.hopVy -= 0.65;
+        if (kr.hopY <= 0) kr.hopVy = 0;
+      }
+      if (keys.jump && (kr.driftDir !== 0 || Math.abs(steerInput) > 0) && kr.speed > 5.5) {
+        if (kr.driftDir === 0) kr.driftDir = steerInput;
+        kr.driftCharge = (kr.driftCharge || 0) + 1;
+      } else {
+        if ((kr.driftCharge || 0) >= 22) {
+          const superDrift = kr.driftCharge >= 50;
+          this.kartBoost = Math.max(this.kartBoost || 0, superDrift ? 65 : 38);
+          sfx('whip');
+          spawnFloatingText(superDrift ? '🟣 ULTRA DRIFT TURBO!' : '🔥 MINI-TURBO DRIFT!', this.x, this.y - 22, superDrift ? '#E599F7' : '#FF922B');
+        }
+        kr.driftDir = 0; kr.driftCharge = 0;
+      }
+      // Curvatura da pista em função de trackZ (empurra o kart para fora da curva como no Mario Kart!)
+      const segIdx = Math.floor(kr.trackZ / 32);
+      const roadCurve = Math.sin(segIdx * 0.045) * 0.65 + Math.cos(segIdx * 0.022) * 0.45;
+      const centrifugal = -roadCurve * (kr.speed / 11.5) * 0.032;
+      const steerPower = (kr.driftDir !== 0 ? 0.052 : 0.042);
+      kr.laneX = clamp((kr.laneX || 0) + steerInput * steerPower + centrifugal, -1.42, 1.42);
+      const offRoad = Math.abs(kr.laneX) > 1.04 && (this.kartBoost || 0) <= 0;
+      const topSpd = this.kartBoost > 0 ? 13.4 : (unionTimer > 0 ? 12.8 : (offRoad ? 5.6 : 9.4));
+      const accelTarget = keys.down ? 4.2 : topSpd * (keys.up || keys.right || !keys.left ? 1.0 : 0.92);
+      kr.speed = lerp(kr.speed || 6.5, accelTarget, this.kartBoost > 0 ? 0.16 : 0.08);
+      kr.trackZ += kr.speed;
+      const totalRaceDist = kr.lapLength * kr.totalLaps;
+      kr.lap = clamp(Math.floor(kr.trackZ / kr.lapLength) + 1, 1, kr.totalLaps);
+      // Sincroniza x 2D proporcionalmente ao progresso das 3 voltas para compatibilidade total com a bandeira e testes
+      const flagX = L.flagX || (L.levelW - 220) || 5180;
+      this.x = clamp(120 + (kr.trackZ / totalRaceDist) * (flagX - 120), 80, flagX + 12);
+      this.vx = kr.speed;
+      this.y = 408 - (kr.hopY || 0);
+      this.vy = -(kr.hopVy || 0);
+      this.onGround = (kr.hopY || 0) <= 0;
+      if (kr.trackZ >= totalRaceDist && L.flagpole && currentState === GAME_STATE.PLAYING) {
+        this.x = L.flagpole.x;
+        this.y = L.flagpole.y + L.flagpole.h - this.h;
+      }
       this.updateAnim();
       return;
     }
@@ -876,15 +923,73 @@ class Tonho {
     if (this.landSquash > 0) this.landSquash--;
   }
   performAttack() {
+    const L = currentLevel;
+    // Em Brawl Stars (4-4, 6-4, ★-4), Mira 360° + Auto-Aim (Quickfire) no inimigo ou caixa mais próxima!
+    let brawlAimAngle = null;
+    if (L && L.specialMode === 'brawlstars') {
+      let best = null, bestD = 380;
+      const cx = this.x + this.w / 2, cy = this.y + this.h / 2;
+      for (const e of (L.enemies || [])) {
+        if (e.dead || e.respawnTimer > 0) continue;
+        const d = Math.hypot((e.x + e.w / 2) - cx, (e.y + e.h / 2) - cy);
+        if (d < bestD) { bestD = d; best = e; }
+      }
+      if (!best) {
+        for (const cr of (L.brawlCrates || [])) {
+          if (cr.broken) continue;
+          const d = Math.hypot((cr.x + cr.w / 2) - cx, (cr.y + cr.h / 2) - cy);
+          if (d < bestD) { bestD = d; best = cr; }
+        }
+      }
+      this._brawlTarget = best;
+      if (best) {
+        brawlAimAngle = Math.atan2((best.y + best.h / 2) - cy, (best.x + best.w / 2) - cx);
+        this.facing = Math.cos(brawlAimAngle) >= 0 ? 1 : -1;
+      } else if (this === player) {
+        const mx = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
+        const my = (keys.down ? 1 : 0) - ((keys.up || keys.jump) ? 1 : 0);
+        if (mx !== 0 || my !== 0) brawlAimAngle = Math.atan2(my, mx);
+      }
+    }
     const ox = this.x + this.w / 2 + this.facing * 18, oy = this.y + 16;
     const dmgBonus = (this.powerCubes || 0) + (unionTimer > 0 ? 2 : 0);
     const fr = (type, vx, vy, o) => {
       const opts = Object.assign({ hostile: false }, o);
       opts.damage = (opts.damage || 1) + dmgBonus;
-      const pr = new Projectile(ox, oy, vx, vy, type, opts);
+      let rvx = vx, rvy = vy;
+      if (brawlAimAngle != null && !opts._noAimRotate && Math.hypot(vx, vy) > 0.1) {
+        const spd = Math.hypot(vx, vy);
+        const spread = Math.atan2(vy, Math.abs(vx) || 1) * 0.45;
+        rvx = Math.cos(brawlAimAngle + spread) * spd;
+        rvy = Math.sin(brawlAimAngle + spread) * spd;
+      }
+      const pr = new Projectile(ox, oy, rvx, rvy, type, opts);
       pr.owner = this; if (opts.pierce) pr.hitSet = new Set(); projectiles.push(pr); return pr;
     };
-    const L = currentLevel;
+    // Em Oxe-Kart 3D (3-4), o botão de ataque dispara o Item da Roleta Mario Kart ou um Casco de Tatu 3D na pista!
+    if (L && L.specialMode === 'kart' && this === player && L.kartRace) {
+      const kr = L.kartRace;
+      const item = kr.heldItem || 'casco_tatu';
+      kr.heldItem = null; kr.rouletteTimer = 0;
+      this.whipCooldown = 18;
+      if (item === 'pimenta_turbo') {
+        this.kartBoost = 95; sfx('powerup'); addScreenShake(5);
+        spawnFloatingText('🌶️ PIMENTA MALAGUETA TURBO!', this.x, this.y - 20, '#FF6B6B');
+      } else if (item === 'trovao_oxe') {
+        kr.lightningFlash = 35; sfx('quake'); addScreenShake(9);
+        (L.kartRivals || []).forEach((rv) => { rv.spinTimer = 85; rv.shrunkTimer = 240; });
+        spawnFloatingText('⚡ TROVÃO DE SÃO PEDRO! RIVAIS ENCOLHERAM!', this.x, this.y - 24, '#FFD43B');
+      } else if (item === 'rojao_azul') {
+        kr.shells3D.push({ z: kr.trackZ + 32, lane: kr.laneX, vz: 24, type: 'rojao_azul', color: '#4DABF7', life: 150 });
+        sfx('fire');
+        spawnFloatingText('🚀 ROJÃO AZUL (CAÇA O LÍDER)!', this.x, this.y - 20, '#4DABF7');
+      } else {
+        kr.shells3D.push({ z: kr.trackZ + 28, lane: kr.laneX, vz: 19, type: 'casco_tatu', color: '#51CF66', life: 120 });
+        sfx('whip');
+      }
+      fr('pedra', 11, 0, { life: 45, damage: 2 });
+      return;
+    }
     // Em OxeCraft (2-4), qualquer ataque quebra blocos de minério/TNT perto!
     if (L && L.specialMode === 'minecraft' && typeof breakCraftBlocksNear === 'function') {
       breakCraftBlocksNear(this.x + this.w / 2 + this.facing * 32, this.y + this.h / 2, 72);
@@ -896,7 +1001,7 @@ class Tonho {
         sfx('bossRoar'); addScreenShake(6); sanfonaBlast(this);
         for (let a = 0; a < 8; a++) {
           const ang = (a / 8) * Math.PI * 2;
-          fr('rojao', Math.cos(ang) * 7.5, Math.sin(ang) * 7.5, { life: 48, damage: 3, weapon: 'rojao' });
+          fr('rojao', Math.cos(ang) * 7.5, Math.sin(ang) * 7.5, { life: 48, damage: 3, weapon: 'rojao', _noAimRotate: true });
         }
         spawnFloatingText('⭐ SUPER BRAWL OXE! ⭐', this.x + this.w / 2, this.y - 24, '#FFD43B');
         return;
@@ -1195,8 +1300,47 @@ class Tonho {
     const A3 = typeof window !== 'undefined' && window.OxeArt3;
     const sm = typeof window !== 'undefined' && window._oxeSpecialMode;
     if (A3 && this.dazed > 0 && Math.floor(this.dazed / 6) % 2 === 0) ctx.globalAlpha = 0.6;
-    // Em OxeCraft (2-4), Tonho usa o modelo 3D em blocos de Minecraft com picareta de diamante!
-    if (sm === 'minecraft' && this.hero === 'tonho' && !this.mount && window.OxeHD && window.OxeHD.drawTonhoHD) {
+    // Rastro dourado/ciano de velocidade durante o Especial da União Suprema ou Dash!
+    if ((unionTimer > 0 || (this.dash || 0) > 0) && !this.dead) {
+      const sx = lerp(this.prevX, this.x, renderAlpha) - camX, sy = lerp(this.prevY, this.y, renderAlpha) - camY;
+      ctx.save();
+      for (let k = 1; k <= 2; k++) {
+        ctx.fillStyle = k === 1 ? 'rgba(255,212,59,0.28)' : 'rgba(77,171,247,0.20)';
+        ctx.beginPath();
+        ctx.ellipse(sx + this.w / 2 - (this.facing || 1) * k * 14, sy + this.h / 2, this.w * 0.45, this.h * 0.46, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+    // Asa-Delta de Couro Nordestina com Turbinas de Rojão na fase 5-4 (Voo do Carcará)!
+    if (sm === 'shmup') {
+      const hx = lerp(this.prevX, this.x, renderAlpha) - camX + this.w / 2;
+      const hy = lerp(this.prevY, this.y, renderAlpha) - camY + this.h / 2;
+      ctx.save();
+      // Asa triangular de couro do Cariri
+      ctx.fillStyle = this === player ? '#D9480F' : '#1C7ED6';
+      ctx.strokeStyle = '#3B1F0E'; ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(hx + 28, hy - 14);
+      ctx.lineTo(hx - 32, hy - 34);
+      ctx.lineTo(hx - 20, hy + 8);
+      ctx.closePath();
+      ctx.fill(); ctx.stroke();
+      // Costuras e meia-lua branca de couro
+      ctx.strokeStyle = '#FFE8A3'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(hx + 22, hy - 14); ctx.lineTo(hx - 26, hy - 22); ctx.stroke();
+      // Turbinas de rojão soltando fogo
+      ctx.fillStyle = '#495057'; ctx.fillRect(hx - 28, hy - 10, 14, 7);
+      ctx.fillStyle = frameCount % 2 ? '#FFD43B' : '#FF6B6B';
+      ctx.beginPath();
+      ctx.moveTo(hx - 28, hy - 10);
+      ctx.lineTo(hx - 48 - (frameCount % 8), hy - 6.5);
+      ctx.lineTo(hx - 28, hy - 3);
+      ctx.closePath(); ctx.fill();
+      ctx.restore();
+    }
+    // Em OxeCraft (2-4), TODOS os 7 heróis, amigos e montarias usam o modelo 3D em blocos de Minecraft!
+    if (sm === 'minecraft' && window.OxeHD && window.OxeHD.drawTonhoHD) {
       window.OxeHD.drawTonhoHD(ctx, camX, camY, this, renderAlpha, frameCount);
       ctx.globalAlpha = 1;
       return;
@@ -3266,13 +3410,41 @@ function drawBossGuide(ctx, boss, camX, camY) {
           }
         }
       });
+      const kr = L.kartRace;
+      if (kr) {
+        if (kr.rouletteTimer > 0) {
+          kr.rouletteTimer--;
+          const rItems = ['casco_tatu', 'pimenta_turbo', 'rojao_azul', 'trovao_oxe'];
+          kr.rouletteItem = rItems[Math.floor(frameCount / 4) % rItems.length];
+          if (kr.rouletteTimer === 0) {
+            kr.heldItem = kr.rouletteItem;
+            sfx('powerup');
+            floatText(player.x, player.y - 18, `🎁 ITEM: ${kr.heldItem.toUpperCase()}!`, '#FFD43B');
+          }
+        }
+        for (let si = (kr.shells3D || []).length - 1; si >= 0; si--) {
+          const sh = kr.shells3D[si];
+          sh.z += sh.vz || 18;
+          sh.life = (sh.life || 120) - 1;
+          const hitRv = (L.kartRivals || []).find((r) => Math.abs(r.z - sh.z) < 32 && Math.abs((r.lane || 0) - (sh.lane || 0)) < 0.65);
+          if (hitRv) {
+            hitRv.spinTimer = 65; sfx('stomp');
+            spawnSparks(player.x, player.y, 14, '#FFD43B');
+            floatText(player.x, player.y - 20, `💥 ACERTOU ${hitRv.name}!`, '#FFD43B');
+            kr.shells3D.splice(si, 1);
+            continue;
+          }
+          if (sh.life <= 0) kr.shells3D.splice(si, 1);
+        }
+      }
       (L.kartRivals || []).forEach((rv) => {
-        if (rv.spinTimer > 0) { rv.spinTimer--; rv.x += 1.2; return; }
+        if (rv.spinTimer > 0) { rv.spinTimer--; rv.x += 1.2; rv.z = (rv.z || 0) + 1.2; return; }
         // Rubber-banding equilibrado para corrida emocionante
         const diff = player.x - rv.x;
         const base = rv.baseSpd || rv.baseSpeed || 5.1;
         const spd = clamp(base + (diff > 260 ? 1.35 : diff < -220 ? -0.85 : Math.sin(frameCount * 0.03 + rv.x) * 0.35), 3.6, 7.2);
         rv.x = Math.min((L.flagX || L.levelW - 180) - 40, rv.x + spd);
+        rv.z = (rv.z || 0) + spd;
         // Encontrar altura da pista abaixo do rival
         const pl = L.platforms.find((p) => !p.falling && rv.x + 20 >= p.x && rv.x <= p.x + p.w);
         if (pl) rv.y = pl.y - 38;
@@ -3361,6 +3533,14 @@ function drawBossGuide(ctx, boss, camX, camY) {
       partner: spec.partner ? Object.assign({ joined: false }, spec.partner) : null, duo: !!spec.duo, diffIdx: spec.diffIdx != null ? spec.diffIdx : (spec.worldIdx || 0),
       checkpoint: null, flagpole: null
     };
+    if (L.specialMode === 'kart') {
+      L.kartRace = {
+        trackZ: 0, lap: 1, totalLaps: 3, lapLength: 2600,
+        laneX: 0, steer: 0, speed: 6.5, hopY: 0, hopVy: 0,
+        driftDir: 0, driftCharge: 0, heldItem: null, rouletteTimer: 0, rouletteItem: 'casco_tatu',
+        shells3D: [], lightningFlash: 0, rank: 1
+      };
+    }
     window._oxeSpecialMode = L.specialMode || null;
     L.movingPlatforms.forEach((mp) => L.platforms.push(mp));
     const sp = spec.spawn || spec.playerStart || { x: spec.respawnX != null ? spec.respawnX : 80, y: spec.respawnY != null ? spec.respawnY : 380 };
@@ -4017,6 +4197,377 @@ function drawBossGuide(ctx, boss, camX, camY) {
     keys.jumpJustPressed = false; keys.whipJustPressed = false;
   }
 
+  function renderKart3D(ctx, L, W, H) {
+    const kr = L.kartRace || {
+      trackZ: 0, lap: 1, totalLaps: 3, lapLength: 2600,
+      laneX: 0, steer: 0, speed: 6.5, hopY: 0, hopVy: 0,
+      driftDir: 0, driftCharge: 0, heldItem: null, rouletteTimer: 0, rouletteItem: 'casco_tatu',
+      shells3D: [], lightningFlash: 0, rank: 1
+    };
+    // 1. Céu e horizonte do Sertão (montanhas 3D e sol poente)
+    const horizonY = Math.round(H * 0.44);
+    const skyG = ctx.createLinearGradient(0, 0, 0, horizonY);
+    skyG.addColorStop(0, '#E8590C');
+    skyG.addColorStop(0.45, '#F76707');
+    skyG.addColorStop(0.8, '#FFA94D');
+    skyG.addColorStop(1, '#FFE066');
+    ctx.fillStyle = skyG;
+    ctx.fillRect(0, 0, W, horizonY);
+
+    // Sol poente dourado do Sertão
+    const sunX = Math.round(W * 0.5 - (kr.laneX || 0) * 45);
+    const sunY = horizonY - 28;
+    const sunHalo = ctx.createRadialGradient(sunX, sunY, 6, sunX, sunY, 78);
+    sunHalo.addColorStop(0, 'rgba(255,243,191,0.95)');
+    sunHalo.addColorStop(0.35, 'rgba(255,146,43,0.55)');
+    sunHalo.addColorStop(1, 'rgba(255,107,107,0)');
+    ctx.fillStyle = sunHalo; ctx.fillRect(sunX - 78, sunY - 78, 156, 156);
+    ctx.fillStyle = '#FFF3BF'; ctx.beginPath(); ctx.arc(sunX, sunY, 26, 0, Math.PI * 2); ctx.fill();
+
+    // Silhuetas de serras nordestinas ao fundo (parallax suave)
+    ctx.fillStyle = '#7A2E1E';
+    ctx.beginPath(); ctx.moveTo(0, horizonY);
+    for (let x = 0; x <= W; x += 32) {
+      const h = Math.sin((x + kr.trackZ * 0.04) * 0.012) * 24 + Math.cos((x + kr.trackZ * 0.02) * 0.02) * 14;
+      ctx.lineTo(x, horizonY - 14 - Math.max(0, h));
+    }
+    ctx.lineTo(W, horizonY); ctx.closePath(); ctx.fill();
+
+    // 2. Projeção de pista 3D (estilo Mode-7 / OutRun / Super Mario Kart)
+    const nSlices = 76;
+    const roadBaseW = W * 0.88;
+    const camHeight = 110;
+    const curveBase = Math.sin(kr.trackZ * 0.0018) * 0.75 + Math.cos(kr.trackZ * 0.0009) * 0.5;
+
+    for (let i = nSlices - 1; i >= 0; i--) {
+      const p = (i + 1) / nSlices;
+      const y0 = Math.round(horizonY + Math.pow(p, 1.85) * (H - horizonY));
+      const pNext = (i + 2) / nSlices;
+      const y1 = Math.round(horizonY + Math.pow(pNext, 1.85) * (H - horizonY));
+      const sliceH = Math.max(1, y1 - y0);
+
+      // Z em profundidade
+      const zDist = camHeight / (p * 0.95 + 0.05);
+      const worldZ = kr.trackZ + zDist;
+      const segIndex = Math.floor(worldZ / 36);
+
+      // Curvatura e perspectiva horizontal
+      const curveOffset = Math.pow(1 - p, 2.2) * (curveBase * 240);
+      const roadCenterX = (W / 2) - (kr.laneX * roadBaseW * 0.38 * p) + curveOffset;
+      const roadW = Math.max(20, roadBaseW * Math.pow(p, 1.35));
+
+      // Cores alternadas da terra (off-road)
+      const isAlt = (segIndex % 2 === 0);
+      ctx.fillStyle = isAlt ? '#D99B52' : '#C98840';
+      ctx.fillRect(0, y0, W, sliceH);
+
+      // Zebras / Rumble strips nas bordas (vermelho e branco)
+      const stripW = Math.max(4, roadW * 0.075);
+      ctx.fillStyle = isAlt ? '#E03131' : '#F8F9FA';
+      ctx.fillRect(roadCenterX - roadW / 2 - stripW, y0, stripW, sliceH);
+      ctx.fillRect(roadCenterX + roadW / 2, y0, stripW, sliceH);
+
+      // Superfície da pista (asfalto/terra batida do Sertão)
+      const isCheckered = (worldZ % kr.lapLength < 55);
+      if (isCheckered) {
+        ctx.fillStyle = ((Math.floor(worldZ / 12) + segIndex) % 2 === 0) ? '#111' : '#FFF';
+      } else {
+        ctx.fillStyle = isAlt ? '#5C3D2E' : '#4E3224';
+      }
+      ctx.fillRect(roadCenterX - roadW / 2, y0, roadW, sliceH);
+
+      // Linha central amarela tracejada
+      if (!isCheckered && (segIndex % 3 === 0)) {
+        ctx.fillStyle = '#FFD43B';
+        const lineW = Math.max(2, roadW * 0.024);
+        ctx.fillRect(roadCenterX - lineW / 2, y0, lineW, sliceH);
+      }
+    }
+
+    // 3. Objetos 3D na pista (Tapetes Turbo, Caixas [?], Manchas de Óleo)
+    const lapZ = kr.trackZ % kr.lapLength;
+    // Boost Pads 3D
+    const pads3D = [450, 1150, 1920];
+    pads3D.forEach((pz) => {
+      let dz = pz - lapZ;
+      if (dz < 0) dz += kr.lapLength;
+      if (dz > 15 && dz < 720) {
+        const p = clamp(110 / dz, 0.04, 1);
+        const sy = Math.round(horizonY + Math.pow(p, 1.85) * (H - horizonY));
+        const curveOffset = Math.pow(1 - p, 2.2) * (curveBase * 240);
+        const sx = (W / 2) - (kr.laneX * roadBaseW * 0.38 * p) + curveOffset;
+        const pw = Math.max(16, roadBaseW * Math.pow(p, 1.35) * 0.65);
+        ctx.fillStyle = (Math.floor(frameCount / 4) % 2 === 0) ? '#00F5D4' : '#FFD43B';
+        ctx.fillRect(sx - pw / 2, sy - 4, pw, Math.max(4, p * 16));
+        ctx.fillStyle = '#1A1A1A'; ctx.font = `bold ${Math.max(9, Math.round(18 * p))}px sans-serif`;
+        ctx.textAlign = 'center';
+        if (p > 0.18) ctx.fillText('>>> TURBO >>>', sx, sy);
+      }
+    });
+
+    // Caixas [?] 3D
+    const boxes3D = [280, 820, 1500, 2250];
+    boxes3D.forEach((bz, bidx) => {
+      let dz = bz - lapZ;
+      if (dz < 0) dz += kr.lapLength;
+      if (dz > 15 && dz < 750) {
+        const p = clamp(110 / dz, 0.04, 1);
+        const sy = Math.round(horizonY + Math.pow(p, 1.85) * (H - horizonY)) - Math.round(p * 32);
+        const curveOffset = Math.pow(1 - p, 2.2) * (curveBase * 240);
+        const laneOffset = ((bidx % 2 === 0 ? -0.35 : 0.35) - kr.laneX) * roadBaseW * 0.38 * p;
+        const sx = (W / 2) + laneOffset + curveOffset;
+        const bs = Math.max(12, Math.round(p * 46));
+        ctx.save();
+        ctx.translate(sx, sy + Math.sin(frameCount * 0.12 + bidx) * 4);
+        ctx.rotate(Math.sin(frameCount * 0.08 + bidx) * 0.2);
+        const boxCols = ['#FF6B6B', '#FFD43B', '#51CF66', '#339AF0', '#CC5DE8'];
+        ctx.fillStyle = boxCols[(Math.floor(frameCount / 8) + bidx) % boxCols.length];
+        ctx.strokeStyle = '#FFF'; ctx.lineWidth = Math.max(1.5, p * 3);
+        ctx.beginPath();
+        if (ctx.roundRect) ctx.roundRect(-bs / 2, -bs / 2, bs, bs, 4);
+        else ctx.rect(-bs / 2, -bs / 2, bs, bs);
+        ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#FFF'; ctx.font = `bold ${Math.max(10, Math.round(bs * 0.72))}px sans-serif`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('?', 0, 0);
+        ctx.restore();
+      }
+    });
+
+    // 4. Cascos de Tatu 3D disparados na pista
+    (kr.shells3D || []).forEach((sh) => {
+      const dz = sh.z - kr.trackZ;
+      if (dz > 10 && dz < 800) {
+        const p = clamp(110 / dz, 0.04, 1);
+        const sy = Math.round(horizonY + Math.pow(p, 1.85) * (H - horizonY)) - Math.round(p * 14);
+        const curveOffset = Math.pow(1 - p, 2.2) * (curveBase * 240);
+        const sx = (W / 2) + (sh.lane - kr.laneX) * roadBaseW * 0.38 * p + curveOffset;
+        const r = Math.max(6, Math.round(p * 22));
+        ctx.save();
+        ctx.fillStyle = sh.color || '#51CF66';
+        ctx.strokeStyle = '#1E120A'; ctx.lineWidth = Math.max(1.5, p * 2.5);
+        ctx.beginPath(); ctx.arc(sx, sy, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#FFE066'; ctx.beginPath(); ctx.arc(sx - r * 0.3, sy - r * 0.3, r * 0.35, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+      }
+    });
+
+    // 5. Vilões Rivais 3D na pista adiante
+    const rivals = Array.isArray(L.kartRivals) ? L.kartRivals : [];
+    rivals.forEach((rv) => {
+      const dz = (rv.z || 120) - (kr.trackZ % kr.lapLength);
+      const effZ = dz < -100 ? dz + kr.lapLength : dz;
+      if (effZ > 12 && effZ < 780) {
+        const p = clamp(110 / effZ, 0.04, 1);
+        const sy = Math.round(horizonY + Math.pow(p, 1.85) * (H - horizonY));
+        const curveOffset = Math.pow(1 - p, 2.2) * (curveBase * 240);
+        const sx = (W / 2) + ((rv.lane || 0) - kr.laneX) * roadBaseW * 0.38 * p + curveOffset;
+        const rw = Math.max(18, Math.round(p * 74));
+        const rh = Math.max(16, Math.round(p * 66));
+        ctx.save();
+        ctx.translate(sx, sy);
+        if (rv.spinTimer > 0) ctx.rotate(rv.spinTimer * 0.4);
+        // Sombra no chão
+        ctx.fillStyle = 'rgba(0,0,0,0.38)';
+        ctx.beginPath(); ctx.ellipse(0, 0, rw * 0.55, rh * 0.22, 0, 0, Math.PI * 2); ctx.fill();
+        // Corpo do kart/jegue rival visto de trás
+        ctx.fillStyle = rv.color || '#9C36B5';
+        ctx.strokeStyle = '#1A1A1A'; ctx.lineWidth = Math.max(1.5, p * 2.5);
+        ctx.beginPath();
+        if (ctx.roundRect) ctx.roundRect(-rw / 2, -rh, rw, rh * 0.75, Math.max(3, p * 8));
+        else ctx.rect(-rw / 2, -rh, rw, rh * 0.75);
+        ctx.fill(); ctx.stroke();
+        // Cabeça / Chapéu de couro do vilão visto de trás
+        ctx.fillStyle = rv.hatColor || '#3B1F0E';
+        ctx.beginPath(); ctx.arc(0, -rh * 0.95, rw * 0.28, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        // Aba do chapéu meia-lua
+        ctx.beginPath(); ctx.ellipse(0, -rh * 0.95, rw * 0.45, rh * 0.15, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        // Nome do rival
+        if (p > 0.22) {
+          ctx.font = `bold ${Math.max(9, Math.round(p * 14))}px sans-serif`;
+          ctx.textAlign = 'center'; ctx.fillStyle = '#FFF'; ctx.strokeStyle = '#000'; ctx.lineWidth = 3;
+          ctx.strokeText(rv.name || 'Vilão', 0, -rh * 1.3);
+          ctx.fillText(rv.name || 'Vilão', 0, -rh * 1.3);
+        }
+        ctx.restore();
+      }
+    });
+
+    // 6. O JEGUE DO TONHO (Câmera atrás, visão traseira do Jegue e do Herói montado!)
+    ctx.save();
+    const px = Math.round(W / 2 + (kr.steer || 0) * 22);
+    const py = Math.round(H - 24 - (kr.hopY || 0));
+    const trot = Math.sin(frameCount * 0.35) * (kr.speed > 2 ? 5 : 0);
+    const steerTilt = clamp((kr.steer || 0) * 0.14, -0.22, 0.22);
+    ctx.translate(px, py + trot);
+    ctx.rotate(steerTilt);
+
+    // Faíscas de Drift / Fogo de Turbo no Jegue
+    if (player.kartBoost > 0 || (kr.driftCharge || 0) > 0) {
+      const sparkCol = (kr.driftCharge >= 50) ? '#E599F7' : (kr.driftCharge >= 22 ? '#FF922B' : '#74C0FC');
+      for (let s = -1; s <= 1; s += 2) {
+        ctx.fillStyle = sparkCol;
+        ctx.beginPath();
+        ctx.arc(s * 36, -8 + (frameCount % 4) * 2, 6 + (frameCount % 3) * 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    // Sombra do Jegue no chão
+    ctx.fillStyle = 'rgba(0,0,0,0.42)';
+    ctx.beginPath(); ctx.ellipse(0, 4, 44, 14, 0, 0, Math.PI * 2); ctx.fill();
+
+    // Patas traseiras do Jegue (com ferraduras)
+    const legSwing = Math.sin(frameCount * 0.4) * 6;
+    for (let side = -1; side <= 1; side += 2) {
+      const lx = side * 22;
+      const ly = -14 + (side === 1 ? legSwing : -legSwing);
+      ctx.fillStyle = '#868E96'; ctx.strokeStyle = '#1E120A'; ctx.lineWidth = 2;
+      ctx.fillRect(lx - 5, ly, 10, 18);
+      ctx.fillStyle = '#343A40'; ctx.fillRect(lx - 6, ly + 14, 12, 5); // ferradura
+    }
+
+    // Corpo / Anca peluda do Jegue vista de trás (arredondada, cinza fofinho)
+    const jgGrad = ctx.createLinearGradient(0, -68, 0, -10);
+    jgGrad.addColorStop(0, '#ADB5BD');
+    jgGrad.addColorStop(0.65, '#868E96');
+    jgGrad.addColorStop(1, '#495057');
+    ctx.fillStyle = jgGrad; ctx.strokeStyle = '#1E120A'; ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(-34, -58, 68, 48, 22);
+    else ctx.rect(-34, -58, 68, 48);
+    ctx.fill(); ctx.stroke();
+
+    // Rabo do Jegue com penacho que balança ao correr
+    const tailWiggle = Math.sin(frameCount * 0.32) * 12;
+    ctx.strokeStyle = '#495057'; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(0, -32); ctx.quadraticCurveTo(tailWiggle * 0.5, -16, tailWiggle, -6); ctx.stroke();
+    ctx.fillStyle = '#212529'; ctx.beginPath(); ctx.arc(tailWiggle, -4, 5, 0, Math.PI * 2); ctx.fill();
+
+    // Orelhas compridas do Jegue (apontadas para a frente nas curvas!)
+    for (let es = -1; es <= 1; es += 2) {
+      ctx.save();
+      ctx.translate(es * 18, -62);
+      ctx.rotate(es * 0.25 - steerTilt * 0.5);
+      ctx.fillStyle = '#868E96'; ctx.strokeStyle = '#1E120A'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.ellipse(0, -16, 7, 18, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#FFA8A8'; ctx.beginPath(); ctx.ellipse(0, -15, 3.5, 12, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    }
+
+    // Cangalha / Sela de couro com alforjes
+    ctx.fillStyle = '#8B5A2B'; ctx.strokeStyle = '#3E2210'; ctx.lineWidth = 2;
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(-26, -64, 52, 14, 4);
+    else ctx.rect(-26, -64, 52, 14);
+    ctx.fill(); ctx.stroke();
+    // Alforjes nas laterais (sacos de mantimento/rapadura)
+    for (const af of [-32, 22]) {
+      ctx.fillStyle = '#A06A38'; ctx.fillRect(af, -50, 10, 16);
+      ctx.strokeRect(af, -50, 10, 16);
+    }
+
+    // Herói (Tonho ou amigo) montado no Jegue visto de costas
+    const heroCol = (player.hero === 'zefinha' || heroKind === 'zefinha') ? '#F783AC' : '#D9480F';
+    ctx.fillStyle = heroCol; ctx.strokeStyle = '#1E120A'; ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(-16, -92, 32, 30, 8);
+    else ctx.rect(-16, -92, 32, 30);
+    ctx.fill(); ctx.stroke();
+
+    // Chapéu de Couro do Sertão visto de costas (copa arredondada + aba larga meia-lua com estrela dourada)
+    const hatG = ctx.createLinearGradient(0, -118, 0, -90);
+    hatG.addColorStop(0, '#C98A4B'); hatG.addColorStop(1, '#5C3416');
+    ctx.fillStyle = hatG; ctx.strokeStyle = '#1E120A'; ctx.lineWidth = 2.2;
+    // Copa
+    ctx.beginPath(); ctx.arc(0, -102, 15, Math.PI, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+    // Aba larga
+    ctx.beginPath(); ctx.ellipse(0, -99, 28, 8, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    // Estrela dourada de couro no centro da copa
+    ctx.fillStyle = '#FFD43B'; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('★', 0, -103);
+    ctx.restore();
+
+    // 7. Flash de Trovão (Item Trovão de São Pedro)
+    if (kr.lightningFlash > 0) {
+      kr.lightningFlash--;
+      ctx.fillStyle = `rgba(255,255,255,${Math.min(0.85, kr.lightningFlash / 20)})`;
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    // 8. HUD de Corrida estilo Mario Kart
+    // Item Box no topo esquerdo
+    ctx.save();
+    const ibx = 24, iby = 22, ibs = 52;
+    ctx.fillStyle = 'rgba(15,10,24,0.88)';
+    ctx.strokeStyle = '#FFD43B'; ctx.lineWidth = 3;
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(ibx, iby, ibs, ibs, 10);
+    else ctx.rect(ibx, iby, ibs, ibs);
+    ctx.fill(); ctx.stroke();
+    // Item dentro da caixa
+    let itIcon = '❓';
+    if (kr.rouletteTimer > 0) {
+      const rList = ['🐢', '🌶️', '🚀', '⚡'];
+      itIcon = rList[Math.floor(frameCount / 4) % rList.length];
+    } else if (kr.heldItem === 'pimenta_turbo') itIcon = '🌶️';
+    else if (kr.heldItem === 'rojao_azul') itIcon = '🚀';
+    else if (kr.heldItem === 'trovao_oxe') itIcon = '⚡';
+    else if (kr.heldItem === 'casco_tatu') itIcon = '🐢';
+    ctx.font = '26px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(itIcon, ibx + ibs / 2, iby + ibs / 2);
+
+    // Contador de Voltas (Lap Counter)
+    ctx.font = 'bold 15px sans-serif'; ctx.textAlign = 'left';
+    ctx.fillStyle = '#FFF'; ctx.strokeStyle = '#000'; ctx.lineWidth = 3;
+    const lapTxt = kr.lap >= kr.totalLaps ? '🏁 VOLTA FINAL!' : `VOLTA ${kr.lap}/${kr.totalLaps}`;
+    ctx.strokeText(lapTxt, ibx + ibs + 14, iby + 22);
+    ctx.fillText(lapTxt, ibx + ibs + 14, iby + 22);
+
+    // Posição / Rank (1º, 2º, 3º...)
+    const aheadCount = rivals.filter((r) => (r.z || 0) > (kr.trackZ % kr.lapLength)).length;
+    kr.rank = aheadCount + 1;
+    const rankTxt = `${kr.rank}º`;
+    ctx.font = '900 44px sans-serif'; ctx.textAlign = 'right';
+    const rankCol = kr.rank === 1 ? '#FFD43B' : (kr.rank === 2 ? '#CED4DA' : (kr.rank === 3 ? '#E599F7' : '#FF8787'));
+    ctx.fillStyle = rankCol; ctx.strokeStyle = '#000'; ctx.lineWidth = 6;
+    ctx.strokeText(rankTxt, W - 24, 60); ctx.fillText(rankTxt, W - 24, 60);
+    ctx.font = 'bold 13px sans-serif'; ctx.fillStyle = '#FFF';
+    ctx.strokeText(`/ ${rivals.length + 1}`, W - 24, 82); ctx.fillText(`/ ${rivals.length + 1}`, W - 24, 82);
+
+    // Velocímetro digital
+    const speedKmh = Math.round(kr.speed * 8.5);
+    ctx.font = 'bold 18px monospace'; ctx.textAlign = 'right';
+    ctx.fillStyle = '#00F5D4'; ctx.strokeStyle = '#000'; ctx.lineWidth = 3;
+    ctx.strokeText(`${speedKmh} KM/H`, W - 24, H - 24);
+    ctx.fillText(`${speedKmh} KM/H`, W - 24, H - 24);
+
+    // Minimapa do Circuito Oval
+    const mmW = 92, mmH = 54, mmX = W - mmW - 20, mmY = H - mmH - 52;
+    ctx.fillStyle = 'rgba(15,10,24,0.78)'; ctx.strokeStyle = '#5C3D2E'; ctx.lineWidth = 2;
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(mmX, mmY, mmW, mmH, 8);
+    else ctx.rect(mmX, mmY, mmW, mmH);
+    ctx.fill(); ctx.stroke();
+    // Traçado do circuito
+    ctx.strokeStyle = '#ADB5BD'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.ellipse(mmX + mmW / 2, mmY + mmH / 2, mmW * 0.38, mmH * 0.32, 0, 0, Math.PI * 2); ctx.stroke();
+    // Ponto dos Rivais no minimapa
+    rivals.forEach((rv) => {
+      const ang = (((rv.z || 0) % kr.lapLength) / kr.lapLength) * Math.PI * 2;
+      const rx = mmX + mmW / 2 + Math.cos(ang) * (mmW * 0.38);
+      const ry = mmY + mmH / 2 + Math.sin(ang) * (mmH * 0.32);
+      ctx.fillStyle = rv.color || '#E03131'; ctx.beginPath(); ctx.arc(rx, ry, 3.5, 0, Math.PI * 2); ctx.fill();
+    });
+    // Ponto do Jogador no minimapa (amarelo brilhante)
+    const pAng = ((kr.trackZ % kr.lapLength) / kr.lapLength) * Math.PI * 2;
+    const pxm = mmX + mmW / 2 + Math.cos(pAng) * (mmW * 0.38);
+    const pym = mmY + mmH / 2 + Math.sin(pAng) * (mmH * 0.32);
+    ctx.fillStyle = '#FFD43B'; ctx.strokeStyle = '#000'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(pxm, pym, 5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+
+    ctx.restore();
+  }
+
   function drawRolimaKartUnder(ctx, h, camX, camY, color, label) {
     if (!h) return;
     const kx = h.x - camX + (h.w || 36) / 2, ky = h.y - camY + (h.h || 42);
@@ -4049,6 +4600,11 @@ function drawBossGuide(ctx, boss, camX, camY) {
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
     if (!currentLevel || !player) return;
     const L = currentLevel;
+    // Em fases de Corrida de Jegue (3-4), renderiza a perspectiva 3D estilo Mario Kart com câmera atrás!
+    if (L.specialMode === 'kart') {
+      renderKart3D(ctx, L, W, H);
+      return;
+    }
     let camX = view.px + (view.x - view.px) * alpha, camY = view.py + (view.y - view.py) * alpha;
     if (screenShake > 0.35 && currentState !== GAME_STATE.PAUSED) { const a = frameCount * 1.7; camX += Math.sin(a) * screenShake * 0.5; camY += Math.cos(a * 1.3) * screenShake * 0.5; }
     const dprR = +(P2C.dataset.dpr || 1) || 1;
@@ -4125,48 +4681,19 @@ function drawBossGuide(ctx, boss, camX, camY) {
     if (typeof drawFx === 'function') drawFx(ctx, camX, camY);
     if (typeof drawDarkness === 'function') drawDarkness(ctx, camX, camY, L);
 
-    // Banner HUD de Modos Especiais (Pac-Oxe, OxeCraft, Oxe-Kart, Brawl Stars, Asa-Delta, Street Oxe) e Barra de União!
-    if (L.specialMode || companion || unionGauge > 0 || unionTimer > 0) {
+    // Indicadores e Barra de União da Dupla
+    if (companion || unionGauge > 0 || unionTimer > 0 || (L.specialMode === 'brawlstars' && (L.brawlBossesKilled || 0) >= (L.brawlBossesTotal || 2))) {
       ctx.save();
-      if (L.specialMode) {
-        let bannerTxt = '';
-        let bannerCol = '#FFD43B';
-        if (L.specialMode === 'pacman') {
-          const scared = L.enemies.some((e) => !e.dead && e.scaredTimer > 0);
-          bannerTxt = scared ? '🟡 PAC-OXE: FANTASMAS AZUIS! ENCOSTE PARA COMER ELES!' : '🟡 PAC-OXE: PEGUE RAPADURAS E CAJUS DOURADOS NO LABIRINTO!';
-          bannerCol = scared ? '#4DABF7' : '#FFD43B';
-        } else if (L.specialMode === 'minecraft') {
-          bannerTxt = '⛏️ OXECRAFT: QUEBRE BLOCOS DE OURO, DIAMANTE E TNT COM SUA ARMA!';
-          bannerCol = '#69DB7C';
-        } else if (L.specialMode === 'kart') {
-          const ahead = (L.kartRivals || []).filter((r) => r.x > player.x).length;
-          const pos = ahead + 1;
-          bannerTxt = `🏎️ GRANDE PRÊMIO ROLIMÃ · POSIÇÃO: ${pos}º / ${(L.kartRivals ? L.kartRivals.length : 4) + 1} · USE [?] E TAPETES TURBO!`;
-          bannerCol = pos === 1 ? '#FFD43B' : '#74C0FC';
-        } else if (L.specialMode === 'brawlstars') {
-          const killed = L.brawlBossesKilled || 0, tot = L.brawlBossesTotal || 2;
-          const open = killed >= tot;
-          bannerTxt = open
-            ? `⭐ ARENA OXE-STARS: CHEFES DERROTADOS (${killed}/${tot})! PORTÃO DE SAÍDA ABERTO! ➡️`
-            : `⭐ ARENA OXE-STARS: DERROTE OS ${tot} BRAWLERS CHEFES (${killed}/${tot}) · ⚡ PODER: +${player.brawlPower || 0}`;
-          bannerCol = open ? '#51CF66' : '#FF8787';
-        } else if (L.specialMode === 'shmup') {
-          bannerTxt = '🚀 VOO DO CARCARÁ: COMBATE AÉREO LIVRE (SETAS/WASD + ATAQUE)!';
-          bannerCol = '#74C0FC';
-        } else if (L.specialMode === 'beatemup') {
-          bannerTxt = '🥊 RINGUE DA FEIRA (STREET OXE): DERROTE A GANGUE NA ARENA!';
-          bannerCol = '#FFA94D';
-        }
-        if (bannerTxt) {
-          ctx.font = 'bold 13px sans-serif';
-          const tw = Math.min(W - 24, ctx.measureText(bannerTxt).width + 28);
-          const bx = (W - tw) / 2, by = 54;
-          ctx.fillStyle = 'rgba(15, 10, 22, 0.82)';
-          ctx.strokeStyle = bannerCol; ctx.lineWidth = 2;
-          ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(bx, by, tw, 26, 13); else ctx.rect(bx, by, tw, 26); ctx.fill(); ctx.stroke();
-          ctx.fillStyle = bannerCol; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-          ctx.fillText(bannerTxt, W / 2, by + 13);
-        }
+      if (L.specialMode === 'brawlstars' && (L.brawlBossesKilled || 0) >= (L.brawlBossesTotal || 2)) {
+        ctx.font = 'bold 12px sans-serif';
+        const pTxt = '⭐ PORTÃO ABERTO! ➡️';
+        const tw = ctx.measureText(pTxt).width + 24;
+        const bx = (W - tw) / 2, by = 54;
+        ctx.fillStyle = 'rgba(15, 10, 22, 0.82)';
+        ctx.strokeStyle = '#51CF66'; ctx.lineWidth = 2;
+        ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(bx, by, tw, 24, 12); else ctx.rect(bx, by, tw, 24); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#51CF66'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(pTxt, W / 2, by + 12);
       }
       // Barra de União da Dupla (canto superior esquerdo abaixo dos corações)
       if (companion || unionGauge > 15 || unionTimer > 0) {
@@ -4256,27 +4783,8 @@ function drawBossGuide(ctx, boss, camX, camY) {
 
   function installQuickTestPanel() {
     if (document.getElementById('oxeQuickTestBar')) return;
-    const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.search.includes('test');
-    if (isLocal) {
-      // Barra fixa no topo para alternar em 1 clique entre Minecraft, Brawl Stars, Pac-Man e Kart!
-      const topBar = document.createElement('div');
-      topBar.id = 'oxeTopStageSwitcher';
-      topBar.style.cssText = 'position:fixed;top:6px;left:50%;transform:translateX(-50%);z-index:10000;display:flex;flex-wrap:wrap;gap:6px;justify-content:center;background:rgba(15,10,24,0.92);border:2px solid #ffd43b;border-radius:14px;padding:6px 10px;box-shadow:0 4px 18px rgba(0,0,0,0.7);font-family:sans-serif;';
-      topBar.innerHTML = `
-        <button type="button" data-lv="10" style="background:linear-gradient(135deg,#2b8a3e,#51cf66);color:#fff;border:2px solid #b2f2bb;border-radius:8px;padding:6px 12px;font-size:13px;font-weight:900;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.4);">⛏️ VER FASE MINECRAFT (2-4)</button>
-        <button type="button" data-lv="24" style="background:linear-gradient(135deg,#5f3dc4,#845ef7);color:#fff;border:2px solid #d0bfff;border-radius:8px;padding:6px 12px;font-size:13px;font-weight:900;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.4);">⭐ BRAWL STARS 1 (4-4)</button>
-        <button type="button" data-lv="38" style="background:linear-gradient(135deg,#5f3dc4,#7950f2);color:#fff;border:2px solid #d0bfff;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:800;cursor:pointer;">⭐ BRAWL STARS 2 (6-4)</button>
-        <button type="button" data-lv="52" style="background:linear-gradient(135deg,#5f3dc4,#7950f2);color:#fff;border:2px solid #d0bfff;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:800;cursor:pointer;">⭐ BRAWL STARS 3 (★-4)</button>
-        <button type="button" data-lv="3" style="background:#f59f00;color:#111;border:none;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:800;cursor:pointer;">🟡 PAC-MAN (1-4)</button>
-        <button type="button" data-lv="17" style="background:#fa5252;color:#fff;border:none;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:800;cursor:pointer;">🏎️ KART (3-4)</button>
-      `;
-      document.body.appendChild(topBar);
-      topBar.addEventListener('click', (e) => {
-        const b = e.target.closest('button[data-lv]');
-        if (!b) return;
-        startGame(parseInt(b.dataset.lv, 10));
-      });
-    }
+    const isTest = location.search.includes('test=1') || location.search.includes('debug=1');
+    if (!isTest) return;
 
     const wrap = document.createElement('div');
     wrap.id = 'oxeQuickTestBar';

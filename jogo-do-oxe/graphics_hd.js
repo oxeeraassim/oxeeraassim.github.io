@@ -330,38 +330,90 @@
     G._oxeSpecialMode = spMode;
     if (spMode === 'pacman') {
       ctx.save();
+      var pacPow = num(G._pacPowerTimer, 0) > 0;
       var pg = ctx.createLinearGradient(0, 0, 0, H);
-      pg.addColorStop(0, '#070b22'); pg.addColorStop(0.5, '#0f163b'); pg.addColorStop(1, '#1a1033');
+      pg.addColorStop(0, pacPow ? '#0b1e3d' : '#090718');
+      pg.addColorStop(0.55, pacPow ? '#123059' : '#181030');
+      pg.addColorStop(1, '#26132e');
       ctx.fillStyle = pg; ctx.fillRect(0, 0, W, H);
-      ctx.strokeStyle = 'rgba(77,171,247,0.12)'; ctx.lineWidth = 1;
-      for (var gx = -(camX % 46); gx < W; gx += 46) { ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, H); ctx.stroke(); }
-      for (var gy = 0; gy < H; gy += 46) { ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(W, gy); ctx.stroke(); }
+      // Serras do Sertão 2.5D ao fundo + Mandacarus em silhueta iluminada
+      ctx.fillStyle = 'rgba(45, 22, 54, 0.75)';
+      ctx.beginPath(); ctx.moveTo(0, H);
+      for (var px = 0; px <= W; px += 40) {
+        var py = H * 0.68 - Math.sin((px + camX * 0.15) * 0.008) * 32 - Math.cos((px + camX * 0.08) * 0.018) * 18;
+        ctx.lineTo(px, py);
+      }
+      ctx.lineTo(W, H); ctx.closePath(); ctx.fill();
+      // Ladrilhos 2.5D em perspectiva de Xilogravura / Cordel no piso do labirinto
+      var gs = 46;
+      var gox = -(Math.floor(camX) % gs);
+      ctx.strokeStyle = pacPow ? 'rgba(116,192,252,0.26)' : 'rgba(255,212,59,0.14)';
+      ctx.lineWidth = 1.2;
+      for (var gx = gox; gx < W; gx += gs) {
+        ctx.beginPath(); ctx.moveTo(gx, 40); ctx.lineTo(gx, H); ctx.stroke();
+      }
+      for (var gy = 46; gy < H; gy += gs) {
+        ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(W, gy); ctx.stroke();
+        for (var dx = gox + gs / 2; dx < W; dx += gs * 2) {
+          ctx.fillStyle = pacPow ? 'rgba(77,171,247,0.12)' : 'rgba(255,146,43,0.09)';
+          ctx.beginPath();
+          ctx.moveTo(dx, gy - 6); ctx.lineTo(dx + 6, gy); ctx.lineTo(dx, gy + 6); ctx.lineTo(dx - 6, gy);
+          ctx.closePath(); ctx.fill();
+        }
+      }
+      // Bandeirinhas de São João neon no topo do labirinto Pac-Oxe
+      var bCols = ['#ffd43b', '#ff6b6b', '#51cf66', '#4dabf7', '#f783ac'];
+      for (var fx = -(Math.floor(camX * 0.5) % 28); fx < W; fx += 28) {
+        var idxF = Math.abs(Math.floor((fx + camX * 0.5) / 28)) % bCols.length;
+        ctx.fillStyle = bCols[idxF];
+        ctx.beginPath(); ctx.moveTo(fx, 40); ctx.lineTo(fx + 18, 40); ctx.lineTo(fx + 9, 54 + Math.sin(t * 0.08 + idxF) * 2); ctx.closePath(); ctx.fill();
+      }
       ctx.restore();
       return;
     }
     if (spMode === 'brawlstars') {
       ctx.save();
-      var bgCol1 = '#d99b52', bgCol2 = '#c98840';
-      if (L && L.worldIdx === 3) { bgCol1 = '#4d8a6a'; bgCol2 = '#3f7659'; }
-      else if (L && L.worldIdx === 5) { bgCol1 = '#43355e'; bgCol2 = '#362a4d'; }
-      else if (L && L.worldIdx === 7) { bgCol1 = '#7a4430'; bgCol2 = '#663624'; }
+      var bgCol1 = '#d99b52', bgCol2 = '#c98840', rimCol = '#8a5428';
+      if (L && L.worldIdx === 3) { bgCol1 = '#4d8a6a'; bgCol2 = '#3f7659'; rimCol = '#264a36'; }
+      else if (L && L.worldIdx === 5) { bgCol1 = '#483863'; bgCol2 = '#392c50'; rimCol = '#221933'; }
+      else if (L && L.worldIdx === 7) { bgCol1 = '#854932'; bgCol2 = '#6e3a26'; rimCol = '#422013'; }
       ctx.fillStyle = bgCol1; ctx.fillRect(0, 0, W, H);
-      // Ladrilhos de Arena Top-Down estilo Brawl Stars
+      // Ladrilhos 2.5D de Terreiro Nordestino com relevo chanfrado
       var ts = 64;
       var ox = -(Math.floor(camX) % (ts * 2));
-      ctx.fillStyle = bgCol2;
       for (var tx = ox - ts * 2; tx < W + ts * 2; tx += ts) {
         for (var ty = 0; ty < H + ts; ty += ts) {
           var cellX = Math.floor((tx + Math.floor(camX)) / ts);
           var cellY = Math.floor(ty / ts);
-          if ((cellX + cellY) % 2 === 0) ctx.fillRect(tx, ty, ts, ts);
+          if ((cellX + cellY) % 2 === 0) {
+            ctx.fillStyle = bgCol2;
+            ctx.fillRect(tx, ty, ts, ts);
+            ctx.strokeStyle = 'rgba(255,245,220,0.12)';
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(tx + 2, ty + 2, ts - 4, ts - 4);
+          }
         }
       }
-      // Círculo central da Arena Oxe-Stars
-      var acx = 740 - camX, acy = 270 - camY;
-      ctx.strokeStyle = 'rgba(255,243,191,0.28)'; ctx.lineWidth = 5;
-      ellPath(ctx, acx, acy, 130, 130); ctx.stroke();
-      star5(ctx, acx, acy, 38, 'rgba(255,212,59,0.28)');
+      // Borda 3D superior e inferior da Arena de Cordel (Mourões de Madeira e Corda Sisal)
+      ctx.fillStyle = rimCol;
+      ctx.fillRect(0, 0, W, 42);
+      ctx.fillRect(0, H - 36, W, 36);
+      ctx.fillStyle = 'rgba(0,0,0,0.28)';
+      ctx.fillRect(0, 42, W, 8);
+      for (var mx = -(Math.floor(camX) % 96); mx < W + 96; mx += 96) {
+        roundBox(ctx, mx - 8, 8, 16, 36, 4, '#5c3a1e');
+        ball(ctx, mx, 10, 8, 6, '#ffd43b', { lw: 1.5 });
+      }
+      // Rosácea / Sol do Sertão 2.5D nos centros da Arena Oxe-Stars
+      for (var ai = 0; ai < 2; ai++) {
+        var acx = (740 + ai * 760) - camX, acy = 275 - camY;
+        if (acx < -180 || acx > W + 180) continue;
+        ctx.strokeStyle = 'rgba(255,235,175,0.34)'; ctx.lineWidth = 6;
+        ellPath(ctx, acx, acy, 132, 132); ctx.stroke();
+        ctx.strokeStyle = 'rgba(92,58,30,0.35)'; ctx.lineWidth = 3;
+        ellPath(ctx, acx, acy, 94, 94); ctx.stroke();
+        star5(ctx, acx, acy, 44, 'rgba(255,212,59,0.32)');
+      }
       ctx.restore();
       return;
     }
@@ -771,32 +823,53 @@
         ctx.restore();
       });
     }
-    // Elementos especiais da Arena Oxe-Stars (Caixas de Power Cube + Moitas)
+    // Elementos especiais da Arena Oxe-Stars (Caixas 3D de Power Cube + Moitas 2.5D de Macambira)
     if (spMode === 'brawlstars') {
       (L.brawlCrates || []).forEach(function (cr) {
-        if (cr.hp <= 0) return;
+        if (cr.hp <= 0 || cr.broken) return;
         var cx = cr.x - camX, cy = cr.y - camY;
         ctx.save();
-        ctx.fillStyle = 'rgba(0,0,0,0.32)';
-        rrPath(ctx, cx + 4, cy + 7, cr.w, cr.h, 6); ctx.fill();
-        roundBox(ctx, cx, cy, cr.w, cr.h, 6, '#8b5a2b');
-        roundBox(ctx, cx + 5, cy + 5, cr.w - 10, cr.h - 10, 4, '#a06a38');
-        // Cubo verde brilhante (Power Cube) no centro da caixa
-        star5(ctx, cx + cr.w / 2, cy + cr.h / 2, 10, '#51cf66');
-        // Barra de vida da caixa estilo Brawl Stars
-        var bw = 38, pct = Math.max(0, cr.hp / (cr.maxHp || 3));
-        roundBox(ctx, cx + cr.w / 2 - bw / 2, cy - 11, bw, 7, 3, '#212529');
-        roundBox(ctx, cx + cr.w / 2 - bw / 2 + 1, cy - 10, (bw - 2) * pct, 5, 2, '#fcc419');
+        // Sombra e extrusão 3D do caixote de feira nordestina
+        ctx.fillStyle = 'rgba(0,0,0,0.38)';
+        rrPath(ctx, cx + 6, cy + 10, cr.w, cr.h, 6); ctx.fill();
+        // Face lateral/inferior 3D
+        roundBox(ctx, cx + 4, cy + 6, cr.w, cr.h, 6, '#5c3a1e');
+        // Topo do caixote
+        roundBox(ctx, cx, cy, cr.w, cr.h - 3, 6, '#9c6634');
+        roundBox(ctx, cx + 5, cy + 4, cr.w - 10, cr.h - 11, 4, '#b87d46');
+        // Ripas diagonais de madeira
+        ctx.strokeStyle = '#5c3a1e'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(cx + 6, cy + 5); ctx.lineTo(cx + cr.w - 6, cy + cr.h - 8); ctx.stroke();
+        // Emblema 3D de Cubo de Poder (Estrela de Caju Esmeralda)
+        ball(ctx, cx + cr.w / 2, cy + cr.h / 2 - 1, 11, 11, '#2b8a3e', { lw: 1.5 });
+        star5(ctx, cx + cr.w / 2, cy + cr.h / 2 - 1, 9, '#69db7c');
+        // Barra de vida 3D da caixa
+        var bw = 42, pct = Math.max(0, cr.hp / (cr.maxHp || 3));
+        roundBox(ctx, cx + cr.w / 2 - bw / 2, cy - 13, bw, 8, 3, '#1a1a1a');
+        roundBox(ctx, cx + cr.w / 2 - bw / 2 + 1, cy - 12, Math.max(4, (bw - 2) * pct), 6, 2, '#51cf66');
         ctx.restore();
       });
       (L.brawlBushes || []).forEach(function (bs, bi) {
         var bx = bs.x - camX, by = bs.y - camY;
         ctx.save();
-        ctx.globalAlpha = bs._heroInside ? 0.46 : 0.92;
-        for (var kx = 16; kx < bs.w - 8; kx += 26) {
-          for (var ky = 16; ky < bs.h - 8; ky += 26) {
-            ball(ctx, bx + kx, by + ky + Math.sin(t * 0.06 + bi + kx) * 1.5, 19, 16, (kx + ky) % 52 === 0 ? '#40c057' : '#2f9e44', { lw: 1.6 });
+        // Sombra 3D da moita no chão
+        ctx.fillStyle = 'rgba(0,0,0,0.28)';
+        rrPath(ctx, bx + 6, by + 8, bs.w, bs.h, 14); ctx.fill();
+        ctx.globalAlpha = bs._heroInside ? 0.45 : 0.94;
+        for (var kx = 16; kx < bs.w - 8; kx += 24) {
+          for (var ky = 16; ky < bs.h - 8; ky += 24) {
+            var sway = Math.sin(t * 0.06 + bi + kx * 0.1) * 1.8;
+            ball(ctx, bx + kx, by + ky + 4, 20, 16, '#1b4332', { lw: 1.2, rim: false });
+            ball(ctx, bx + kx + sway, by + ky, 19, 15, (kx + ky) % 48 === 0 ? '#40c057' : '#2f9e44', { lw: 1.6 });
+            if ((kx + ky) % 72 === 0) {
+              ball(ctx, bx + kx + 4, by + ky - 4, 3.5, 3.5, '#ffd43b', { lw: 0.8 });
+            }
           }
+        }
+        if (bs._heroInside) {
+          ctx.globalAlpha = 0.95;
+          ctx.fillStyle = '#ffe066'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
+          ctx.fillText('👁️ FURTIVO', bx + bs.w / 2, by - 4);
         }
         ctx.restore();
       });
@@ -805,21 +878,37 @@
 
   function drawPacMazeWall(ctx, x, y, w, h, theme, t) {
     ctx.save();
+    // Extrusão 3D (mistura 2D clássico com blocos de relevo 3D e estética de Couro/Xilogravura Neon do Oxe)
+    var dx3 = 6, dy3 = 8;
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    rrPath(ctx, x + dx3 + 2, y + dy3 + 3, w, h, 8); ctx.fill();
     if (theme === 'ghostHouse') {
-      roundBox(ctx, x, y, w, h, 10, '#2b1b4e');
-      ctx.strokeStyle = '#ff6b6b'; ctx.lineWidth = 3;
+      roundBox(ctx, x + dx3, y + dy3, w, h, 10, '#190d33');
+      roundBox(ctx, x, y, w, h, 10, '#321b59');
+      ctx.strokeStyle = '#ff922b'; ctx.lineWidth = 3;
       rrPath(ctx, x + 3, y + 3, w - 6, h - 6, 8); ctx.stroke();
-      // Portão neon rosa no topo da Casa das Assombrações
-      ctx.strokeStyle = '#f783ac'; ctx.lineWidth = 4;
-      ctx.beginPath(); ctx.moveTo(x + w * 0.35, y + 2); ctx.lineTo(x + w * 0.65, y + 2); ctx.stroke();
+      // Portão neon dourado/rosa no topo do Curral das Assombrações
+      ctx.strokeStyle = '#ffd43b'; ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.moveTo(x + w * 0.32, y + 2); ctx.lineTo(x + w * 0.68, y + 2); ctx.stroke();
       ctx.fillStyle = '#ffe066'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText('👻 ASSOMBRAÇÕES DO SERTÃO', x + w / 2, y + h / 2 + 4);
+      ctx.fillText('👻 CURRAL DAS ASSOMBRAÇÕES', x + w / 2, y + h / 2 + 4);
     } else {
-      ctx.shadowColor = '#339af0'; ctx.shadowBlur = 10;
-      roundBox(ctx, x, y, w, h, 8, '#1864ab');
-      ctx.shadowBlur = 0;
-      ctx.strokeStyle = '#74c0fc'; ctx.lineWidth = 2.2;
+      var pacPow = num(G._pacPowerTimer, 0) > 0;
+      // Parede lateral 3D
+      roundBox(ctx, x + dx3, y + dy3, w, h, 8, pacPow ? '#0b3c78' : '#5c2b0e');
+      // Face frontal 2.5D com chanfro de couro e ouro neon
+      roundBox(ctx, x, y, w, h, 8, pacPow ? '#1971c2' : '#9c4a1a');
+      ctx.strokeStyle = pacPow ? '#74c0fc' : '#ffd43b';
+      ctx.lineWidth = 2.2;
       rrPath(ctx, x + 3, y + 3, Math.max(4, w - 6), Math.max(4, h - 6), 5); ctx.stroke();
+      // Tachas douradas de couro nos cantos dos blocos maiores
+      if (w >= 48 && h >= 22) {
+        ctx.fillStyle = '#ffe066';
+        ctx.beginPath();
+        ctx.arc(x + 8, y + 8, 2.2, 0, Math.PI * 2);
+        ctx.arc(x + w - 8, y + 8, 2.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
     ctx.restore();
   }
@@ -910,13 +999,21 @@
 
   function drawBrawlWall(ctx, x, y, w, h, t) {
     ctx.save();
-    // Sombra e parede 3D vista de cima estilo Brawl Stars
-    ctx.fillStyle = 'rgba(0,0,0,0.34)';
-    rrPath(ctx, x + 5, y + 8, w, h, 8); ctx.fill();
-    roundBox(ctx, x, y + 5, w, h, 8, '#5c3d2e');
-    roundBox(ctx, x, y, w, h - 4, 8, '#b07a45');
-    ctx.strokeStyle = '#ffd43b'; ctx.lineWidth = 1.5;
+    // Parede 2.5D/3D de Taipa & Couro com volume alto visto de cima na Arena Oxe-Stars
+    var dx3 = 6, dy3 = 12;
+    ctx.fillStyle = 'rgba(0,0,0,0.42)';
+    rrPath(ctx, x + dx3 + 3, y + dy3 + 4, w, h, 8); ctx.fill();
+    // Face frontal/lateral 3D escura
+    roundBox(ctx, x + 3, y + 8, w, h, 8, '#4a2c18');
+    // Topo iluminado 2.5D
+    roundBox(ctx, x, y, w, Math.max(12, h - 4), 8, '#b87d46');
+    ctx.strokeStyle = '#ffd43b'; ctx.lineWidth = 1.8;
     rrPath(ctx, x + 4, y + 4, Math.max(4, w - 8), Math.max(4, h - 12), 5); ctx.stroke();
+    // Tachas de couro de cangaceiro no topo do muro
+    ctx.fillStyle = '#ffe066';
+    for (var sx = x + 14; sx < x + w - 10; sx += 28) {
+      ctx.beginPath(); ctx.arc(sx, y + Math.min(12, h * 0.35), 2.5, 0, Math.PI * 2); ctx.fill();
+    }
     ctx.restore();
   }
 
@@ -1087,33 +1184,69 @@
     groundShadow(ctx, cx, by + 1, w * S * 0.9, onG ? 0.3 : 0.15);
 
     if (G._oxeSpecialMode === 'minecraft') {
+      var hk = tonho.hero || 'tonho';
+      var VOX_PAL = {
+        tonho:        { leg: '#4a2810', torso: '#9a5b2a', trim: '#e03131', skin: '#f2c094', hat: '#8a4f22', pick: '#3bc9db' },
+        zefinha:      { leg: '#8a4f22', torso: '#f06595', trim: '#ffe066', skin: '#f5cba7', hat: '#ffd43b', pick: '#f783ac' },
+        cabeca_vento: { leg: '#1c7ed6', torso: '#4dabf7', trim: '#ffd43b', skin: '#f5cba7', hat: '#ff6b6b', pick: '#69db7c' },
+        galinha:      { leg: '#f59f00', torso: '#ffffff', trim: '#fa5252', skin: '#ffffff', hat: '#e03131', pick: '#ffd43b' },
+        bode_toddy:   { leg: '#343a40', torso: '#ced4da', trim: '#e03131', skin: '#dee2e6', hat: '#845ef7', pick: '#ff922b' },
+        seu_lunga:    { leg: '#3b2818', torso: '#d9a066', trim: '#495057', skin: '#f2c094', hat: '#5c3d2e', pick: '#ffd43b' },
+        tatu_bola:    { leg: '#5c4033', torso: '#a68a64', trim: '#ffd43b', skin: '#d9b99b', hat: '#7f5539', pick: '#94d82d' }
+      }[hk] || { leg: '#4a2810', torso: '#9a5b2a', trim: '#e03131', skin: '#f2c094', hat: '#8a4f22', pick: '#3bc9db' };
       ctx.save();
       ctx.translate(cx, by);
       ctx.scale(S * dir, S);
+      ctx.strokeStyle = OUT; ctx.lineWidth = 1.4;
+      // Se estiver montado no Jegue ou Bode Toddy, desenha a montaria em blocos 3D estilo Minecraft!
+      if (tonho.mount) {
+        var isToddyM = tonho.mount.type === 'bode_toddy';
+        ctx.fillStyle = isToddyM ? '#adb5bd' : '#8d6e63';
+        ctx.fillRect(-14, -14, 28, 10); ctx.strokeRect(-14, -14, 28, 10);
+        ctx.fillRect(8, -24, 10, 12); ctx.strokeRect(8, -24, 10, 12);
+        ctx.fillStyle = '#3e2723';
+        ctx.fillRect(-12, -4, 5, 4); ctx.fillRect(-3, -4, 5, 4); ctx.fillRect(7, -4, 5, 4);
+        ctx.translate(0, -10);
+      }
       // Pernas quadradas estilo Minecraft
       var mLeg = running ? runPh * 6 : (!onG ? 4 : 0);
-      ctx.fillStyle = '#4a2810';
+      ctx.fillStyle = VOX_PAL.leg;
       ctx.fillRect(-7, -12 + mLeg * 0.3, 6, 12); ctx.strokeRect(-7, -12 + mLeg * 0.3, 6, 12);
       ctx.fillRect(1, -12 - mLeg * 0.3, 6, 12); ctx.strokeRect(1, -12 - mLeg * 0.3, 6, 12);
-      // Tronco gibão cúbico
-      ctx.fillStyle = '#9a5b2a'; ctx.fillRect(-8, -26, 16, 14);
-      ctx.strokeStyle = OUT; ctx.lineWidth = 1.4; ctx.strokeRect(-8, -26, 16, 14);
-      ctx.fillStyle = '#e03131'; ctx.fillRect(-7, -26, 14, 3);
+      // Tronco cúbico
+      ctx.fillStyle = VOX_PAL.torso; ctx.fillRect(-8, -26, 16, 14); ctx.strokeRect(-8, -26, 16, 14);
+      ctx.fillStyle = VOX_PAL.trim; ctx.fillRect(-7, -26, 14, 3);
       // Cabeça quadrada 3D
-      ctx.fillStyle = '#d9a070'; ctx.fillRect(-6, -42, 16, 16);
-      ctx.fillStyle = '#f2c094'; ctx.fillRect(-8, -42, 16, 16);
-      ctx.strokeRect(-8, -42, 16, 16);
+      ctx.fillStyle = shade(VOX_PAL.skin, -0.15); ctx.fillRect(-6, -42, 16, 16);
+      ctx.fillStyle = VOX_PAL.skin; ctx.fillRect(-8, -42, 16, 16); ctx.strokeRect(-8, -42, 16, 16);
       ctx.fillStyle = '#111'; ctx.fillRect(2, -36, 3, 3); ctx.fillRect(-3, -36, 3, 3);
-      // Chapéu de couro em blocos
-      ctx.fillStyle = '#8a4f22'; ctx.fillRect(-13, -46, 26, 5); ctx.strokeRect(-13, -46, 26, 5);
-      ctx.fillRect(-8, -52, 16, 6); ctx.strokeRect(-8, -52, 16, 6);
-      ctx.fillStyle = '#ffd43b'; ctx.fillRect(-2, -50, 4, 4);
-      // Picareta de Diamante na mão!
+      if (hk === 'galinha') {
+        // Bico e barbela quadrados estilo Chicken do Minecraft!
+        ctx.fillStyle = '#ff922b'; ctx.fillRect(6, -34, 6, 4); ctx.strokeRect(6, -34, 6, 4);
+        ctx.fillStyle = '#e03131'; ctx.fillRect(7, -30, 4, 4);
+      } else if (hk === 'seu_lunga') {
+        // Barba branca quadrada em blocos
+        ctx.fillStyle = '#f8f9fa'; ctx.fillRect(-6, -31, 13, 7); ctx.strokeRect(-6, -31, 13, 7);
+      }
+      // Chapéu / Crista / Chifres em blocos
+      ctx.fillStyle = VOX_PAL.hat;
+      if (hk === 'bode_toddy') {
+        ctx.fillRect(-6, -48, 4, 6); ctx.strokeRect(-6, -48, 4, 6);
+        ctx.fillRect(3, -48, 4, 6); ctx.strokeRect(3, -48, 4, 6);
+      } else if (hk === 'cabeca_vento') {
+        ctx.fillRect(-9, -46, 18, 4); ctx.strokeRect(-9, -46, 18, 4);
+        ctx.fillStyle = '#ffd43b'; ctx.fillRect(-6 + (t % 4) * 2, -50, 12, 3);
+      } else {
+        ctx.fillRect(-13, -46, 26, 5); ctx.strokeRect(-13, -46, 26, 5);
+        ctx.fillRect(-8, -52, 16, 6); ctx.strokeRect(-8, -52, 16, 6);
+        ctx.fillStyle = '#ffd43b'; ctx.fillRect(-2, -50, 4, 4);
+      }
+      // Picareta de Diamante / Ferramenta Voxel na mão!
       ctx.save();
       ctx.translate(6, -22);
       ctx.rotate(whip > 0 ? 0.9 : -0.35);
       ctx.fillStyle = '#6f4518'; ctx.fillRect(0, -14, 3, 18);
-      ctx.fillStyle = '#3bc9db'; ctx.fillRect(-6, -17, 15, 4);
+      ctx.fillStyle = VOX_PAL.pick; ctx.fillRect(-6, -17, 15, 4);
       ctx.strokeRect(-6, -17, 15, 4);
       ctx.restore();
       ctx.restore();
@@ -1288,9 +1421,16 @@
     var stunned = num(enemy.stunTimer, num(enemy.stunned === true ? 1 : enemy.stunned, num(enemy.dizzy === true ? 1 : enemy.dizzy, 0))) > 0;
     var hurt = num(enemy.hurtTimer, num(enemy.flash, 0)) > 0;
 
-    // Indicador de alvo vermelho no chão estilo Brawl Stars
+    // Indicador de alvo vermelho no chão estilo Brawl Stars (+ Anel de SUPER do Brawler Chefe!)
     if (G._oxeSpecialMode === 'brawlstars' && !enemy.dead) {
       ctx.save();
+      if (isBrBoss && (enemy.superTelegraph || 0) > 0) {
+        var stPct = 1 - clamp(enemy.superTelegraph / 36, 0, 1);
+        ellPath(ctx, cx, by - 2, 42 + stPct * 72, 18 + stPct * 30);
+        ctx.fillStyle = (Math.floor(t / 3) % 2 === 0) ? 'rgba(255,212,59,0.38)' : 'rgba(250,82,82,0.42)';
+        ctx.fill();
+        ctx.lineWidth = 3; ctx.strokeStyle = '#ffd43b'; ctx.stroke();
+      }
       ellPath(ctx, cx, by - 2, isBrBoss ? 36 : 22, isBrBoss ? 14 : 9);
       ctx.fillStyle = isBrBoss ? 'rgba(250,82,82,0.34)' : 'rgba(255,146,43,0.26)';
       ctx.fill();
@@ -1302,27 +1442,43 @@
       groundShadow(ctx, cx, by + 1, w * S * 0.8, 0.28);
     }
 
-    // Fantasma de Pac-Oxe quando energizado (fica azul assustado!)
+    // Fantasma de Pac-Oxe quando energizado (fica azul assustado em 2.5D com chapéu de couro!)
     var pacScared = Math.max(num(enemy.scaredTimer, 0), num(G._pacPowerTimer, 0));
     if ((enemy.pacGhost || enemy.isPacGhost) && pacScared > 0 && !enemy.dead) {
       ctx.save();
-      ctx.translate(cx, by - h * 0.65);
+      ctx.translate(cx + Math.sin(t * 0.45) * 1.5, by - h * 0.65);
       var flashBlue = (pacScared < 120 && Math.floor(t / 8) % 2 === 0) ? '#f8f9fa' : '#1c7ed6';
-      ball(ctx, 0, -6, 22, 22, flashBlue, { lw: 2 });
-      ctx.fillStyle = '#fff'; ellPath(ctx, -7, -10, 4, 4); ctx.fill(); ellPath(ctx, 7, -10, 4, 4); ctx.fill();
-      ctx.strokeStyle = '#ffe066'; ctx.lineWidth = 2;
+      // Sombra 3D no piso do labirinto
+      ctx.fillStyle = 'rgba(0,0,0,0.38)';
+      ellPath(ctx, 3, 18, 20, 7); ctx.fill();
+      // Corpo 3D de Fantasma Assombrado
+      ball(ctx, 3, -3, 22, 22, '#0b3c78', { lw: 1.5, rim: false });
+      ball(ctx, 0, -6, 22, 22, flashBlue, { lw: 2.2 });
+      // Chapéu de Couro Nordestino no topo do fantasma
+      roundBox(ctx, -14, -29, 28, 6, 3, '#8a4f22');
+      ctx.fillStyle = '#ffd43b'; ctx.fillRect(-8, -28, 16, 2);
+      ctx.fillStyle = '#fff'; ellPath(ctx, -7, -10, 4.2, 4.2); ctx.fill(); ellPath(ctx, 7, -10, 4.2, 4.2); ctx.fill();
+      ctx.strokeStyle = '#ffe066'; ctx.lineWidth = 2.2;
       ctx.beginPath(); ctx.moveTo(-10, 2); ctx.lineTo(-5, -2); ctx.lineTo(0, 2); ctx.lineTo(5, -2); ctx.lineTo(10, 2); ctx.stroke();
       ctx.restore();
       return;
     }
 
-    // Aura e nome dos 4 Fantasmas do Pac-Oxe quando normais
+    // Aura 2.5D, sombra 3D e chapéu de cangaceiro dos 4 Fantasmas do Pac-Oxe quando normais
     if ((enemy.pacGhost || enemy.isPacGhost) && !enemy.dead) {
       ctx.save();
-      ctx.globalAlpha = 0.32;
-      ellPath(ctx, cx, by - h * 0.55, 28, 28);
-      ctx.fillStyle = enemy.ghostColor || '#ff6b6b';
+      var gCol = enemy.ghostColor || '#ff6b6b';
+      ctx.globalAlpha = 0.36;
+      ellPath(ctx, cx, by - h * 0.55, 30, 30);
+      ctx.fillStyle = gCol;
       ctx.fill();
+      ctx.globalAlpha = 0.92;
+      if (enemy.ghostName) {
+        ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center';
+        ctx.fillStyle = '#fff3bf'; ctx.strokeStyle = '#1e120a'; ctx.lineWidth = 2.5;
+        ctx.strokeText(enemy.ghostName, cx, by - h - 10);
+        ctx.fillText(enemy.ghostName, cx, by - h - 10);
+      }
       ctx.restore();
     }
 
