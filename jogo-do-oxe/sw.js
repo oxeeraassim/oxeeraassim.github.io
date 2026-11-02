@@ -6,7 +6,7 @@
  *  - Offline                        -> fallback para o cache (e index.html em navegação)
  */
 
-const CACHE_NAME = 'oxe-jogo-v23';
+const CACHE_NAME = 'oxe-jogo-v24';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -15,6 +15,8 @@ const ASSETS_TO_CACHE = [
   './graphics_hd.js',
   './art_v3.js',
   './audio.js',
+  './dados/equilibrio.js',
+  './oxe-telemetria.js',
   './manifest.json',
   './icon-192.png',
   './icon-512.png',
