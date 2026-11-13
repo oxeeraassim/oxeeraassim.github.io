@@ -5,7 +5,7 @@
  */
 'use strict';
 
-const VERSION = 'v3'; // Altere a cada deploy para invalidar o cache antigo
+const VERSION = 'v4'; // Altere a cada deploy para invalidar o cache antigo
 const CACHE_PREFIX = 'cidade-do-oxe-';
 const CACHE_NAME = CACHE_PREFIX + VERSION;
 
@@ -19,6 +19,7 @@ const PRECACHE = [
   './styles/oxe_ui.css',
   './vendor/three.min.js',
   './js/textures_oxe.js',
+  './js/collision_oxe.js',
   './map_data.js',
   './game_data.js',
   './js/sim_engine.js',
