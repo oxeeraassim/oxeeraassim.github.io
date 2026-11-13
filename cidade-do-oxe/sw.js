@@ -5,7 +5,7 @@
  */
 'use strict';
 
-const VERSION = 'v4'; // Altere a cada deploy para invalidar o cache antigo
+const VERSION = 'v5-claude'; // Altere a cada deploy para invalidar o cache antigo
 const CACHE_PREFIX = 'cidade-do-oxe-';
 const CACHE_NAME = CACHE_PREFIX + VERSION;
 
@@ -17,8 +17,11 @@ const PRECACHE = [
   './index.html',
   './manifest.webmanifest',
   './styles/oxe_ui.css',
+  './styles/oxe_hd.css',
   './vendor/three.min.js',
   './js/textures_oxe.js',
+  './js/herois_oxe_3d.js',
+  './js/visual_oxe_hd.js',
   './js/collision_oxe.js',
   './map_data.js',
   './game_data.js',

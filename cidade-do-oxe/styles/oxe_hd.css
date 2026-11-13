@@ -1,0 +1,16 @@
+/* oxe_hd.css — ajustes de layout do upgrade HD (textos sem corte, gaveta compacta) */
+.gv2-tabs { display: flex !important; flex-wrap: wrap !important; overflow: visible !important; gap: 6px !important; padding-bottom: 6px; }
+.gv2-tab { white-space: nowrap; flex: 0 0 auto; }
+.gv2-tab small { margin-left: 4px; opacity: .7; }
+.gv2-item { white-space: normal !important; overflow: visible !important; text-overflow: clip !important; line-height: 1.2; }
+.gv2-item * { white-space: normal !important; overflow-wrap: anywhere; }
+#gaveta, .gaveta { height: auto !important; max-height: min(78vh, 720px); overflow-y: auto; }
+/* avisos e balões: quebram linha em vez de cortar */
+[class*="toast"], [class*="aviso"], .oxm-tut, .oxe-toast { white-space: normal !important; overflow-wrap: anywhere; max-width: min(92vw, 640px); }
+.oxm-tut span { white-space: normal !important; }
+/* botões do topo não somem atrás do alerta de fome */
+#oxe-fome-alerta { top: 58px !important; }
+@media (max-width: 600px) {
+  #oxe-fome-alerta { top: auto !important; bottom: 96px !important; font-size: 13px !important; }
+  .gv2-tab { font-size: 13px; padding: 6px 8px; }
+}
