@@ -5,7 +5,7 @@
  */
 'use strict';
 
-const VERSION = 'pub-mwg8b6bi'; // Altere a cada deploy para invalidar o cache antigo
+const VERSION = 'pub-mwg9vrg3'; // Altere a cada deploy para invalidar o cache antigo
 const CACHE_PREFIX = 'cidade-do-oxe-';
 const CACHE_NAME = CACHE_PREFIX + VERSION;
 
@@ -33,7 +33,8 @@ const PRECACHE = [
   './js/street_mode.js',
   './js/ui_campanha.js',
   './js/oxe_bridge.js',
-  './js/fable_melhorias_40.js'
+  './js/fable_melhorias_40.js',
+  './js/oxe_recursos.js'
 ];
 
 const OFFLINE_HTML = `<!doctype html>

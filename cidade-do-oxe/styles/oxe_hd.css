@@ -23,3 +23,29 @@
   /* botão de camadas não fica escondido atrás do "Mais" */
   .oxe-camadas { top: calc(min(var(--topo-h), 14vh) + var(--sat) + 52px) !important; }
 }
+
+/* ===== UPGRADE celular: nada sobreposto no topo ===== */
+#oxeHudV2 { top: calc(min(var(--topo-h, 68px), 14vh) + var(--sat, 0px) + 6px) !important; }
+@media (max-width: 600px) {
+  #oxeHudV2 { left: 8px; right: 8px !important; justify-content: space-between !important; max-width: none !important; gap: 6px !important; pointer-events: none; }
+  #oxeHudV2 > *, #oxeHudV2 .oxe-hudv2-acoes > * { pointer-events: auto; }
+  #oxeHudV2 .oxe-hudv2-acoes { width: 100%; justify-content: flex-end; }
+  #oxeHudV2 .oxe-ato-chip { margin-right: auto; font-size: 11.5px !important; padding: 5px 10px !important; max-width: 58vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #oxeHudV2 button, #oxeHudV2 .oxe-hudv2-btn { min-height: 38px !important; font-size: 12.5px !important; padding: 0 10px !important; }
+  #oxeHudV2 .oxe-hudv2-btn[disabled], #oxeHudV2 button[disabled] { display: none !important; }
+  .oxe-camadas { top: calc(min(var(--topo-h), 14vh) + var(--sat) + 58px) !important; }
+  /* avisos no alto (antes ficavam embaixo, por cima do cartão "O que a vila precisa") */
+  .toast-box { top: calc(min(var(--topo-h), 14vh) + var(--sat) + 52px) !important; bottom: auto !important; right: 64px !important; left: 10px !important; transform: none !important; max-width: none !important; }
+  #oxeRecToast { top: calc(min(var(--topo-h), 14vh) + var(--sat) + 104px) !important; }
+}
+/* controles de câmera por toque (botões) */
+#oxeCamCtl { position: fixed; z-index: 40; right: calc(10px + env(safe-area-inset-right, 0px)); bottom: calc(var(--polegar-h, 56px) + env(safe-area-inset-bottom, 0px) + 18px);
+  display: none; flex-direction: column; gap: 8px; }
+#oxeCamCtl button { width: 44px; height: 44px; border-radius: 50%; border: 1.5px solid rgba(255,241,201,.45); background: rgba(30,22,16,.78); color: #fff1c9;
+  font: 700 20px/1 system-ui, sans-serif; box-shadow: 0 2px 6px rgba(0,0,0,.35); touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+#oxeCamCtl button:active { transform: scale(.92); background: rgba(201,134,43,.9); color: #1d1408; }
+body.oxe-touch #oxeCamCtl { display: flex; }
+body.oxe-modo-rua #oxeCamCtl, body.oxe-gaveta-aberta #oxeCamCtl { display: none !important; }
+#oxeDicaToque { position: fixed; z-index: 70; left: 50%; top: 42%; transform: translate(-50%, -50%); background: rgba(27,23,20,.9); color: #fff1c9;
+  border: 1.5px solid #E0A12F; border-radius: 14px; padding: 14px 16px; font: 600 14px/1.5 system-ui, sans-serif; text-align: center; max-width: 82vw;
+  box-shadow: 0 6px 18px rgba(0,0,0,.4); transition: opacity .4s; }
