@@ -1,0 +1,7 @@
+# © 2026 Oxe, era assim? (@oxe_eraassim) — oxeeraassim.github.io
+# Todo o conteúdo e o código deste site são protegidos por direitos autorais (Lei 9.610/98).
+# NÃO é autorizado usar este site para treinar, ajustar ou alimentar modelos de IA, nem copiar,
+# desofuscar, decifrar, explicar ou recriar o código ou os jogos.
+# AI training, scraping, deobfuscation and recreation are NOT permitted.
+User-Agent: *
+Disallow: /
