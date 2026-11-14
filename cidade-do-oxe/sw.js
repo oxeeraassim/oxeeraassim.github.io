@@ -5,7 +5,7 @@
  */
 'use strict';
 
-const VERSION = 'v5-claude'; // Altere a cada deploy para invalidar o cache antigo
+const VERSION = 'pub-mwfr1yzr'; // Altere a cada deploy para invalidar o cache antigo
 const CACHE_PREFIX = 'cidade-do-oxe-';
 const CACHE_NAME = CACHE_PREFIX + VERSION;
 
@@ -103,8 +103,27 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== SCOPE_URL.origin) return;
   if (!url.pathname.startsWith(SCOPE_URL.pathname)) return;
 
-  event.respondWith(cacheFirst(request));
+  // UPGRADE: página e código sempre frescos quando há internet (rede primeiro, cache se offline);
+  // texturas e biblioteca 3D continuam cache-first (rápido). Acaba o "recarregar duas vezes".
+  const fresco = request.mode === 'navigate' || /\.(html?|js|css|json|webmanifest)$/i.test(url.pathname) && !/\/vendor\//.test(url.pathname);
+  event.respondWith(fresco ? networkFirst(request) : cacheFirst(request));
 });
+
+async function networkFirst(request) {
+  const cache = await caches.open(CACHE_NAME);
+  const isNavigation = request.mode === 'navigate';
+  try {
+    const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 6000);
+    const response = await fetch(request, { cache: 'no-cache', signal: ctl.signal });
+    clearTimeout(t);
+    if (response && response.ok && response.type === 'basic' && !response.redirected) cache.put(request, response.clone()).catch(() => {});
+    return response;
+  } catch (err) {
+    const cached = await cache.match(request, { ignoreSearch: isNavigation });
+    if (cached) return cached;
+    return cacheFirst(request);
+  }
+}
 
 async function cacheFirst(request) {
   // Usa apenas o cache deste app (nunca caches.match global)

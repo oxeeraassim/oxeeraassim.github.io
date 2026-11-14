@@ -13,4 +13,13 @@
 @media (max-width: 600px) {
   #oxe-fome-alerta { top: auto !important; bottom: 96px !important; font-size: 13px !important; }
   .gv2-tab { font-size: 13px; padding: 6px 8px; }
+  /* topo: a 2ª linha de indicadores rola para o lado em vez de sair da tela */
+  .tp-l2 { flex-wrap: nowrap !important; overflow-x: auto !important; overflow-y: hidden; max-width: 100vw; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding-right: 10px; }
+  .tp-l2::-webkit-scrollbar { display: none; }
+  .tp-l2 > * { flex: 0 0 auto !important; }
+  /* cartão "O que a vila precisa" acima da barra de baixo (antes cobria Construir e Rua 3D) */
+  #oxe-needs-card { bottom: calc(76px + env(safe-area-inset-bottom, 0px)) !important; width: 205px !important; font-size: 11px !important; max-height: 32vh; overflow-y: auto; opacity: .96; }
+  #oxe-needs-card h4 { font-size: 11px !important; }
+  /* botão de camadas não fica escondido atrás do "Mais" */
+  .oxe-camadas { top: calc(min(var(--topo-h), 14vh) + var(--sat) + 52px) !important; }
 }
