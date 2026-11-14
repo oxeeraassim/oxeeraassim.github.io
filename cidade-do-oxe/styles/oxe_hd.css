@@ -49,3 +49,37 @@ body.oxe-modo-rua #oxeCamCtl, body.oxe-gaveta-aberta #oxeCamCtl { display: none 
 #oxeDicaToque { position: fixed; z-index: 70; left: 50%; top: 42%; transform: translate(-50%, -50%); background: rgba(27,23,20,.9); color: #fff1c9;
   border: 1.5px solid #E0A12F; border-radius: 14px; padding: 14px 16px; font: 600 14px/1.5 system-ui, sans-serif; text-align: center; max-width: 82vw;
   box-shadow: 0 6px 18px rgba(0,0,0,.4); transition: opacity .4s; }
+
+/* ===== AUDITORIA 14/11: tablet, PC e celular ===== */
+/* botão de camadas sempre abaixo da faixa do Ato/Mais (antes ficava escondido atrás dela no tablet e no PC) */
+.oxe-camadas { top: calc(min(var(--topo-h), 14vh) + var(--sat) + 54px) !important; }
+/* cartão "O que a vila precisa" nunca cobre a barra de baixo (no tablet em pé tapava o Construir) */
+@media (max-width: 1100px) {
+  #oxe-needs-card { bottom: calc(var(--polegar-h) + var(--sab) + 12px) !important; }
+}
+/* tablet e telas médias: nome da vila não some, indicadores rolam para o lado */
+@media (min-width: 521px) and (max-width: 1100px) {
+  /* duas linhas no topo (como no celular): nome/data/velocidade em cima, indicadores embaixo */
+  :root { --topo-h: 76px; }
+  .oxe-topo { display: block !important; padding-top: calc(6px + var(--sat)) !important; padding-bottom: 6px !important; }
+  .tp-l1 { display: flex !important; margin-bottom: 6px; }
+  .tp-l2 { display: flex !important; }
+  .tp-vila { flex: 1 1 auto !important; max-width: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tp-l2 { overflow-x: auto !important; flex-wrap: nowrap !important; scrollbar-width: none; justify-content: flex-start !important; }
+  .tp-l2::-webkit-scrollbar { display: none; }
+  .tp-l2 > * { flex: 0 0 auto !important; }
+}
+/* aparelhos de toque maiores que celular (tablet): alvos de dedo maiores */
+@media (min-width: 601px) {
+  body.oxe-touch { --polegar-h: 66px; }
+  body.oxe-touch .oxe-chip { height: 34px !important; font-size: 14px !important; }
+  body.oxe-touch #oxeHudV2 button { min-height: 40px !important; font-size: 14px !important; padding: 0 14px !important; }
+  body.oxe-touch #oxeHudV2 .oxe-ato-chip { font-size: 13px !important; padding: 7px 12px !important; }
+  body.oxe-touch .pg-btn { min-width: 64px; font-size: 13px; }
+  body.oxe-touch .gv2-item { min-height: 92px; }
+  body.oxe-touch .gv2-tab { padding: 9px 12px !important; font-size: 15px !important; }
+  body.oxe-touch #oxeCamCtl button { width: 52px; height: 52px; font-size: 22px; }
+  body.oxe-touch #oxe-needs-card { font-size: 13px !important; width: 250px !important; }
+}
+/* a lista da gaveta não termina escondida atrás da barra de baixo */
+.gv2 .gv2-lista, .gv2-grid, .oxe-gaveta .gv2-body { padding-bottom: 24px; }
