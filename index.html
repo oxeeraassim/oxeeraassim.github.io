@@ -13,7 +13,7 @@ var s=document.createElement('style');s.textContent='body{-webkit-user-select:no
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Oxe, era assim? — Portal Oficial</title>
-  <meta name="description" content="Portal oficial do Oxe, era assim?: Biblioteca do Oxe, Arena do Oxe e o Jogo do Oxe. Histórias do Nordeste checadas nas fontes.">
+  <meta name="description" content="Portal oficial do Oxe, era assim?: Biblioteca do Oxe, Arena do Oxe, Jogo do Oxe e Cidade do Oxe 3D. Histórias do Nordeste checadas nas fontes.">
   <meta name="theme-color" content="#1B1714">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -54,6 +54,10 @@ var s=document.createElement('style');s.textContent='body{-webkit-user-select:no
     .capa::before { content:""; position:absolute; left:50%; top:100%; width:520px; height:520px; transform:translate(-50%,-50%); border-radius:50%;
       background:repeating-conic-gradient(from 0deg, rgba(27,23,20,.13) 0deg 6deg, transparent 6deg 14deg); }
     .capa .icone { position:relative; width:74px; height:74px; border-radius:50%; background:var(--papel); border:2.5px solid var(--tinta); display:flex; align-items:center; justify-content:center; font-size:36px; box-shadow:3px 3px 0 var(--tinta); }
+    .c-cidade .capa { background:#3F6B3A; } .c-cidade .rotulo { color:#3F6B3A; } .c-cidade .botao { background:#3F6B3A; color:#FFF6E0; }
+    .selo-teste { position:absolute; top:12px; right:12px; z-index:2; font-family:var(--sans); font-weight:700; font-size:11px; letter-spacing:.1em; text-transform:uppercase; background:var(--ambar); color:var(--tinta); border:2px solid var(--tinta); border-radius:999px; padding:4px 10px; box-shadow:2px 2px 0 var(--tinta); }
+    .aviso-teste { font-family:var(--sans); font-size:13.5px; line-height:1.45; background:#FFF1D0; border:1.5px dashed var(--terra); border-radius:10px; padding:10px 12px; margin-bottom:18px; color:var(--tinta); }
+    .link-fino { display:block; text-align:center; margin-top:10px; font-family:var(--sans); font-size:12.5px; color:var(--muted); word-break:break-all; }
     .c-bib .capa { background:var(--verm); } .c-arena .capa { background:var(--ambar); } .c-jogo .capa { background:var(--azul); }
     .corpo { padding:22px 20px 22px; display:flex; flex-direction:column; flex:1; }
     .rotulo { font-family:var(--sans); font-weight:700; font-size:11.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--verm); }
@@ -147,6 +151,23 @@ var s=document.createElement('style');s.textContent='body{-webkit-user-select:no
             <li><span>📲</span>Instala no celular e joga sem internet</li>
           </ul>
           <a href="/jogo-do-oxe/" class="botao">Jogar o Jogo do Oxe →</a>
+        </div>
+      </article>
+      <article class="cartao c-cidade">
+        <div class="capa"><span class="selo-teste">Em teste</span><div class="icone">🏘️</div></div>
+        <div class="corpo">
+          <div class="rotulo">Construa sua cidade em 3D</div>
+          <h2>Cidade do Oxe</h2>
+          <p class="desc">A sequência do Jogo do Oxe: funde uma vila no Nordeste de 1700 e faça ela crescer até virar metrópole, com Tonho, Zefinha e Cabeça de Vento andando pelas ruas.</p>
+          <ul class="lista">
+            <li><span>🌵</span>Sertão, agreste, mata e litoral, com seca, inverno e mar</li>
+            <li><span>🏗️</span>Roçado, feira, casa de farinha, açude, igreja e muito mais</li>
+            <li><span>🚶</span>Modo Rua 3D: desça e passeie pela vila com os heróis</li>
+            <li><span>📜</span>Fatos checados nas fontes, e lenda sempre contada como lenda</li>
+          </ul>
+          <p class="aviso-teste"><b>Versão de teste.</b> O jogo ainda está em construção e pode ter bugs. Achou algum? Manda no direct do @oxe_eraassim que a gente conserta.</p>
+          <a href="/cidade-do-oxe/" class="botao">Fundar minha cidade →</a>
+          <span class="link-fino">oxeeraassim.github.io/cidade-do-oxe</span>
         </div>
       </article>
     </div>
