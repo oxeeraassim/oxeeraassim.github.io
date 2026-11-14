@@ -83,3 +83,22 @@ body.oxe-modo-rua #oxeCamCtl, body.oxe-gaveta-aberta #oxeCamCtl { display: none 
 }
 /* a lista da gaveta não termina escondida atrás da barra de baixo */
 .gv2 .gv2-lista, .gv2-grid, .oxe-gaveta .gv2-body { padding-bottom: 24px; }
+
+/* ===== REVISÃO 14/11: celular deitado ===== */
+@media (orientation: landscape) and (max-height: 500px) {
+  /* topo numa linha só (antes a 2ª linha de indicadores ficava cortada) */
+  :root { --topo-h: 40px; }
+  .oxe-topo { display: flex !important; align-items: center; gap: 8px; padding-top: calc(3px + var(--sat)) !important; padding-bottom: 3px !important; max-height: calc(var(--topo-h) + var(--sat)) !important; }
+  .tp-l1 { margin-bottom: 0 !important; flex: 0 1 auto !important; min-width: 0; }
+  .tp-l2 { flex: 1 1 auto !important; min-width: 0; }
+  .tp-vila { max-width: 20vw; }
+  /* controles de câmera em linha, à direita da barra de baixo (antes subiam até o botão Mais) */
+  #oxeCamCtl { flex-direction: row !important; gap: 6px !important; bottom: calc(var(--polegar-h, 56px) + env(safe-area-inset-bottom, 0px) + 8px) !important; }
+  #oxeCamCtl button { width: 38px !important; height: 38px !important; font-size: 17px !important; }
+  /* gaveta Construir: categorias numa linha que rola e lista acima da barra de baixo */
+  .oxe-gaveta { bottom: calc(var(--polegar-h, 56px) + var(--sab, 0px) + 6px) !important; overflow-y: auto !important; }
+  .gv2-tabs { flex-wrap: nowrap !important; overflow-x: auto !important; scrollbar-width: none; }
+  .gv2-tabs::-webkit-scrollbar { display: none; }
+  .gv2-item { min-height: 0 !important; }
+  #oxe-needs-card { max-height: 38vh; width: 190px !important; }
+}
