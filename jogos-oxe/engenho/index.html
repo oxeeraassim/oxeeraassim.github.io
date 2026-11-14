@@ -13,29 +13,39 @@ var s=document.createElement('style');s.textContent='body{-webkit-user-select:no
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#1B1714">
-<title>Defenda o Engenho! · Oxe, era assim?</title>
+<title>Defenda o Engenho! · do engenho à fazenda · Oxe, era assim?</title>
+<meta name="description" content="Estratégia em 3D: cuide do engenho, cresça até sítio e fazenda e defenda a vila. Versão de teste.">
 <link rel="stylesheet" href="../comum.css">
 <style>
-#gl,#ov{position:fixed;inset:0;width:100%;height:100%}#ov{pointer-events:none;z-index:5}
-.en-rec{position:fixed;left:0;right:0;top:0;z-index:20;display:flex;gap:6px;align-items:center;padding:calc(6px + env(safe-area-inset-top)) 8px 6px;background:linear-gradient(rgba(27,23,20,.9),rgba(27,23,20,.55));font-family:"IBM Plex Serif",Georgia,serif;color:#EFE4CF;overflow-x:auto;scrollbar-width:none}
-.en-rec::-webkit-scrollbar{display:none}
-.en-r{flex:0 0 auto;display:flex;align-items:center;gap:5px;background:rgba(247,239,223,.12);border:2px solid rgba(224,161,47,.7);border-radius:999px;padding:5px 11px;font-weight:700;font-size:15px;white-space:nowrap}
-.en-onda{margin-left:auto;background:#B9432B;border-color:#1B1714}
-.en-ico{flex:0 0 auto;width:42px;height:42px;border-radius:50%;border:2px solid #E0A12F;background:rgba(27,23,20,.85);color:#EFE4CF;font-size:18px;cursor:pointer;touch-action:manipulation}
+html,body{overscroll-behavior:none}
+#gl,#ov{position:fixed;inset:0;width:100%;height:100%}#gl{touch-action:none}#ov{pointer-events:none;z-index:5}
+.en-rec{position:fixed;left:0;right:0;top:0;z-index:20;display:flex;gap:6px;align-items:center;padding:calc(6px + env(safe-area-inset-top)) 8px 8px;background:linear-gradient(rgba(27,23,20,.92),rgba(27,23,20,.6));font-family:"IBM Plex Serif",Georgia,serif;color:#EFE4CF;flex-wrap:wrap}
+.en-r{flex:0 0 auto;display:flex;align-items:center;gap:4px;background:rgba(247,239,223,.12);border:2px solid rgba(224,161,47,.7);border-radius:999px;padding:4px 9px;font-weight:700;font-size:14px;white-space:nowrap}
+.en-r.din{background:#E0A12F;color:#1B1714;border-color:#1B1714}
+.en-niv{background:#1D3656;border-color:#EFE4CF}
+.en-onda{background:#B9432B;border-color:#1B1714;cursor:pointer}
+.en-esp{flex:1 1 0;min-width:0}
+.en-ico{flex:0 0 auto;width:38px;height:38px;border-radius:50%;border:2px solid #E0A12F;background:rgba(27,23,20,.85);color:#EFE4CF;font-size:16px;cursor:pointer;touch-action:manipulation}
 .en-painel{position:fixed;left:0;right:0;bottom:0;z-index:20;background:#F7EFDF;border-top:4px solid #1B1714;font-family:"IBM Plex Serif",Georgia,serif;color:#1B1714;padding:0 8px calc(8px + env(safe-area-inset-bottom));box-shadow:0 -4px 0 rgba(27,23,20,.2)}
-.en-abas{display:flex;gap:6px;transform:translateY(-22px);margin-bottom:-16px}
-.en-aba{flex:1;max-width:170px;border:3px solid #1B1714;border-radius:14px 14px 0 0;background:#e6d6b5;font:700 15px "IBM Plex Serif",serif;padding:9px 6px;cursor:pointer;touch-action:manipulation;color:#1B1714}
+.en-abas{display:flex;gap:5px;transform:translateY(-22px);margin-bottom:-16px;overflow-x:auto;scrollbar-width:none}.en-abas::-webkit-scrollbar{display:none}
+.en-aba{flex:1 0 auto;max-width:150px;border:3px solid #1B1714;border-radius:14px 14px 0 0;background:#e6d6b5;font:700 14px "IBM Plex Serif",serif;padding:8px 10px;cursor:pointer;touch-action:manipulation;color:#1B1714}
 .en-aba.on{background:#F7EFDF;border-bottom-color:#F7EFDF}
-.en-conteudo{display:flex;gap:8px;overflow-x:auto;padding:4px 2px 2px;scrollbar-width:none;min-height:96px;align-items:stretch}
-.en-conteudo::-webkit-scrollbar{display:none}
-.en-card{flex:0 0 auto;min-width:104px;border:3px solid #1B1714;border-radius:14px;background:#fff8e7;padding:6px 8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font:600 13px/1.2 "IBM Plex Serif",serif;cursor:pointer;touch-action:manipulation;color:#1B1714;text-align:center}
-.en-card .g{font-size:26px;line-height:1}.en-card small{font-weight:400;opacity:.8;font-size:11.5px}
-.en-card.on{background:#E0A12F;box-shadow:3px 3px 0 #1B1714}.en-card.off{opacity:.45}
-.en-job{flex:0 0 auto;min-width:118px;border:3px solid #1B1714;border-radius:14px;background:#fff8e7;padding:6px;display:flex;flex-direction:column;align-items:center;gap:4px;font:600 13px "IBM Plex Serif",serif}
-.en-job .n{font-size:24px;font-weight:700}.en-job .row{display:flex;gap:8px;align-items:center}
-.en-job button{width:40px;height:40px;border-radius:50%;border:3px solid #1B1714;background:#E0A12F;font:700 22px/1 serif;cursor:pointer;touch-action:manipulation;color:#1B1714}
-.en-dica{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(150px + env(safe-area-inset-bottom));z-index:21;background:rgba(27,23,20,.88);color:#fff1c9;border:2px solid #E0A12F;border-radius:999px;padding:8px 16px;font:600 14px "IBM Plex Serif",serif;white-space:nowrap;pointer-events:none;transition:opacity .3s}
-@media (max-width:560px){.en-rec{flex-wrap:wrap;gap:4px;padding-left:6px;padding-right:6px}.en-r{font-size:13px;padding:4px 8px}.en-onda{margin-left:0}.en-ico{width:36px;height:36px;font-size:15px}.en-card,.en-job{min-width:96px}.en-job button{width:36px;height:36px}}
+.en-conteudo{display:flex;gap:8px;overflow-x:auto;padding:4px 2px 2px;scrollbar-width:thin;min-height:100px;align-items:stretch;touch-action:pan-x;-webkit-overflow-scrolling:touch}
+.en-card{flex:0 0 auto;width:112px;border:3px solid #1B1714;border-radius:14px;background:#fff8e7;padding:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font:600 12.5px/1.15 "IBM Plex Serif",serif;cursor:pointer;touch-action:manipulation;color:#1B1714;text-align:center;position:relative}
+.en-card .g{font-size:26px;line-height:1}.en-card small{font-weight:400;opacity:.85;font-size:11px}
+.en-card.on{background:#E0A12F;box-shadow:3px 3px 0 #1B1714}.en-card.off{opacity:.5}.en-card.trava{opacity:.38;filter:grayscale(.7)}
+.en-card .cad{position:absolute;top:3px;right:5px;font-size:12px}
+.en-card.largo{width:170px}.en-card.meta{width:190px;align-items:flex-start;text-align:left}
+.en-card .bar{width:100%;height:7px;border:2px solid #1B1714;border-radius:4px;background:#e6d6b5;overflow:hidden;margin-top:3px}.en-card .bar i{display:block;height:100%;background:#2f9e44}
+.en-job{flex:0 0 auto;min-width:112px;border:3px solid #1B1714;border-radius:14px;background:#fff8e7;padding:6px;display:flex;flex-direction:column;align-items:center;gap:4px;font:600 12.5px "IBM Plex Serif",serif}
+.en-job .n{font-size:22px;font-weight:700;min-width:1.4em;text-align:center}.en-job .row{display:flex;gap:6px;align-items:center}
+.en-job button{width:38px;height:38px;border-radius:50%;border:3px solid #1B1714;background:#E0A12F;font:700 21px/1 serif;cursor:pointer;touch-action:manipulation;color:#1B1714}
+.en-dica{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(158px + env(safe-area-inset-bottom));z-index:21;background:rgba(27,23,20,.9);color:#fff1c9;border:2px solid #E0A12F;border-radius:999px;padding:8px 16px;font:600 14px "IBM Plex Serif",serif;white-space:nowrap;pointer-events:none;transition:opacity .3s;max-width:94vw;overflow:hidden;text-overflow:ellipsis}
+.en-cerca{position:fixed;right:calc(10px + env(safe-area-inset-right));bottom:calc(160px + env(safe-area-inset-bottom));z-index:21;display:flex;gap:6px}
+.en-cerca button{height:42px;border-radius:999px;border:3px solid #1B1714;background:#F7EFDF;box-shadow:3px 3px 0 #1B1714;font:700 13px "IBM Plex Serif",serif;padding:0 12px;cursor:pointer;touch-action:manipulation}
+.en-placa{position:fixed;left:50%;top:38%;transform:translate(-50%,-50%) rotate(-3deg) scale(.6);z-index:42;background:#F7EFDF;border:5px solid #1B1714;box-shadow:10px 10px 0 #1B1714;padding:14px 24px;text-align:center;font-family:"IBM Plex Serif",serif;color:#1B1714;opacity:0;transition:opacity .25s,transform .35s cubic-bezier(.2,1.6,.4,1);pointer-events:none;max-width:88vw}
+.en-placa.on{opacity:1;transform:translate(-50%,-50%) rotate(-3deg) scale(1)}.en-placa h3{margin:0;font-size:clamp(26px,7vw,46px);line-height:1.05;color:#B9432B}.en-placa p{margin:8px 0 0;font-style:italic;font-size:clamp(14px,3.6vw,18px)}
+@media (max-width:560px){.en-r{font-size:12.5px;padding:3px 7px}.en-ico{width:34px;height:34px;font-size:14px}.en-card{width:100px}.en-job{min-width:100px}.en-job button{width:34px;height:34px}}
 </style>
 </head>
 <body>
