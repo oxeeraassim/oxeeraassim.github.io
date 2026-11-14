@@ -106,3 +106,6 @@ body.oxe-modo-rua #oxeCamCtl, body.oxe-gaveta-aberta #oxeCamCtl { display: none 
 #oxm-btn { left: auto !important; right: calc(10px + env(safe-area-inset-right, 0px)) !important; bottom: auto !important;
   top: calc(min(var(--topo-h, 68px), 14vh) + var(--sat, 0px) + 112px) !important; z-index: 30 !important; }
 body.oxe-modo-rua #oxm-btn { display: none !important; }
+/* a caixa invisível das camadas cobria o meio da tela e "roubava" o 2º dedo da pinça (zoom e giro falhavam) */
+.oxe-camadas { pointer-events: none !important; }
+#oxe-ui .oxe-camadas .cam-fab, .oxe-camadas.aberta .cam-lista, .oxe-camadas.aberta .cam-lista * { pointer-events: auto !important; }
