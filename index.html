@@ -74,6 +74,16 @@ var s=document.createElement('style');s.textContent='body{-webkit-user-select:no
     .c-arena .botao { background:var(--verm); color:#FFF6E0; }
     .c-jogo .botao { background:var(--ambar); color:var(--tinta); }
 
+    .arcade { margin:34px auto 0; max-width:1100px; }
+    .arcade h2.tit { font-size:clamp(26px,6vw,34px); margin-bottom:6px; }
+    .arcade .sub { color:var(--muted); font-family:var(--sans); font-size:15px; margin-bottom:16px; }
+    .arc-grade { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr)); gap:16px; }
+    .arc { display:flex; gap:12px; align-items:center; text-decoration:none; color:var(--tinta); background:var(--papel); border:2.5px solid var(--tinta); border-radius:14px; padding:14px; box-shadow:4px 4px 0 var(--tinta); transition:transform .15s, box-shadow .15s; }
+    .arc:hover { transform:translate(-2px,-2px); box-shadow:7px 7px 0 var(--tinta); }
+    .arc .ic { flex:0 0 56px; height:56px; border-radius:50%; border:2.5px solid var(--tinta); display:flex; align-items:center; justify-content:center; font-size:28px; }
+    .arc b { display:block; font-size:18px; line-height:1.15; }
+    .arc small { display:block; font-family:var(--sans); font-size:13px; color:var(--muted); margin-top:3px; line-height:1.35; }
+
     /* ===== Faixa do Instagram ===== */
     .insta { margin:34px auto 0; max-width:1100px; background:var(--tinta); color:var(--creme); border-radius:16px; padding:22px 20px; display:flex; flex-wrap:wrap; gap:14px; align-items:center; justify-content:space-between; border:2.5px solid var(--tinta); box-shadow:6px 6px 0 var(--ambar); }
     .insta p { font-size:17px; line-height:1.45; max-width:620px; }
@@ -171,6 +181,17 @@ var s=document.createElement('style');s.textContent='body{-webkit-user-select:no
         </div>
       </article>
     </div>
+
+    <section class="arcade" id="arcade">
+      <h2 class="tit">🕹️ Arcade do Oxe</h2>
+      <p class="sub">Jogos rápidos em 3D, direto no navegador, no PC ou no celular. Sem cadastro.</p>
+      <div class="arc-grade">
+        <a class="arc" href="/jogos-oxe/lendas/"><span class="ic" style="background:#B9432B">🥊</span><span><b>Lendas do Oxe 3D</b><small>Luta de lendas e heróis, solo ou em dupla com troca</small></span></a>
+        <a class="arc" href="/jogos-oxe/engenho/"><span class="ic" style="background:#3F6B3A">🏚️</span><span><b>Defenda o Engenho</b><small>Construa, cresça até fazenda e aguente as noites de lenda</small></span></a>
+        <a class="arc" href="/jogos-oxe/pau-de-arara/"><span class="ic" style="background:#E0A12F">🚚</span><span><b>Pau-de-Arara Radical</b><small>Suba ladeira de caminhão, carroça ou jegue</small></span></a>
+        <a class="arc" href="/jogos-oxe/galinha/"><span class="ic" style="background:#1D3656">🐔</span><span><b>Galinha Arretada</b><small>Bote a cidade de pernas pro ar e enfrente os chefões</small></span></a>
+      </div>
+    </section>
 
     <section class="insta">
       <p>Os episódios completos saem no Instagram. <b>Comenta lá</b> o que você quer ver na próxima viagem.</p>
