@@ -27,6 +27,7 @@ html,body{overscroll-behavior:none}
 .ga-chips{display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:5px;font-weight:700;font-size:13px}
 .ga-dir{position:fixed;right:calc(8px + env(safe-area-inset-right));top:calc(8px + env(safe-area-inset-top));z-index:20;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px;max-width:46vw}
 .ga-dir button{height:40px;border-radius:999px;border:3px solid #1B1714;background:#F7EFDF;box-shadow:3px 3px 0 #1B1714;font:700 13px "IBM Plex Serif",serif;color:#1B1714;padding:0 11px;cursor:pointer;touch-action:manipulation;white-space:nowrap}
+.ga-dir button.alerta{position:relative}.ga-dir button.alerta:after{content:'';position:absolute;top:-4px;right:-4px;width:14px;height:14px;border-radius:50%;background:#e03131;border:2px solid #1B1714}
 .ga-dir button:active{transform:translate(2px,2px);box-shadow:1px 1px 0 #1B1714}
 @media (max-width:640px){.ga-dir button{padding:0;width:40px;font-size:17px}.ga-dir button span{display:none}}
 .ga-boss{position:fixed;left:50%;transform:translateX(-50%);top:calc(64px + env(safe-area-inset-top));z-index:19;width:min(420px,70vw);text-align:center;font:700 14px "IBM Plex Serif",serif;color:#fff;text-shadow:2px 2px 0 #1B1714;pointer-events:none}
