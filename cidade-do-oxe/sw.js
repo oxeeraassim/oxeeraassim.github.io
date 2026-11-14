@@ -5,7 +5,7 @@
  */
 'use strict';
 
-const VERSION = 'pub-mwghwuyt'; // Altere a cada deploy para invalidar o cache antigo
+const VERSION = 'pub-mwgiiun8'; // Altere a cada deploy para invalidar o cache antigo
 const CACHE_PREFIX = 'cidade-do-oxe-';
 const CACHE_NAME = CACHE_PREFIX + VERSION;
 
