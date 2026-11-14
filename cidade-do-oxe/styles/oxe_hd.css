@@ -102,3 +102,7 @@ body.oxe-modo-rua #oxeCamCtl, body.oxe-gaveta-aberta #oxeCamCtl { display: none 
   .gv2-item { min-height: 0 !important; }
   #oxe-needs-card { max-height: 38vh; width: 190px !important; }
 }
+/* botão 🧩 Melhorias: no canto direito, abaixo do botão de camadas (no canto de baixo tampava a barra e o cartão da vila) */
+#oxm-btn { left: auto !important; right: calc(10px + env(safe-area-inset-right, 0px)) !important; bottom: auto !important;
+  top: calc(min(var(--topo-h, 68px), 14vh) + var(--sat, 0px) + 112px) !important; z-index: 30 !important; }
+body.oxe-modo-rua #oxm-btn { display: none !important; }
