@@ -20,7 +20,7 @@ var s=document.createElement('style');s.textContent='body{-webkit-user-select:no
 <style>
 #gl{position:fixed;inset:0;width:100%;height:100%;display:block}
 #flash{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:25;transition:opacity .25s}
-.lb-topo{position:fixed;left:0;right:0;top:0;z-index:20;padding:calc(8px + env(safe-area-inset-top)) 10px 6px;display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:start;font-family:"IBM Plex Serif",Georgia,serif;pointer-events:none}
+.lb-topo{position:fixed;left:0;right:0;top:0;z-index:26;padding:calc(8px + env(safe-area-inset-top)) 10px 6px;display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:start;font-family:"IBM Plex Serif",Georgia,serif;pointer-events:none}
 .lb-lado{display:grid;grid-template-columns:auto 1fr;gap:3px 8px;align-items:center}
 .lb-lado.dir{grid-template-columns:1fr auto}.lb-lado.dir .lb-ret{order:2}.lb-lado.dir .lb-info{order:1;align-items:flex-end}
 .lb-ret{width:clamp(40px,10vw,58px);height:clamp(40px,10vw,58px);border-radius:12px;border:3px solid #1B1714;background:#F7EFDF;box-shadow:3px 3px 0 #1B1714;object-fit:cover}
@@ -88,14 +88,27 @@ kbd{display:inline-block;min-width:22px;padding:1px 6px;border:2px solid #1B1714
 @media (max-width:640px){.lb-treino{top:auto;bottom:calc(230px + env(safe-area-inset-bottom));font-size:11px;padding:6px 8px}}
 @media (max-width:420px){.lb-bts{transform:scale(.86);transform-origin:right bottom}}
 @media (max-height:500px){.sel h1{font-size:22px}.sel .sub{margin:2px 0 4px}#prev{width:84px;height:84px}.sel-desc p{font-size:12.5px}.sel-rol{padding:8px 12px 6px}.sel-pe{padding:6px}.sel-pe .ox-bt{min-height:40px;padding:6px 14px}.grade{grid-template-columns:repeat(8,1fr)}}
+
+/* controle por gestos */
+.lb-gestos{position:fixed;inset:0;z-index:24;touch-action:none;-webkit-user-select:none;user-select:none}
+.lb-anel{position:fixed;width:112px;height:112px;margin:-56px 0 0 -56px;border-radius:50%;border:2px solid rgba(239,228,207,.55);background:rgba(27,23,20,.18);opacity:0;transition:opacity .12s;pointer-events:none}
+.lb-anel.on{opacity:1}.lb-anel i{position:absolute;left:50%;top:50%;width:46px;height:46px;margin:-23px 0 0 -23px;border-radius:50%;background:rgba(224,161,47,.85);box-shadow:0 2px 8px rgba(0,0,0,.35)}
+.lb-gesto-rot{position:fixed;transform:translate(-50%,-50%);font:700 18px "IBM Plex Serif",serif;color:#fff;-webkit-text-stroke:1.5px #1B1714;pointer-events:none;animation:lbRot .5s ease-out forwards;white-space:nowrap}
+@keyframes lbRot{from{opacity:1;transform:translate(-50%,-50%) scale(.8)}to{opacity:0;transform:translate(-50%,-120%) scale(1.15)}}
+.lb-dica{position:fixed;left:0;right:0;bottom:calc(14px + env(safe-area-inset-bottom));display:flex;justify-content:space-between;gap:10px;padding:0 12px;opacity:0;transition:opacity .4s;pointer-events:none}
+.lb-dica.on{opacity:1}.lb-dica div{background:rgba(27,23,20,.78);color:#EFE4CF;border-radius:12px;padding:8px 12px;font:13px/1.35 system-ui;max-width:46%}.lb-dica b{display:block;color:#E0A12F;font-size:14px;margin-bottom:2px}
+body.lb-modo-gestos .lb-bts .ox-toque:not(.troca){display:none}
+body.lb-modo-gestos .lb-bts .ox-toque.esp.pronto{display:flex;left:auto!important;right:6px;top:auto!important;bottom:150px;width:96px!important;height:96px!important;font-size:17px;animation:lbPulsa .8s infinite alternate}
+@keyframes lbPulsa{from{transform:scale(1)}to{transform:scale(1.08)}}
 </style>
 </head>
 <body>
 <canvas id="gl"></canvas><div id="flash"></div>
 <script src="../vendor/three.min.js"></script>
 <script src="../comum.js"></script>
+<script src="../vendor/GLTFLoader.js"></script>
+<script src="../vendor/SkeletonUtils.js"></script>
+<script src="lutador3d.js"></script>
 <script src="jogo.js"></script>
-<script src="/oxe-caderneta.js" defer></script>
-<script src="/oxe-qualidade.js" defer></script>
 </body>
 </html>
