@@ -65,6 +65,12 @@ body.compacto .en-dica{font-size:12.5px;padding:6px 12px}
 body.compacto .en-mini{width:84px;height:84px}
 @media (orientation:landscape) and (max-height:520px){.en-dica{top:calc(var(--topoH,44px) + 8px);bottom:auto}.en-painel{left:auto;right:0;width:min(560px,62vw);border-left:4px solid #1B1714;border-radius:14px 0 0 0}.en-conteudo{min-height:68px}.en-dica{left:30%}.en-mini{width:76px;height:76px}}
 </style>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<script src="/oxe-pwa.js" defer></script>
 </head>
 <body>
 <canvas id="gl"></canvas><canvas id="ov"></canvas>

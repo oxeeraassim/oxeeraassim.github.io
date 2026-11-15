@@ -1,169 +1,35 @@
-/**
- * SERVICE WORKER — OXE! 2.0: A Grande Jornada dos Nove Sóis
- * Estratégia:
- *  - HTML / JS / JSON / navegação  -> NETWORK-FIRST (corrige B16: nunca servir código velho)
- *  - Imagens / ícones / demais      -> STALE-WHILE-REVALIDATE
- *  - Offline                        -> fallback para o cache (e index.html em navegação)
+/* Oxe — service worker dos jogos (um por pasta de jogo)
+ * - Páginas, scripts e dados: busca na internet primeiro (sempre a versão mais nova) e guarda cópia para jogar sem internet.
+ * - Arquivos pesados (modelos 3D, imagens, fontes, bibliotecas): usa a cópia guardada e atualiza por trás.
+ * - VERSION muda sozinha a cada publicação (ferramentas/build_protegido.js), o que apaga o cache velho.
  */
+'use strict';
+const VERSION = 'pub-mwhujhty';
+const PREFIXO = 'oxe-' + new URL('./', self.location.href).pathname.replace(/[^a-z0-9]+/gi, '-') ;
+const CACHE = PREFIXO + VERSION;
+const BASICO = ['./', './index.html', './manifest.webmanifest'];
 
-const CACHE_NAME = 'oxe-jogo-v50';
-const ASSETS_TO_CACHE = [
-  './',
-  './index.html',
-  './game.js',
-  './levels.js',
-  './graphics_hd.js',
-  './art_v3.js',
-  './audio.js',
-  './dados/equilibrio.js',
-  './oxe-telemetria.js',
-  './oxe-ranking.js',
-  './regulamento.html',
-  './manifest.json',
-  './icon-192.png',
-  './icon-512.png',
-  './icon.svg'
-];
-
-const NETWORK_TIMEOUT_MS = 4000;
-
-// ===================== INSTALL =====================
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      // cache: 'reload' ignora o cache HTTP do navegador -> garante arquivos frescos
-      return Promise.all(
-        ASSETS_TO_CACHE.map((url) =>
-          fetch(new Request(url, { cache: 'reload' }))
-            .then((res) => {
-              if (res && res.ok) return cache.put(url, res);
-              return null;
-            })
-            .catch((err) => {
-              console.warn('[SW] Falha ao pré-cachear', url, err);
-              return null;
-            })
-        )
-      );
-    }).then(() => self.skipWaiting())
-  );
+self.addEventListener('install', function (e) {
+  e.waitUntil(caches.open(CACHE).then(function (c) { return Promise.all(BASICO.map(function (u) { return fetch(new Request(u, { cache: 'reload' })).then(function (r) { if (r.ok) return c.put(u, r); }).catch(function () {}); })); }));
+  self.skipWaiting();
 });
-
-// ===================== ACTIVATE =====================
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys()
-      .then((keys) => Promise.all(
-        keys.map((key) => (key !== CACHE_NAME ? caches.delete(key) : null))
-      ))
-      .then(() => self.clients.claim())
-      .then(() => self.clients.matchAll({ type: 'window', includeUncontrolled: true }))
-      .then((clients) => {
-        clients.forEach((client) => {
-          try {
-            client.postMessage({ type: 'SW_UPDATED', version: CACHE_NAME });
-          } catch (e) {}
-        });
-      })
-  );
+self.addEventListener('activate', function (e) {
+  e.waitUntil(caches.keys().then(function (ks) { return Promise.all(ks.filter(function (k) { return (k.indexOf(PREFIXO) === 0 && k !== CACHE) || k.indexOf('oxe-') !== 0; }).map(function (k) { return caches.delete(k); })); }).then(function () { return self.clients.claim(); }));
 });
+self.addEventListener('message', function (e) { if (e.data === 'pular-espera') self.skipWaiting(); });
 
-// ===================== MENSAGENS =====================
-self.addEventListener('message', (event) => {
-  const data = event.data || {};
-  if (data.type === 'SKIP_WAITING') {
-    self.skipWaiting();
-  } else if (data.type === 'GET_VERSION' && event.source) {
-    try { event.source.postMessage({ type: 'SW_VERSION', version: CACHE_NAME }); } catch (e) {}
+var PESADO = /\.(glb|gltf|png|jpe?g|webp|gif|svg|mp3|ogg|wav|woff2?|ttf)(\?|$)|\/vendor\//i;
+function guarda(req, res) { if (res && res.ok && (res.type === 'basic' || res.type === 'cors')) { var cp = res.clone(); caches.open(CACHE).then(function (c) { c.put(req, cp); }); } return res; }
+self.addEventListener('fetch', function (e) {
+  var req = e.request; if (req.method !== 'GET') return;
+  var url = new URL(req.url);
+  if (url.origin !== location.origin && !/fonts\.(googleapis|gstatic)\.com$/.test(url.hostname)) return;
+  if (/\/(api|ranking)\//.test(url.pathname)) return;
+  if (PESADO.test(url.pathname) || url.origin !== location.origin) {
+    e.respondWith(caches.match(req).then(function (c) { var rede = fetch(req).then(function (r) { return guarda(req, r); }).catch(function () { return c; }); return c || rede; }));
+    return;
   }
-});
-
-// ===================== HELPERS =====================
-function isCodeRequest(request, url) {
-  if (request.mode === 'navigate') return true;
-  const dest = request.destination;
-  if (dest === 'document' || dest === 'script' || dest === 'manifest') return true;
-  return /\.(html?|js|mjs|json|webmanifest)$/i.test(url.pathname) || url.pathname.endsWith('/');
-}
-
-function fetchWithTimeout(request, ms) {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error('timeout')), ms);
-    fetch(request, { cache: 'no-store' }).then((res) => {
-      clearTimeout(timer);
-      resolve(res);
-    }).catch((err) => {
-      clearTimeout(timer);
-      reject(err);
-    });
-  });
-}
-
-function putInCache(request, response) {
-  if (!response || !response.ok || response.type === 'opaque') return Promise.resolve();
-  const copy = response.clone();
-  return caches.open(CACHE_NAME)
-    .then((cache) => cache.put(request, copy))
-    .catch(() => {});
-}
-
-async function networkFirst(event) {
-  const request = event.request;
-  try {
-    const response = await fetchWithTimeout(request, NETWORK_TIMEOUT_MS);
-    if (response && response.ok) {
-      event.waitUntil(putInCache(request, response));
-    }
-    return response;
-  } catch (err) {
-    const cached = await caches.match(request, { ignoreSearch: true });
-    if (cached) return cached;
-    if (request.mode === 'navigate') {
-      const fallback = (await caches.match('./index.html')) || (await caches.match('./'));
-      if (fallback) return fallback;
-    }
-    return new Response('Offline — recurso indisponível.', {
-      status: 503,
-      statusText: 'Offline',
-      headers: { 'Content-Type': 'text/plain; charset=utf-8' }
-    });
-  }
-}
-
-async function staleWhileRevalidate(event) {
-  const request = event.request;
-  const cached = await caches.match(request);
-  const networkPromise = fetch(request).then((response) => {
-    if (response && response.ok) {
-      event.waitUntil(putInCache(request, response));
-    }
-    return response;
-  }).catch(() => null);
-
-  if (cached) {
-    event.waitUntil(networkPromise);
-    return cached;
-  }
-  const net = await networkPromise;
-  if (net) return net;
-  return new Response('', { status: 504, statusText: 'Offline' });
-}
-
-// ===================== FETCH =====================
-self.addEventListener('fetch', (event) => {
-  const request = event.request;
-  if (request.method !== 'GET') return;
-
-  let url;
-  try { url = new URL(request.url); } catch (e) { return; }
-
-  // Ignora extensões, data:, blob: e origens externas
-  if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
-  if (url.origin !== self.location.origin) return;
-
-  if (isCodeRequest(request, url)) {
-    event.respondWith(networkFirst(event));
-  } else {
-    event.respondWith(staleWhileRevalidate(event));
-  }
+  e.respondWith(fetch(req, { cache: 'no-cache' }).then(function (r) { return guarda(req, r); }).catch(function () {
+    return caches.match(req, { ignoreSearch: true }).then(function (c) { return c || (req.mode === 'navigate' ? caches.match('./index.html').then(function (i) { return i || caches.match('./'); }) : undefined); });
+  }));
 });

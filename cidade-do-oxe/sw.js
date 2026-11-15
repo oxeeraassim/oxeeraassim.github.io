@@ -1,170 +1,35 @@
-/* Oxe! Metrópole 3D — Service Worker standalone
- * Escopo: a pasta onde este arquivo está (/…/cidade-do-oxe/).
- * Não interfere em /jogo-do-oxe/sw.js: o escopo é próprio e os caches
- * usam prefixo exclusivo (o Cache Storage é compartilhado por origem).
+/* Oxe — service worker dos jogos (um por pasta de jogo)
+ * - Páginas, scripts e dados: busca na internet primeiro (sempre a versão mais nova) e guarda cópia para jogar sem internet.
+ * - Arquivos pesados (modelos 3D, imagens, fontes, bibliotecas): usa a cópia guardada e atualiza por trás.
+ * - VERSION muda sozinha a cada publicação (ferramentas/build_protegido.js), o que apaga o cache velho.
  */
 'use strict';
+const VERSION = 'pub-mwhuja9t';
+const PREFIXO = 'oxe-' + new URL('./', self.location.href).pathname.replace(/[^a-z0-9]+/gi, '-') ;
+const CACHE = PREFIXO + VERSION;
+const BASICO = ['./', './index.html', './manifest.webmanifest'];
 
-const VERSION = 'pub-mwhtf6cf'; // Altere a cada deploy para invalidar o cache antigo
-const CACHE_PREFIX = 'cidade-do-oxe-';
-const CACHE_NAME = CACHE_PREFIX + VERSION;
-
-const SCOPE_URL = new URL('./', self.location.href);
-const INDEX_URL = new URL('./index.html', SCOPE_URL).href;
-
-const PRECACHE = [
-  './',
-  './index.html',
-  './manifest.webmanifest',
-  './styles/oxe_ui.css',
-  './styles/oxe_hd.css',
-  './vendor/three.min.js',
-  './js/textures_oxe.js',
-  './js/herois_oxe_3d.js',
-  './js/visual_oxe_hd.js',
-  './js/collision_oxe.js',
-  './map_data.js',
-  './game_data.js',
-  './js/sim_engine.js',
-  './js/world_3d.js',
-  './js/roads_vehicles_3d.js',
-  './js/structures_ext_3d.js',
-  './js/audio_oxe.js',
-  './js/street_mode.js',
-  './js/ui_campanha.js',
-  './js/oxe_bridge.js',
-  './js/fable_melhorias_40.js',
-  './js/oxe_recursos.js',
-  './js/cidade_jogo.js'
-];
-
-const OFFLINE_HTML = `<!doctype html>
-<html lang="pt-BR">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Oxe! Metrópole 3D — offline</title>
-<style>
-  html,body{height:100%;margin:0}
-  body{display:flex;align-items:center;justify-content:center;
-       background:#F2E8D5;color:#1B1714;
-       font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-       text-align:center;padding:24px;box-sizing:border-box}
-  h1{font-size:1.6rem;margin:0 0 .5rem}
-  p{margin:0 0 1.25rem;opacity:.8}
-  button{background:#1B1714;color:#F2E8D5;border:0;border-radius:8px;
-         padding:.75rem 1.5rem;font-size:1rem;cursor:pointer}
-</style>
-</head>
-<body>
-  <main>
-    <h1>Oxe! Você está offline</h1>
-    <p>Não foi possível carregar a Metrópole 3D agora. Verifique a conexão e tente de novo.</p>
-    <button onclick="location.reload()">Tentar novamente</button>
-  </main>
-</body>
-</html>`;
-
-/* ---------- install: pré-cache ---------- */
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) =>
-        // cache: 'reload' ignora o cache HTTP e garante arquivos frescos
-        cache.addAll(PRECACHE.map((url) => new Request(url, { cache: 'reload' })))
-      )
-      .then(() => self.skipWaiting())
-  );
+self.addEventListener('install', function (e) {
+  e.waitUntil(caches.open(CACHE).then(function (c) { return Promise.all(BASICO.map(function (u) { return fetch(new Request(u, { cache: 'reload' })).then(function (r) { if (r.ok) return c.put(u, r); }).catch(function () {}); })); }));
+  self.skipWaiting();
 });
-
-/* ---------- activate: remove versões antigas (somente as deste app) ---------- */
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys()
-      .then((keys) =>
-        Promise.all(
-          keys
-            .filter((key) => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME)
-            .map((key) => caches.delete(key))
-        )
-      )
-      .then(() => self.clients.claim())
-  );
+self.addEventListener('activate', function (e) {
+  e.waitUntil(caches.keys().then(function (ks) { return Promise.all(ks.filter(function (k) { return (k.indexOf(PREFIXO) === 0 && k !== CACHE) || k.indexOf('oxe-') !== 0; }).map(function (k) { return caches.delete(k); })); }).then(function () { return self.clients.claim(); }));
 });
+self.addEventListener('message', function (e) { if (e.data === 'pular-espera') self.skipWaiting(); });
 
-/* ---------- fetch: cache-first + fallback offline ---------- */
-self.addEventListener('fetch', (event) => {
-  const request = event.request;
-
-  if (request.method !== 'GET') return;
-  if (request.headers.has('range')) return;
-
-  const url = new URL(request.url);
-
-  // Só trata requisições da mesma origem e dentro de /cidade-do-oxe/
-  if (url.origin !== SCOPE_URL.origin) return;
-  if (!url.pathname.startsWith(SCOPE_URL.pathname)) return;
-
-  // UPGRADE: página e código sempre frescos quando há internet (rede primeiro, cache se offline);
-  // texturas e biblioteca 3D continuam cache-first (rápido). Acaba o "recarregar duas vezes".
-  const fresco = request.mode === 'navigate' || /\.(html?|js|css|json|webmanifest)$/i.test(url.pathname) && !/\/vendor\//.test(url.pathname);
-  event.respondWith(fresco ? networkFirst(request) : cacheFirst(request));
-});
-
-async function networkFirst(request) {
-  const cache = await caches.open(CACHE_NAME);
-  const isNavigation = request.mode === 'navigate';
-  try {
-    const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 6000);
-    const response = await fetch(request, { cache: 'no-cache', signal: ctl.signal });
-    clearTimeout(t);
-    if (response && response.ok && response.type === 'basic' && !response.redirected) cache.put(request, response.clone()).catch(() => {});
-    return response;
-  } catch (err) {
-    const cached = await cache.match(request, { ignoreSearch: isNavigation });
-    if (cached) return cached;
-    return cacheFirst(request);
+var PESADO = /\.(glb|gltf|png|jpe?g|webp|gif|svg|mp3|ogg|wav|woff2?|ttf)(\?|$)|\/vendor\//i;
+function guarda(req, res) { if (res && res.ok && (res.type === 'basic' || res.type === 'cors')) { var cp = res.clone(); caches.open(CACHE).then(function (c) { c.put(req, cp); }); } return res; }
+self.addEventListener('fetch', function (e) {
+  var req = e.request; if (req.method !== 'GET') return;
+  var url = new URL(req.url);
+  if (url.origin !== location.origin && !/fonts\.(googleapis|gstatic)\.com$/.test(url.hostname)) return;
+  if (/\/(api|ranking)\//.test(url.pathname)) return;
+  if (PESADO.test(url.pathname) || url.origin !== location.origin) {
+    e.respondWith(caches.match(req).then(function (c) { var rede = fetch(req).then(function (r) { return guarda(req, r); }).catch(function () { return c; }); return c || rede; }));
+    return;
   }
-}
-
-async function cacheFirst(request) {
-  // Usa apenas o cache deste app (nunca caches.match global)
-  const cache = await caches.open(CACHE_NAME);
-  const isNavigation = request.mode === 'navigate';
-
-  const cached = await cache.match(request, { ignoreSearch: isNavigation });
-  if (cached) return cached;
-
-  try {
-    const response = await fetch(request);
-
-    if (response && response.ok && response.type === 'basic' && !response.redirected) {
-      cache.put(request, response.clone()).catch(() => {});
-    }
-    return response;
-  } catch (err) {
-    if (isNavigation) {
-      const shell = (await cache.match(INDEX_URL)) || (await cache.match(SCOPE_URL.href));
-      if (shell) return shell;
-
-      return new Response(OFFLINE_HTML, {
-        status: 503,
-        statusText: 'Offline',
-        headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }
-      });
-    }
-
-    return new Response('', {
-      status: 503,
-      statusText: 'Offline',
-      headers: { 'Cache-Control': 'no-store' }
-    });
-  }
-}
-
-/* ---------- permite que a página force a atualização ---------- */
-self.addEventListener('message', (event) => {
-  if (event.data === 'SKIP_WAITING' || (event.data && event.data.type === 'SKIP_WAITING')) {
-    self.skipWaiting();
-  }
+  e.respondWith(fetch(req, { cache: 'no-cache' }).then(function (r) { return guarda(req, r); }).catch(function () {
+    return caches.match(req, { ignoreSearch: true }).then(function (c) { return c || (req.mode === 'navigate' ? caches.match('./index.html').then(function (i) { return i || caches.match('./'); }) : undefined); });
+  }));
 });
