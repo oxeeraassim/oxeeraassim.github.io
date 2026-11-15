@@ -90,6 +90,7 @@ kbd{display:inline-block;min-width:22px;padding:1px 6px;border:2px solid #1B1714
 @media (max-height:500px){.sel h1{font-size:22px}.sel .sub{margin:2px 0 4px}#prev{width:84px;height:84px}.sel-desc p{font-size:12.5px}.sel-rol{padding:8px 12px 6px}.sel-pe{padding:6px}.sel-pe .ox-bt{min-height:40px;padding:6px 14px}.grade{grid-template-columns:repeat(8,1fr)}}
 
 /* controle por gestos */
+body:not(.ox-pc) .cj-cel{order:-1}
 .lb-gestos{position:fixed;inset:0;z-index:24;touch-action:none;-webkit-user-select:none;user-select:none}
 .lb-anel{position:fixed;width:112px;height:112px;margin:-56px 0 0 -56px;border-radius:50%;border:2px solid rgba(239,228,207,.55);background:rgba(27,23,20,.18);opacity:0;transition:opacity .12s;pointer-events:none}
 .lb-anel.on{opacity:1}.lb-anel i{position:absolute;left:50%;top:50%;width:46px;height:46px;margin:-23px 0 0 -23px;border-radius:50%;background:rgba(224,161,47,.85);box-shadow:0 2px 8px rgba(0,0,0,.35)}
@@ -98,7 +99,8 @@ kbd{display:inline-block;min-width:22px;padding:1px 6px;border:2px solid #1B1714
 .lb-dica{position:fixed;left:0;right:0;bottom:calc(14px + env(safe-area-inset-bottom));display:flex;justify-content:space-between;gap:10px;padding:0 12px;opacity:0;transition:opacity .4s;pointer-events:none}
 .lb-dica.on{opacity:1}.lb-dica div{background:rgba(27,23,20,.78);color:#EFE4CF;border-radius:12px;padding:8px 12px;font:13px/1.35 system-ui;max-width:46%}.lb-dica b{display:block;color:#E0A12F;font-size:14px;margin-bottom:2px}
 body.lb-modo-gestos .lb-bts .ox-toque:not(.troca){display:none}
-body.lb-modo-gestos .lb-bts .ox-toque.esp.pronto{display:flex;left:auto!important;right:6px;top:auto!important;bottom:150px;width:96px!important;height:96px!important;font-size:17px;animation:lbPulsa .8s infinite alternate}
+body.lb-modo-gestos .lb-bts .ox-toque.esp.pronto{display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.05;position:fixed;left:auto!important;right:calc(10px + env(safe-area-inset-right));top:auto!important;bottom:calc(40vh - 48px);width:96px!important;height:96px!important;font-size:16px;animation:lbPulsa .8s infinite alternate}
+body.lb-modo-gestos .lb-bts .ox-toque.troca{position:fixed;left:calc(10px + env(safe-area-inset-left))!important;top:calc(145px + env(safe-area-inset-top))!important;right:auto!important;bottom:auto!important;width:52px!important;height:52px!important}
 @keyframes lbPulsa{from{transform:scale(1)}to{transform:scale(1.08)}}
 </style>
 </head>
