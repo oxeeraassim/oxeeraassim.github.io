@@ -50,7 +50,7 @@ var s=document.createElement('style');s.textContent='body{-webkit-user-select:no
 #joy em{position:absolute;color:rgba(255,241,201,.75);font:700 13px serif;font-style:normal;pointer-events:none}
 .lb-bts{position:fixed;right:calc(10px + env(safe-area-inset-right));bottom:calc(12px + env(safe-area-inset-bottom));width:266px;height:202px;z-index:30;pointer-events:none}
 .lb-bts .ox-toque{position:absolute;pointer-events:auto;font-size:14px;line-height:1.05;text-align:center;border-radius:50%}
-.lb-bts .ox-toque.esp{background:rgba(185,67,43,.75)}.lb-bts .ox-toque.esp.pronto{background:#E0A12F;color:#1B1714;box-shadow:0 0 16px #ffd43b}
+.lb-bts .ox-toque.poder{background:rgba(29,54,86,.88);font-size:13px;line-height:1}.lb-bts .ox-toque.poder.recarga{opacity:.42;filter:grayscale(.7)}.lb-bts .ox-toque.esp{background:rgba(185,67,43,.75)}.lb-bts .ox-toque.esp.pronto{background:#E0A12F;color:#1B1714;box-shadow:0 0 16px #ffd43b}
 .lb-placa{position:fixed;left:50%;top:44%;transform:translate(-50%,-50%) rotate(-3deg) scale(.6);z-index:42;background:#F7EFDF;border:5px solid #1B1714;box-shadow:10px 10px 0 #1B1714;padding:16px 26px;text-align:center;font-family:"IBM Plex Serif",serif;color:#1B1714;opacity:0;transition:opacity .25s,transform .35s cubic-bezier(.2,1.6,.4,1);pointer-events:none;max-width:86vw}
 .lb-placa.on{opacity:1;transform:translate(-50%,-50%) rotate(-3deg) scale(1)}
 .lb-placa h3{margin:0;font-size:clamp(34px,9vw,62px);line-height:1;color:#B9432B;letter-spacing:.02em}
@@ -119,6 +119,7 @@ body.lb-modo-gestos .lb-bts .ox-toque.troca{position:fixed;left:calc(10px + env(
 <script src="../vendor/GLTFLoader.js"></script>
 <script src="../vendor/SkeletonUtils.js"></script>
 <script src="lutador3d.js"></script>
-<script src="jogo.js"></script>
+<script src="/oxe-guia.js"></script>
+<script src="jogo.js?v=guia1"></script>
 </body>
 </html>
