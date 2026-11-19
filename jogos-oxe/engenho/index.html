@@ -74,15 +74,19 @@ html,body{overscroll-behavior:none}
 .en-aba.en-min{flex:0 0 auto;width:44px;padding:8px 0;text-align:center}
 .en-painel.min .en-conteudo{display:none}.en-painel.min{padding-bottom:calc(2px + env(safe-area-inset-bottom))}.en-painel.min .en-abas{transform:translateY(-4px);margin-bottom:0}
 body.compacto .en-rec{flex-wrap:wrap;gap:4px 4px;padding:calc(4px + env(safe-area-inset-top)) 6px 5px}body.compacto .en-rec::-webkit-scrollbar{display:none}
-body.compacto .en-r{font-size:12px;padding:2px 6px;border-width:1.5px}body.compacto .en-ico{width:30px;height:30px;font-size:13px;border-width:1.5px}body.compacto .en-esp{display:none}
+body.compacto .en-r{font-size:12px;padding:2px 6px;border-width:1.5px}body.compacto .en-ico{width:38px;height:38px;font-size:16px;border-width:1.5px}body.compacto .en-esp{display:none}
 body.compacto .en-aba{font-size:12.5px;padding:6px 8px;border-width:2.5px}
 body.compacto .en-conteudo{min-height:76px;gap:6px}
 body.compacto .en-card{width:94px;padding:4px;font-size:11.5px;border-width:2.5px}body.compacto .en-card .g{font-size:21px}body.compacto .en-card small{font-size:10px}body.compacto .en-card.largo{width:140px}body.compacto .en-card.meta{width:160px}
-body.compacto .en-job{min-width:92px;padding:4px;border-width:2.5px}body.compacto .en-job .n{font-size:18px}body.compacto .en-job button{width:32px;height:32px;font-size:18px;border-width:2.5px}
+body.compacto .en-job{min-width:92px;padding:4px;border-width:2.5px}body.compacto .en-job .n{font-size:18px}body.compacto .en-job button{width:38px;height:38px;font-size:20px;border-width:2.5px}
 body.compacto .en-cerca button{height:38px;font-size:15px;padding:0 10px;border-width:2.5px}
 body.compacto .en-dica{font-size:12.5px;padding:6px 12px}
 body.compacto .en-mini{width:84px;height:84px}
 @media (orientation:landscape) and (max-height:520px){.en-dica{top:calc(var(--topoH,44px) + 8px);bottom:auto}.en-painel{left:auto;right:0;width:min(560px,62vw);border-left:4px solid #1B1714;border-radius:14px 0 0 0}.en-conteudo{min-height:68px}.en-dica{left:30%}.en-mini{width:76px;height:76px}}
+/* toque 2026-11: celular em pé: as 5 abas cabem na largura (sem esconder Metas) */
+@media (max-width:440px){body.compacto .en-aba{font-size:11px;padding:9px 4px;letter-spacing:0}body.compacto .en-aba.en-min{width:34px}.en-abas{gap:2px}}
+/* toque 2026-11: tablet com tudo maior (painel, barra de cima e botões) */
+@media (pointer:coarse) and (min-width:700px) and (min-height:700px){.en-painel,.en-rec{zoom:1.22}}
 </style>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png">

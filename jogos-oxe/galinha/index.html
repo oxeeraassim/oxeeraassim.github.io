@@ -75,6 +75,8 @@ html,body{overscroll-behavior:none}
 @keyframes sobe{0%{opacity:0;transform:translateY(8px)}10%{opacity:1;transform:none}80%{opacity:1}100%{opacity:0;transform:translateY(-10px)}}
 @media (max-height:520px){.ga-bts{transform:scale(.8);transform-origin:right bottom}#joy{transform:scale(.85);transform-origin:left bottom}.ga-fala{bottom:calc(150px + env(safe-area-inset-bottom))}}
 @media (max-width:400px){.ga-bts{transform:scale(.9);transform-origin:right bottom}#joy{width:122px;height:122px}}
+/* toque 2026-11: tablet: joystick e botões maiores */
+@media (pointer:coarse) and (min-width:700px) and (min-height:700px){.ga-bts,#joy{zoom:1.3}}
 
 .ga2-flash{position:fixed;inset:0;z-index:18;pointer-events:none;opacity:0;box-shadow:inset 0 0 120px 40px rgba(220,30,30,.75)}
 .ga2-flash.on{animation:ga2fl .45s ease-out}

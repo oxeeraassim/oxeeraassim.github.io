@@ -12,7 +12,7 @@ document.addEventListener('keydown',function(e){var k=(e.key||'').toLowerCase();
 try{console.log('%cPARE!','color:#B9432B;font:900 42px serif');console.log('%cEste site e seus jogos são protegidos por direitos autorais (Lei 9.610/98). Copiar, desofuscar ou recriar o código, inclusive com IA, não é autorizado. © Oxe, era assim? (@oxe_eraassim)','font:16px serif');}catch(e){}
 var s=document.createElement('style');s.textContent='body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}input,textarea{-webkit-user-select:text;user-select:text}';document.head.appendChild(s);}})();</script>
 <script src="/oxe-zoom.js"></script>
-<script src="/oxe-menu.js" data-jogo="lendas" data-botaojogo="1" data-nome="Lendas do Oxe 3D" data-sub="Duelo do Nordeste: escolha sua lenda e brigue nas arenas do sertão, sozinho ou com um amigo." data-cor="#B9432B" data-chaves="oxe_lendas3d" data-botao="top:10px;left:50%;margin-left:-21px"></script>
+<script src="/oxe-menu.js" data-jogo="lendas" data-botaojogo="1" data-nome="Lendas do Oxe 3D" data-sub="Duelo do Nordeste: escolha sua lenda e brigue nas arenas do sertão, sozinho ou com um amigo." data-cor="#B9432B" data-chaves="oxe_lendas3d" data-botao="top:auto;bottom:calc(172px + env(safe-area-inset-bottom));left:calc(20px + env(safe-area-inset-left))"></script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#1B1714">
@@ -41,7 +41,7 @@ var s=document.createElement('style');s.textContent='body{-webkit-user-select:no
 .lb-meio{text-align:center;color:#EFE4CF;display:flex;flex-direction:column;align-items:center;gap:4px;pointer-events:auto}
 .lb-tempo{font:700 clamp(28px,7vw,42px)/1 "IBM Plex Serif",serif;text-shadow:3px 3px 0 #1B1714;min-width:2ch}
 .lb-round{font-size:11px;letter-spacing:.12em;font-weight:700;text-shadow:1px 1px 0 #1B1714}
-.lb-mini{display:flex;gap:6px}.lb-mini button{width:34px;height:34px;border-radius:50%;border:2px solid #E0A12F;background:rgba(27,23,20,.8);color:#EFE4CF;font-size:14px;cursor:pointer;touch-action:manipulation}
+.lb-mini{display:flex;gap:6px}.lb-mini button{width:40px;height:40px;border-radius:50%;border:2px solid #E0A12F;background:rgba(27,23,20,.8);color:#EFE4CF;font-size:14px;cursor:pointer;touch-action:manipulation}
 .lb-hits{position:fixed;top:30%;font:700 clamp(24px,6.5vw,44px)/1 "IBM Plex Serif",serif;color:#fff;-webkit-text-stroke:2px #1B1714;text-shadow:3px 3px 0 #B9432B;z-index:21;pointer-events:none;transition:opacity .35s,transform .15s;opacity:0;white-space:nowrap}
 .lb-hits small{display:block;font-size:.55em;color:#ffd43b;-webkit-text-stroke:1.5px #1B1714}
 .lb-hits.e{left:12px}.lb-hits.d{right:12px;text-align:right}
@@ -76,6 +76,8 @@ var s=document.createElement('style');s.textContent='body{-webkit-user-select:no
 @media (max-width:520px){#prev{width:110px;height:110px}.sel-desc h3{font-size:18px}.grade{grid-template-columns:repeat(4,1fr)}.lut{font-size:10.5px}}
 @media (max-width:400px){#joy{width:124px;height:124px}#joy i{width:52px;height:52px;margin:-26px}}
 @media (max-height:500px){.lb-bts{transform:scale(.85);transform-origin:right bottom}#joy{transform:scale(.85);transform-origin:left bottom}}
+/* toque 2026-11: tablet: joystick e botões maiores */
+@media (pointer:coarse) and (min-width:700px) and (min-height:700px){.lb-bts,#joy{zoom:1.35}}
 
 .lb-res{display:flex;align-items:center;gap:5px;margin-top:2px}.lb-lado.dir .lb-res{flex-direction:row-reverse}
 .lb-res img{width:26px;height:26px;border-radius:7px;border:2px solid #1B1714;background:#F7EFDF}.lb-res i{display:block;width:60px;height:7px;border:2px solid #1B1714;border-radius:4px;background:#3b2a20;overflow:hidden}.lb-res b{display:block;height:100%;background:#69db7c}.lb-res.morto img{filter:grayscale(1) brightness(.6)}
