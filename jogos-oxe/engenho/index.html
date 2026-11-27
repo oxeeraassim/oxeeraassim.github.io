@@ -83,6 +83,17 @@ body.compacto .en-cerca button{height:38px;font-size:15px;padding:0 10px;border-
 body.compacto .en-dica{font-size:12.5px;padding:6px 12px}
 body.compacto .en-mini{width:84px;height:84px}
 @media (orientation:landscape) and (max-height:520px){.en-dica{top:calc(var(--topoH,44px) + 8px);bottom:auto}.en-painel{left:auto;right:0;width:min(560px,62vw);border-left:4px solid #1B1714;border-radius:14px 0 0 0}.en-conteudo{min-height:68px}.en-dica{left:30%}.en-mini{width:76px;height:76px}}
+/* v11: sino do engenho, barra do chefe e dica de rolagem do painel */
+.en-sino{position:fixed;left:calc(10px + env(safe-area-inset-left));bottom:calc(var(--painelH,140px) + 18px + env(safe-area-inset-bottom));z-index:21}
+.en-sino button{height:44px;min-width:44px;border-radius:999px;border:3px solid #1B1714;background:#E0A12F;box-shadow:3px 3px 0 #1B1714;font:700 14px "IBM Plex Serif",serif;padding:0 13px;cursor:pointer;touch-action:manipulation;color:#1B1714}
+.en-sino button.on{background:#B9432B;color:#F7EFDF}
+.en-sino button.pisca{animation:enSino .7s ease-in-out infinite alternate}@keyframes enSino{from{transform:scale(1)}to{transform:scale(1.13) rotate(-6deg)}}
+.en-chefe{position:fixed;left:50%;transform:translateX(-50%);z-index:19;width:min(340px,62vw);background:rgba(27,23,20,.9);border:2.5px solid #E0A12F;border-radius:12px;padding:5px 9px 7px;font:700 13px "IBM Plex Serif",serif;color:#F7EFDF;text-align:center;pointer-events:none}
+.en-chefe div{height:10px;border:2px solid #F7EFDF;border-radius:6px;overflow:hidden;margin-top:4px;background:#3a2d22}.en-chefe i{display:block;height:100%;background:linear-gradient(90deg,#B9432B,#E0A12F);transition:width .2s}
+.en-painel:not(.min)::after{content:"›";position:absolute;right:0;bottom:calc(8px + env(safe-area-inset-bottom));width:30px;height:64px;display:flex;align-items:center;justify-content:flex-end;padding-right:4px;font:700 26px serif;color:#7A4A24;background:linear-gradient(90deg,rgba(247,239,223,0),#F7EFDF 70%);pointer-events:none}
+@media (orientation:landscape) and (max-height:520px){.en-sino{bottom:10px}}
+body.compacto .en-sino{bottom:calc(var(--painelH,140px) + 62px + env(safe-area-inset-bottom))}body.compacto .en-sino button{height:42px;border-width:2.5px}
+body.compacto .en-chefe{left:8px;transform:none;width:calc(100vw - 112px);font-size:12px;padding:4px 8px 6px}
 /* toque 2026-11: celular em pé: as 5 abas cabem na largura (sem esconder Metas) */
 @media (max-width:440px){body.compacto .en-aba{font-size:11px;padding:9px 4px;letter-spacing:0}body.compacto .en-aba.en-min{width:34px}.en-abas{gap:2px}}
 /* toque 2026-11: tablet com tudo maior (painel, barra de cima e botões) */
@@ -103,7 +114,7 @@ body.compacto .en-mini{width:84px;height:84px}
 <script src="/oxe-cinema.js"></script>
 <script src="../comum.js"></script>
 <script src="/oxe-guia.js"></script>
-<script src="jogo.js?v=ja10"></script>
+<script src="jogo.js?v=ja11"></script>
 <script src="/oxe-caderneta.js" defer></script>
 <script src="/oxe-qualidade.js" defer></script>
 <script src="./oxe-telemetria.js" defer></script>
