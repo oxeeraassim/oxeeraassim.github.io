@@ -4,7 +4,7 @@
  * - VERSION muda sozinha a cada publicação (ferramentas/build_protegido.js), o que apaga o cache velho.
  */
 'use strict';
-const VERSION = 'pub-mwz1606s';
+const VERSION = 'pub-mwz1c2qm';
 const PREFIXO = 'oxe-' + new URL('./', self.location.href).pathname.replace(/[^a-z0-9]+/gi, '-') ;
 const CACHE = PREFIXO + VERSION;
 const BASICO = ['./', './index.html', './manifest.webmanifest'];
